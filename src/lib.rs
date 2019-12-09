@@ -23,17 +23,18 @@ impl IsSixDigitsLong for usize {
         (100000usize..=999999usize).contains(self)
     }
 }
-
+/// exact double digits that are not part of a larger same-digit-group, such as a triple
 trait HasDoubleDigits {
     fn has_double_digits(&self) -> bool;
 }
 impl HasDoubleDigits for usize {
     fn has_double_digits(&self) -> bool {
-        self.to_string()
-            .chars()
-            .collect::<Vec<char>>() // intermediate vec to make slice's windows(2) is available
-            .windows(2)
-            .any(|pair| pair[0] == pair[1])
+        let v = self.to_string().chars().collect::<Vec<char>>();
+        (v[0] == v[1] && v[1] != v[2])
+            || (v[0] != v[1] && v[1] == v[2] && v[2] != v[3])
+            || (v[1] != v[2] && v[2] == v[3] && v[3] != v[4])
+            || (v[2] != v[3] && v[3] == v[4] && v[4] != v[5])
+            || (v[3] != v[4] && v[4] == v[5])
     }
 }
 
