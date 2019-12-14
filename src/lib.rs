@@ -35,19 +35,18 @@ impl OrbitCount {
 }
 
 fn count_orbit_transfers(input: &str, orbiter_1: &str, orbiter_2: &str) -> usize {
-    let orbiters: Vec<Orbiter> = input.split('\n').map(|s| Orbiter::from(s)).collect();
-    let mut h: HashMap<&str, &str> = HashMap::new();
-    orbiters.iter().for_each(|o| {
-        h.insert(o.name, o.center);
+    let mut orbiters: HashMap<&str, &str> = HashMap::new();
+    input.split('\n').map(|s| Orbiter::from(s)).for_each(|o| {
+        orbiters.insert(o.name, o.center);
     });
 
     let mut count1 = 0usize;
     let mut name1 = orbiter_1;
-    while let Some(center1) = h.get(name1) {
+    while let Some(center1) = orbiters.get(name1) {
         name1 = center1;
         let mut count2 = 0usize;
         let mut name = orbiter_2;
-        while let Some(center2) = h.get(name) {
+        while let Some(center2) = orbiters.get(name) {
             name = center2;
             if name1 == name {
                 return count1 + count2;
@@ -57,7 +56,7 @@ fn count_orbit_transfers(input: &str, orbiter_1: &str, orbiter_2: &str) -> usize
         count1 += 1;
     }
 
-    println!("h = {:?}", h);
+    println!("h = {:?}", orbiters);
 
     0
 }
@@ -67,23 +66,26 @@ fn count_orbits(input: &str) -> OrbitCount {
         return OrbitCount::empty();
     }
 
-    let objects: Vec<Orbiter> = input.split('\n').map(|s| Orbiter::from(s)).collect();
-    //    println!("{:?}", objects);
+    let mut orbiters: HashMap<&str, &str> = HashMap::new();
+    input.split('\n').map(|s| Orbiter::from(s)).for_each(|o| {
+        orbiters.insert(o.name, o.center);
+    });
 
-    let indirect = objects
-        .par_iter()
-        .map(|object| {
-            // println!("{:?}", object);
+    let total: usize = orbiters
+        .keys()
+        .map(|name| {
             let mut dist_to_root: usize = 0;
-            let mut current = object;
-            while let Some(center) = objects.iter().find(|&o| o.name == current.center) {
+            let mut current = name;
+            while let Some(center) = orbiters.get(current) {
                 dist_to_root += 1;
                 current = center;
             }
             dist_to_root
         })
         .sum();
-    OrbitCount::from(objects.len(), indirect)
+    let direct = orbiters.values().len();
+    let indirect = total - direct;
+    OrbitCount::from(direct, indirect)
 }
 
 #[cfg(test)]
@@ -141,7 +143,7 @@ I)SAN",
     }
     #[test]
     fn part_2() {
-        assert_eq!(count_orbit_transfers(puzzle_input(), "YOU", "SAN"), 0);
+        assert_eq!(count_orbit_transfers(puzzle_input(), "YOU", "SAN"), 445);
     }
 
     // part 1
