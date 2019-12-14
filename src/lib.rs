@@ -1,4 +1,5 @@
 use rayon::prelude::*;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 struct Orbiter<'a> {
@@ -33,6 +34,34 @@ impl OrbitCount {
     }
 }
 
+fn count_orbit_transfers(input: &str, orbiter_1: &str, orbiter_2: &str) -> usize {
+    let orbiters: Vec<Orbiter> = input.split('\n').map(|s| Orbiter::from(s)).collect();
+    let mut h: HashMap<&str, &str> = HashMap::new();
+    orbiters.iter().for_each(|o| {
+        h.insert(o.name, o.center);
+    });
+
+    let mut count1 = 0usize;
+    let mut name1 = orbiter_1;
+    while let Some(center1) = h.get(name1) {
+        name1 = center1;
+        let mut count2 = 0usize;
+        let mut name = orbiter_2;
+        while let Some(center2) = h.get(name) {
+            name = center2;
+            if name1 == name {
+                return count1 + count2;
+            }
+            count2 += 1;
+        }
+        count1 += 1;
+    }
+
+    println!("h = {:?}", h);
+
+    0
+}
+
 fn count_orbits(input: &str) -> OrbitCount {
     if input.is_empty() {
         return OrbitCount::empty();
@@ -59,8 +88,63 @@ fn count_orbits(input: &str) -> OrbitCount {
 
 #[cfg(test)]
 mod tests {
-    use crate::{count_orbits, OrbitCount};
+    use crate::{count_orbit_transfers, count_orbits, OrbitCount};
 
+    // part 2
+    #[test]
+    fn zero_orbit_transfer() {
+        assert_eq!(
+            count_orbit_transfers(
+                "AAA)BBB
+AAA)CCC",
+                "BBB",
+                "CCC"
+            ),
+            0
+        );
+    }
+    #[test]
+    fn single_orbit_transfer() {
+        assert_eq!(
+            count_orbit_transfers(
+                "AAA)BBB
+AAA)CCC
+CCC)DDD",
+                "BBB",
+                "DDD"
+            ),
+            1
+        );
+    }
+    #[test]
+    fn example_part_2() {
+        assert_eq!(
+            count_orbit_transfers(
+                "COM)B
+B)C
+C)D
+D)E
+E)F
+B)G
+G)H
+D)I
+E)J
+J)K
+K)L
+K)YOU
+I)SAN",
+                "YOU",
+                "SAN"
+            ),
+            4
+        );
+    }
+    #[test]
+    fn part_2() {
+        assert_eq!(count_orbit_transfers(puzzle_input(), "YOU", "SAN"), 0);
+    }
+
+    // part 1
     #[test]
     fn empty_input() {
         assert_eq!(count_orbits(""), OrbitCount::empty());
@@ -105,7 +189,7 @@ CCC)DDD"
         );
     }
     #[test]
-    fn example() {
+    fn example_part_1() {
         assert_eq!(
             count_orbits(
                 "COM)B
@@ -126,7 +210,7 @@ K)L"
 
     #[test]
     fn part_1() {
-        assert_eq!(count_orbits(puzzle_input()), OrbitCount::from(11, 31));
+        assert_eq!(count_orbits(puzzle_input()), OrbitCount::from(1605, 252842));
     }
 
     fn puzzle_input() -> &'static str {
