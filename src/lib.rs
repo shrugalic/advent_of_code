@@ -5,6 +5,7 @@ use Mode::*;
 use Op::*;
 
 const DEFAULT_INPUT: i32 = 1;
+const PRINT_OPS: bool = false;
 
 fn to_5_digit_string_padded_with_leading_zeroes(n: i32) -> String {
     let s = n.to_string();
@@ -42,89 +43,154 @@ fn eval(b: bool) -> i32 {
     }
 }
 
-fn max_thruster_signal(prg: &Vec<i32>) -> i32 {
-    all_phase_sequences()
-        .par_iter()
-        .map(|seq| calc_thrust(prg, seq))
+fn max_thrust_in_serial_mode(prg: &Vec<i32>) -> i32 {
+    let phases = [0, 1, 2, 3, 4];
+    permutations_of(phases)
+        .iter()
+        .map(|seq| calc_thrust(prg, seq, true))
         .max()
         .unwrap()
 }
 
-fn all_phase_sequences() -> Vec<Vec<i32>> {
-    let mut phases = [0, 1, 2, 3, 4];
+fn max_thrust_in_feedback_loop_mode(prg: &Vec<i32>) -> i32 {
+    let phases = [5, 6, 7, 8, 9];
+    permutations_of(phases)
+        .par_iter()
+        .map(|seq| calc_thrust(prg, seq, false))
+        .max()
+        .unwrap()
+}
+
+fn permutations_of(mut phases: [i32; 5]) -> Vec<Vec<i32>> {
     let mut phase_sequences = Vec::new();
     heap_recursive(&mut phases, |seq| phase_sequences.push(seq.to_vec()));
     phase_sequences
 }
 
-fn calc_thrust(prg: &Vec<i32>, seq: &Vec<i32>) -> i32 {
-    //    println!("Phase sequence {:?}", seq);
-    let mut in_out = 0;
-    for phase in seq {
-        let inputs: Vec<i32> = vec![*phase, in_out];
-        let mut v2 = prg.clone();
-        if let Some(output) = process_int_code_with_inputs(&mut v2, inputs) {
-            in_out = output;
-        }
-    }
-    in_out
+#[derive(Debug)]
+struct Amplifier {
+    instructions: Vec<i32>, //instructions
+    ptr: usize,             // instruction pointer
 }
-
-fn process_int_code_with_input(v: &mut Vec<i32>, input: i32) -> Option<i32> {
-    let inputs = vec![input];
-    process_int_code_with_inputs(v, inputs)
-}
-
-fn process_int_code_with_inputs(v: &mut Vec<i32>, inputs: Vec<i32>) -> Option<i32> {
-    let mut idx = 0;
-    let mut input_idx = 0;
-    let mut output = None;
-    while idx < v.len() {
-        let s = to_5_digit_string_padded_with_leading_zeroes(v[idx]);
-        let code = to_num(&s[(s.len() - 2)..s.len()]);
-        let op = Op::from_code(code);
-        let modes = extract_modes(&s);
-        match op {
-            Add | Multiply | LessThan | Equals => {
-                let p1 = param_value(&v, idx + 1, &modes[0]);
-                let p2 = param_value(&v, idx + 2, &modes[1]);
-                let res = match op {
-                    Add => p1 + p2,
-                    Multiply => p1 * p2,
-                    LessThan => eval(p1 < p2),
-                    Equals => eval(p1 == p2),
-                    _ => unreachable!(),
-                };
-                // Store result
-                let res_idx = v[idx + 3] as usize;
-                v[res_idx] = res;
-            }
-            Input => {
-                let res_idx = v[idx + 1] as usize;
-                // avoid out-of-bounds by repeatedly taking last input if necessary
-                let input = inputs[min(input_idx, inputs.len() - 1)];
-                input_idx += 1;
-                v[res_idx] = input;
-            }
-            Output => {
-                let p1 = param_value(&v, idx + 1, &modes[0]);
-                output = Some(p1);
-            }
-            JumpIfTrue | JumpIfFalse => {
-                let p1 = param_value(&v, idx + 1, &modes[0]);
-                let p2 = param_value(&v, idx + 2, &modes[1]);
-                if op == JumpIfTrue && p1 != 0 || op == JumpIfFalse && p1 == 0 {
-                    idx = p2 as usize;
-                    continue; // jump here, rather than increasing idx below
+impl Amplifier {
+    fn process(&mut self, inputs: Vec<i32>) -> Option<i32> {
+        let mut input_idx = 0;
+        let mut output = None;
+        while self.ptr < self.instructions.len() {
+            let s = to_5_digit_string_padded_with_leading_zeroes(self.instructions[self.ptr]);
+            let code = to_num(&s[(s.len() - 2)..s.len()]);
+            let op = Op::from_code(code);
+            let modes = extract_modes(&s);
+            let pre = format!("{:?}: {:?}", s, op);
+            match op {
+                Add | Multiply | LessThan | Equals => {
+                    let p1 = param_value(&self.instructions, self.ptr + 1, &modes[0]);
+                    let p2 = param_value(&self.instructions, self.ptr + 2, &modes[1]);
+                    let res = match op {
+                        Add => p1 + p2,
+                        Multiply => p1 * p2,
+                        LessThan => eval(p1 < p2),
+                        Equals => eval(p1 == p2),
+                        _ => unreachable!(),
+                    };
+                    // Store result
+                    let res_idx = self.instructions[self.ptr + 3] as usize;
+                    if PRINT_OPS {
+                        println!("{} ({}, {}) -> v[{}] = {}", pre, p1, p2, res_idx, res);
+                    }
+                    self.instructions[res_idx] = res;
+                }
+                Input => {
+                    let res_idx = self.instructions[self.ptr + 1] as usize;
+                    // avoid out-of-bounds by repeatedly taking last input if necessary
+                    let input = inputs[min(input_idx, inputs.len() - 1)];
+                    input_idx += 1;
+                    if PRINT_OPS {
+                        println!("{} -> v[{}] = {}", pre, res_idx, input);
+                    }
+                    self.instructions[res_idx] = input;
+                }
+                Output => {
+                    let p1 = param_value(&self.instructions, self.ptr + 1, &modes[0]);
+                    self.ptr += op.value_count();
+                    if PRINT_OPS {
+                        println!("{} = {}", pre, p1);
+                    }
+                    return Some(p1);
+                }
+                JumpIfTrue | JumpIfFalse => {
+                    let p1 = param_value(&self.instructions, self.ptr + 1, &modes[0]);
+                    let p2 = param_value(&self.instructions, self.ptr + 2, &modes[1]);
+                    if op == JumpIfTrue && p1 != 0 || op == JumpIfFalse && p1 == 0 {
+                        self.ptr = p2 as usize;
+                        if PRINT_OPS {
+                            println!("{} ({}) == true -> jump to {}", pre, p1, p2);
+                        }
+                        continue; // to jump here, rather than increasing idx below
+                    }
+                }
+                Stop => {
+                    if PRINT_OPS {
+                        println!("{}", pre);
+                    }
+                    return None;
                 }
             }
-            Stop => {
-                break;
+            self.incr_ptr(op);
+        }
+        output
+    }
+
+    fn incr_ptr(&mut self, op: Op) {
+        self.ptr += op.value_count();
+    }
+}
+
+fn calc_thrust(prg: &Vec<i32>, seq: &Vec<i32>, single_run: bool) -> i32 {
+    // Init & run through each amplifier once
+    let mut signal = 0;
+    let mut amplifiers: Vec<Amplifier> = vec![];
+    for &phase in seq {
+        let mut amp = Amplifier {
+            instructions: prg.clone(),
+            ptr: 0,
+        };
+        let inputs: Vec<i32> = vec![phase, signal];
+        if let Some(output) = amp.process(inputs) {
+            signal = output;
+        }
+        amplifiers.push(amp);
+    }
+    if single_run {
+        return signal;
+    }
+    // Run repeatedly
+    loop {
+        let mut loop_cnt = 0;
+        let mut finished = false;
+        for idx in 0..5 {
+            let inputs: Vec<i32> = vec![signal];
+            if let Some(output) = amplifiers[idx].process(inputs) {
+                signal = output;
+            } else {
+                finished = true;
             }
         }
-        idx += op.value_count();
+        loop_cnt += 1;
+        if finished {
+            break;
+        }
     }
-    output
+    signal
+}
+
+fn process_int_code_with_input(instructions: &mut Vec<i32>, input: i32) -> Option<i32> {
+    let inputs = vec![input];
+    let mut amp = Amplifier {
+        instructions: instructions.to_vec(),
+        ptr: 0,
+    };
+    amp.process(inputs)
 }
 
 #[derive(PartialEq, Debug)]
@@ -179,25 +245,21 @@ impl Mode {
             _ => panic!("Unknown Mode code {:?}", code),
         }
     }
-    fn to_code(&self) -> usize {
-        match self {
-            POSITION => 0,
-            IMMEDIATE => 1,
-        }
-    }
 }
 
 mod tests {
-    use crate::{max_thruster_signal, process_int_code, process_int_code_with_input, Op, Op::*};
+    use crate::{
+        max_thrust_in_feedback_loop_mode, max_thrust_in_serial_mode, process_int_code_with_input,
+    };
 
-    // day 7
+    // day 7 part 1
 
     #[test]
     fn day7_part1_example_1() {
         let mut input = vec![
             3, 15, 3, 16, 1002, 16, 10, 16, 1, 16, 15, 15, 4, 15, 99, 0, 0,
         ];
-        assert_eq!(max_thruster_signal(&mut input), 43210);
+        assert_eq!(max_thrust_in_serial_mode(&mut input), 43210);
     }
 
     #[test]
@@ -206,7 +268,7 @@ mod tests {
             3, 23, 3, 24, 1002, 24, 10, 24, 1002, 23, -1, 23, 101, 5, 23, 23, 1, 24, 23, 23, 4, 23,
             99, 0, 0,
         ];
-        assert_eq!(max_thruster_signal(&mut input), 54321);
+        assert_eq!(max_thrust_in_serial_mode(&mut input), 54321);
     }
     #[test]
     fn day7_part1_example_3() {
@@ -214,14 +276,41 @@ mod tests {
             3, 31, 3, 32, 1002, 32, 10, 32, 1001, 31, -2, 31, 1007, 31, 0, 33, 1002, 33, 7, 33, 1,
             33, 31, 31, 1, 32, 31, 31, 4, 31, 99, 0, 0, 0,
         ];
-        assert_eq!(max_thruster_signal(&mut input), 65210);
+        assert_eq!(max_thrust_in_serial_mode(&mut input), 65210);
     }
 
     #[test]
     fn day7_part_1() {
         let mut v = puzzle_input();
-        assert_eq!(max_thruster_signal(&mut v), 87138);
+        assert_eq!(max_thrust_in_serial_mode(&mut v), 87138);
     }
+
+    // day 7 part 1
+
+    #[test]
+    fn day7_part2_example_1() {
+        let mut input = vec![
+            3, 26, 1001, 26, -4, 26, 3, 27, 1002, 27, 2, 27, 1, 27, 26, 27, 4, 27, 1001, 28, -1,
+            28, 1005, 28, 6, 99, 0, 0, 5,
+        ];
+        assert_eq!(max_thrust_in_feedback_loop_mode(&mut input), 139629729);
+    }
+    #[test]
+    fn day7_part2_example_2() {
+        let mut input = vec![
+            3, 52, 1001, 52, -5, 52, 3, 53, 1, 52, 56, 54, 1007, 54, 5, 55, 1005, 55, 26, 1001, 54,
+            -5, 54, 1105, 1, 12, 1, 53, 54, 53, 1008, 54, 0, 55, 1001, 55, 1, 55, 2, 53, 55, 53, 4,
+            53, 1001, 56, -1, 56, 1005, 56, 6, 99, 0, 0, 0, 0, 10,
+        ];
+        assert_eq!(max_thrust_in_feedback_loop_mode(&mut input), 18216);
+    }
+    #[test]
+    fn day7_part2() {
+        let mut input = puzzle_input();
+        assert_eq!(max_thrust_in_feedback_loop_mode(&mut input), 17279674);
+    }
+
+    // puzzle input
 
     fn puzzle_input() -> Vec<i32> {
         vec![
@@ -247,57 +336,6 @@ mod tests {
             1001, 9, 2, 9, 4, 9, 3, 9, 1001, 9, 2, 9, 4, 9, 3, 9, 101, 2, 9, 9, 4, 9, 3, 9, 1002,
             9, 2, 9, 4, 9, 3, 9, 101, 2, 9, 9, 4, 9, 99,
         ]
-    }
-
-    // day 2
-
-    #[test]
-    fn op_from_int_code() {
-        assert_eq!(Add, Op::from_code(1));
-    }
-
-    #[test]
-    fn explanation_example() {
-        let mut v = vec![1, 9, 10, 3, 2, 3, 11, 0, 99, 30, 40, 50];
-        assert_eq!(process_int_code(&mut v), None);
-        assert_eq!(v, vec![3500, 9, 10, 70, 2, 3, 11, 0, 99, 30, 40, 50])
-    }
-
-    #[test]
-    fn add_example_1() {
-        let mut v = vec![1, 0, 0, 0, 99];
-        assert_eq!(process_int_code(&mut v), None);
-        assert_eq!(v, vec![2, 0, 0, 0, 99]);
-    }
-
-    #[test]
-    fn mult_example_1() {
-        let mut v = vec![2, 3, 0, 3, 99];
-        assert_eq!(process_int_code(&mut v), None);
-        assert_eq!(v, vec![2, 3, 0, 6, 99]);
-    }
-
-    #[test]
-    fn mult_example_2() {
-        let mut v = vec![2, 4, 4, 5, 99, 0];
-        assert_eq!(process_int_code(&mut v), None);
-        assert_eq!(v, vec![2, 4, 4, 5, 99, 9801]);
-    }
-
-    #[test]
-    fn add_example_2() {
-        let mut v = vec![1, 1, 1, 4, 99, 5, 6, 0, 99];
-        assert_eq!(process_int_code(&mut v), None);
-        assert_eq!(v, vec![30, 1, 1, 4, 2, 5, 6, 0, 99]);
-    }
-
-    // day 5 part 1
-
-    #[test]
-    fn multiply_example() {
-        let mut v = vec![1002, 4, 3, 4, 33];
-        assert_eq!(process_int_code(&mut v), None);
-        assert_eq!(v, vec![1002, 4, 3, 4, 99]);
     }
 
     // day 5 part 2
