@@ -25,11 +25,15 @@ impl Dir {
     /// Convert angle ranges from (-PI, +PI] to (0, 2PI] to simplify comparisons
     fn positive_angle(&self) -> f64 {
         let angle = self.angle();
-        let a = if angle < 0.0 { angle + 2.0 * PI } else { angle };
-        println!("angle ({}, {}) = {}", self.0, self.1, a);
-        a
+        if angle < 0.0 {
+            angle + 2.0 * PI
+        } else {
+            angle
+        }
     }
 }
+
+/// Order by distance/length of direction vector
 impl Ord for Dir {
     fn cmp(&self, other: &Self) -> Ordering {
         let my_len = self.len();
@@ -69,9 +73,10 @@ impl Point {
             })
             //            .cloned()
             .collect();
-        // Sort by distance to point, closest first (the ordering of Dir is according to length)
+        // Sort by distance to point, closest first (the Ordering of Dir is according to length)
         others.sort_by_key(|(_point, dir)| dir.clone());
 
+        // Pick those that are not obscured by another asteroid
         let mut detectable_others: Vec<(Point, Dir)> = vec![];
         others.iter().for_each(|(candidate, c_dir)| {
             if !detectable_others
@@ -81,7 +86,8 @@ impl Point {
                 detectable_others.push((candidate.clone(), c_dir.clone()));
             }
         });
-        // println!("self = {:?}, dirs = {:?}, uniq_dirs = {:?}", self, dirs, unique_dirs);
+
+        // Remove direction, keep and return only the points
         detectable_others
             .into_iter()
             .map(|(point, _dir)| point)
@@ -113,7 +119,11 @@ impl From<&str> for MonitoringStation {
                     .collect::<Vec<Point>>()
             })
             .collect();
-        if let Some((count, loc)) = MonitoringStation::best_monitoring_station(&asteroids) {
+        if let Some((count, loc)) = asteroids
+            .iter()
+            .map(|loc| (loc.detectable_others(&asteroids).len(), loc.clone()))
+            .max_by_key(|(count, _loc)| *count)
+        {
             MonitoringStation {
                 loc,
                 count,
@@ -125,11 +135,29 @@ impl From<&str> for MonitoringStation {
     }
 }
 impl MonitoringStation {
-    fn best_monitoring_station(asteroids: &Vec<Point>) -> Option<(usize, Point)> {
-        asteroids
-            .iter()
-            .map(|loc| (loc.detectable_others(&asteroids).len(), loc.clone()))
-            .max_by_key(|(count, _loc)| *count)
+    fn vaporized(&mut self) -> Vec<Point> {
+        let mut vaporized: Vec<Point> = vec![];
+        println!("loc = {:?}", self.loc);
+        let round = 0;
+        while self.asteroids.len() > 1 {
+            let mut detectables = self.loc.detectable_others(&self.asteroids);
+            // Sort by positive angle to get into vaporizing order
+            detectables.sort_by(|a, b| {
+                self.loc
+                    .dir_to(a)
+                    .positive_angle()
+                    .partial_cmp(&self.loc.dir_to(b).positive_angle())
+                    .unwrap()
+            });
+            // vaporize
+            detectables.into_iter().for_each(|target| {
+                if let Some(index) = self.asteroids.iter().position(|p| *p == target) {
+                    self.asteroids.remove(index);
+                }
+                vaporized.push(target);
+            });
+        }
+        vaporized
     }
 }
 
@@ -383,9 +411,10 @@ mod tests {
     }
     #[test]
     fn max_detectable_asteroids_larger_example4() {
-        assert_eq!(
-            MonitoringStation::from(
-                ".#..##.###...#######
+        assert_eq!(MonitoringStation::from(large_example()).count, 210);
+    }
+    fn large_example() -> &'static str {
+        ".#..##.###...#######
 ##.############..##.
 .#.######.########.#
 .###.#######.####.#.
@@ -405,12 +434,80 @@ mod tests {
 .#.#.###########.###
 #.#.#.#####.####.###
 ###.##.####.##.#..##"
-            )
-            .count,
-            210
+    }
+    #[test]
+    fn part2_example() {
+        let mut station = MonitoringStation::from(
+            ".#....#####...#..
+##...##.#####..##
+##...#...#.#####.
+..#.....#...###..
+..#.#.....#....##",
+        );
+        assert_eq!(
+            station.vaporized(),
+            vec![
+                Point(8, 1),
+                Point(9, 0),
+                Point(9, 1),
+                Point(10, 0),
+                Point(9, 2),
+                Point(11, 1),
+                Point(12, 1),
+                Point(11, 2),
+                Point(15, 1),
+                Point(12, 2),
+                Point(13, 2),
+                Point(14, 2),
+                Point(15, 2),
+                Point(12, 3),
+                Point(16, 4),
+                Point(15, 4),
+                Point(10, 4),
+                Point(4, 4),
+                Point(2, 4),
+                Point(2, 3),
+                Point(0, 2),
+                Point(1, 2),
+                Point(0, 1),
+                Point(1, 1),
+                Point(5, 2),
+                Point(1, 0),
+                Point(5, 1),
+                Point(6, 1),
+                Point(6, 0),
+                Point(7, 0),
+                Point(8, 0),
+                Point(10, 1),
+                Point(14, 0),
+                Point(16, 1),
+                Point(13, 3),
+                Point(14, 3)
+            ]
         );
     }
-
+    #[test]
+    fn part2_large_example() {
+        let mut station = MonitoringStation::from(large_example());
+        let vaporized = station.vaporized();
+        assert_eq!(vaporized[0], Point(11, 12));
+        assert_eq!(vaporized[1], Point(12, 1));
+        assert_eq!(vaporized[2], Point(12, 2));
+        assert_eq!(vaporized[9], Point(12, 8));
+        assert_eq!(vaporized[19], Point(16, 0));
+        assert_eq!(vaporized[49], Point(16, 9));
+        assert_eq!(vaporized[99], Point(10, 16));
+        assert_eq!(vaporized[198], Point(9, 6));
+        assert_eq!(vaporized[199], Point(8, 2));
+        assert_eq!(vaporized[200], Point(10, 9));
+        assert_eq!(vaporized[298], Point(11, 1));
+    }
+    #[test]
+    fn part2() {
+        let mut station = MonitoringStation::from(puzzle_input());
+        let vaporized = station.vaporized();
+        assert_eq!(vaporized[199], Point(8, 15));
+    }
     #[test]
     fn max_detectable_asteroids_part1() {
         assert_eq!(MonitoringStation::from(puzzle_input()).count, 253);
