@@ -3,6 +3,8 @@ use Mode::*;
 use Op::*;
 
 const TEST_MODE_INPUT: isize = 1;
+const PRINT_INT_CODE_COMPUTER_OUTPUT: bool = false;
+
 #[derive(Debug)]
 struct IntCodeComputer {
     instr: Vec<isize>, // program
@@ -33,12 +35,14 @@ impl IntCodeComputer {
         if idx >= self.instr.len() {
             let diff = 1 + idx - self.instr.len();
             if diff > 10000 {
-                println!(
-                    "old size = {}, idx = {}, huge diff = {}",
-                    self.instr.len(),
-                    idx,
-                    diff
-                );
+                if PRINT_INT_CODE_COMPUTER_OUTPUT {
+                    println!(
+                        "old size = {}, idx = {}, huge diff = {}",
+                        self.instr.len(),
+                        idx,
+                        diff
+                    );
+                }
             }
             self.instr.extend(vec![0; diff]);
         }
@@ -53,7 +57,9 @@ impl IntCodeComputer {
     }
     fn set_result(&mut self, offset: usize, mode: &Mode, res: isize) {
         let val = self.get(self.ptr + offset);
-        println!(" [{}] = {}", val, res);
+        if PRINT_INT_CODE_COMPUTER_OUTPUT {
+            println!(" [{}] = {}", val, res);
+        }
         match mode {
             Immediate => panic!("Output parameter in immediate mode!"),
             Position => self.set(val as usize, res),
@@ -88,12 +94,16 @@ impl IntCodeComputer {
                     self.set_result(3, &modes[2], res);
                 }
                 Input => {
-                    print!("{}", pre);
+                    if PRINT_INT_CODE_COMPUTER_OUTPUT {
+                        print!("{}", pre);
+                    }
                     self.set_result(1, &modes[0], input);
                 }
                 Output => {
                     let value = self.get_value(1, &modes[0]);
-                    println!("{} = {}", pre, value);
+                    if PRINT_INT_CODE_COMPUTER_OUTPUT {
+                        println!("{} = {}", pre, value);
+                    }
                     output = Some(value);
                 }
                 ShiftRelativeBase => {
@@ -113,7 +123,9 @@ impl IntCodeComputer {
                     //                    println!("{} ({}) == false -> NO jump (to {})", pre, p1, p2);
                 }
                 Stop => {
-                    println!("{}", pre);
+                    if PRINT_INT_CODE_COMPUTER_OUTPUT {
+                        println!("{}", pre);
+                    }
                     break;
                 }
             }
@@ -309,11 +321,11 @@ impl Robot {
 
 #[derive(Debug, PartialEq)]
 enum Tile {
-    Empty,            // No game object appears in this tile.
-    Wall,             // Walls are indestructible barriers.
-    Block,            // Blocks can be broken by the ball.
-    HorizontalPaddle, // The paddle is indestructible.
-    Ball,             // The ball moves diagonally and bounces off objects.
+    Empty,  // No game object appears in this tile.
+    Wall,   // Walls are indestructible barriers.
+    Block,  // Blocks can be broken by the ball.
+    Paddle, // The paddle is indestructible.
+    Ball,   // The ball moves diagonally and bounces off objects.
 }
 impl From<isize> for Tile {
     fn from(i: isize) -> Self {
@@ -321,7 +333,7 @@ impl From<isize> for Tile {
             0 => Tile::Empty,
             1 => Tile::Wall,
             2 => Tile::Block,
-            3 => Tile::HorizontalPaddle,
+            3 => Tile::Paddle,
             4 => Tile::Ball,
             i => panic!("Unknown tile {}", i),
         }
@@ -331,25 +343,93 @@ impl From<isize> for Tile {
 #[derive(Debug)]
 struct ArcadeCabinet {
     icc: IntCodeComputer,
-    outputs: Vec<(Point, Tile)>,
 }
 impl ArcadeCabinet {
     fn new(input: &mut Vec<isize>) -> Self {
         let icc = IntCodeComputer::new(input);
-        ArcadeCabinet {
-            icc,
-            outputs: vec![],
-        }
+        ArcadeCabinet { icc }
     }
-    fn run(&mut self) -> &Vec<(Point, Tile)> {
-        while let Some(first) = self.icc.process_int_code_with_default_input() {
-            if let Some(second) = self.icc.process_int_code_with_default_input() {
-                if let Some(third) = self.icc.process_int_code_with_default_input() {
-                    self.outputs.push((Point(first, second), Tile::from(third)));
+    fn run(&mut self) -> Vec<(Point, Tile)> {
+        self.run_with(false)
+    }
+    fn play(&mut self) -> Vec<(Point, Tile)> {
+        self.run_with(true)
+    }
+    fn run_with(&mut self, play: bool) -> Vec<(Point, Tile)> {
+        let mut joystick = JoyStick::Neutral.to_input();
+        if play {
+            self.icc.instr[0] = 2;
+        }
+        let mut outputs: Vec<(Point, Tile)> = vec![];
+        let mut ball: Option<Point> = None;
+        let mut paddle: Option<Point> = None;
+        while let Some(first) = self.icc.process_int_code_with_input(joystick) {
+            if let Some(second) = self.icc.process_int_code_with_input(joystick) {
+                if let Some(third) = self.icc.process_int_code_with_input(joystick) {
+                    let pos = Point(first, second);
+                    if pos == Point(-1, 0) {
+                        println!("Score = {}", third);
+                    } else {
+                        let tile = Tile::from(third);
+                        if play {
+                            match tile {
+                                Tile::Ball => {
+                                    ball = Some(pos.clone());
+                                    joystick = ArcadeCabinet::calc_input(&ball, &paddle).to_input();
+                                    println!(
+                                        "Ball: ball {:?}, paddle {:?}, joystick {:?}",
+                                        pos, paddle, joystick
+                                    );
+                                }
+                                Tile::Paddle => {
+                                    paddle = Some(pos.clone());
+                                    joystick = ArcadeCabinet::calc_input(&ball, &paddle).to_input();
+                                    println!(
+                                        "Paddle: ball {:?}, paddle {:?}, joystick {:?}",
+                                        ball, pos, joystick
+                                    );
+                                }
+                                _ => (),
+                            }
+                        }
+                        outputs.push((pos, tile));
+                    }
                 }
             }
         }
-        &self.outputs
+        outputs
+    }
+    /// Move the paddle towards the ball position
+    fn calc_input(ball: &Option<Point>, paddle: &Option<Point>) -> JoyStick {
+        if let (Some(ball_pos), Some(paddle_pos)) = (ball, paddle) {
+            JoyStick::from(ball_pos.0 - paddle_pos.0)
+        } else {
+            JoyStick::Neutral
+        }
+    }
+}
+enum JoyStick {
+    Neutral,
+    Left,
+    Right,
+}
+impl From<isize> for JoyStick {
+    fn from(diff: isize) -> Self {
+        match diff.signum() {
+            0 => JoyStick::Neutral,
+            -1 => JoyStick::Left,
+            1 => JoyStick::Right,
+            _ => unreachable!(),
+        }
+    }
+}
+impl JoyStick {
+    fn to_input(&self) -> isize {
+        match self {
+            JoyStick::Neutral => 0,
+            JoyStick::Left => -1,
+            JoyStick::Right => 1,
+        }
     }
 }
 
@@ -361,14 +441,34 @@ mod tests {
     #[test]
     fn day_13_part1() {
         let mut arcade = ArcadeCabinet::new(&mut day_13_puzzle_input());
-        let outputs = arcade.run();
-        let block_cnt = outputs.iter().filter(|(_, t)| t == &Tile::Block).count();
+        let tiles = arcade.run();
+        let (block_count, _, _, _, _) = stats(&tiles);
+
+        assert_eq!(block_count, 265)
+    }
+    #[test]
+    fn day_13_part2() {
+        let mut arcade = ArcadeCabinet::new(&mut day_13_puzzle_input());
+        let tiles: Vec<(Point, Tile)> = arcade.play();
+        assert_eq!(tiles.len(), 26947); // Score 13331
+    }
+
+    fn stats(tiles: &Vec<(Point, Tile)>) -> (usize, usize, usize, usize, usize) {
+        let blocks = tiles.iter().filter(|(_, t)| t == &Tile::Block).count();
+        let balls = tiles.iter().filter(|(_, t)| t == &Tile::Ball).count();
+        let paddles = tiles.iter().filter(|(_, t)| t == &Tile::Paddle).count();
+        let walls = tiles.iter().filter(|(_, t)| t == &Tile::Wall).count();
+        let empty = tiles.iter().filter(|(_, t)| t == &Tile::Empty).count();
         println!(
-            "Total tiles = {}, {} of which are blocks",
-            outputs.len(),
-            block_cnt
+            "Tiles: {} blocks, {} balls, {} paddles, {} walls, {} empty, {} total",
+            blocks,
+            balls,
+            paddles,
+            walls,
+            empty,
+            tiles.len(),
         );
-        assert_eq!(block_cnt, 265)
+        (blocks, balls, paddles, walls, empty)
     }
 
     fn day_13_puzzle_input() -> Vec<isize> {
@@ -478,6 +578,7 @@ mod tests {
 
     // day 11
 
+    #[ignore] // takes too long
     #[test]
     fn part1() {
         let mut robot = Robot::new(&mut day11_puzzle_input(), None);
