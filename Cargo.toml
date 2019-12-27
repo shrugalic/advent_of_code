@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 regex = "1"
+num-format = "0.4.0"

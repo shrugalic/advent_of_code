@@ -208,7 +208,8 @@ fn lcm(a: usize, b: usize) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Axis, Jupiter, Moon, Vector};
+    use crate::{Jupiter, Moon, Vector};
+    use num_format::{Locale, ToFormattedString};
 
     // part 2
 
@@ -216,10 +217,15 @@ mod tests {
     fn determine_periods() {
         let mut jupiter = Jupiter::from(puzzle_input());
         let periods = jupiter.determine_periods();
-        // Periods = (56344, 286332, 231614)
-        println!("Periods = ({}, {}, {})", periods.0, periods.1, periods.2);
+        // Periods = (56'344, 286'332, 231'614)
+        println!(
+            "Periods = ({}, {}, {})",
+            periods.0.to_formatted_string(&Locale::de_CH),
+            periods.1.to_formatted_string(&Locale::de_CH),
+            periods.2.to_formatted_string(&Locale::de_CH)
+        );
         let count = crate::lcm(periods.0, crate::lcm(periods.1, periods.2));
-        assert_eq!(count, 467081194429464);
+        assert_eq!(count, 467_081_194_429_464);
     }
 
     // part 1
