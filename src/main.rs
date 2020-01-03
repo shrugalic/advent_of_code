@@ -9,7 +9,7 @@ use coffee::load::Task;
 use coffee::{Game, Result, Timer};
 use std::ops::RangeInclusive;
 
-const LIGHT_RED: Color = Color {
+const DARK_RED: Color = Color {
     r: 0.5,
     g: 0.0,
     b: 0.0,
@@ -30,6 +30,12 @@ const GREEN: Color = Color {
 const BLUE: Color = Color {
     r: 0.25,
     g: 0.25,
+    b: 1.0,
+    a: 1.0,
+};
+const LIGHT_BLUE: Color = Color {
+    r: 0.5,
+    g: 0.5,
     b: 1.0,
     a: 1.0,
 };
@@ -71,18 +77,25 @@ impl Game for RepairDroid {
             match state {
                 BoardState::Clear => mesh.fill(ct.square_at(pos), Color::WHITE),
                 BoardState::Wall => mesh.fill(ct.square_at(pos), Color::BLACK),
-                BoardState::OxygenSystem => mesh.fill(ct.square_at(pos), GREEN),
+                BoardState::OxygenSystem => mesh.fill(ct.square_at(pos), BLUE),
                 BoardState::Unexplored => (),
                 BoardState::ShortestPath => mesh.fill(ct.square_at(pos), RED),
-                BoardState::BeingSearched => mesh.fill(ct.square_at(pos), LIGHT_RED),
+                BoardState::Searched => mesh.fill(ct.square_at(pos), DARK_RED),
+                BoardState::Oxygenated => mesh.fill(ct.square_at(pos), LIGHT_BLUE),
+                BoardState::OxygenatedPath => mesh.fill(ct.square_at(pos), BLUE),
             }
         }
         let origin = ct.square_at(&Point2D::default());
-        mesh.fill(origin, BLUE);
+        mesh.fill(origin, GREEN);
 
-        if self.droid_state == RepairDroidState::Exploring {
+        if let Some(oxygen_system) = self.goal_pos {
+            let oxygen_system = ct.square_at(&oxygen_system);
+            mesh.fill(oxygen_system, BLUE);
+        }
+
+        if self.droid_state == DroidState::Exploring {
             // draw robot while exploring
-            let robot = ct.triangle_at(&self.curr_pos, &self.dir);
+            let robot = ct.robot_at(&self.curr_pos, &self.dir);
             mesh.fill(robot, RED);
         }
         mesh.draw(&mut frame.as_target());
@@ -90,11 +103,12 @@ impl Game for RepairDroid {
 
     fn update(&mut self, _window: &Window) {
         match self.droid_state {
-            RepairDroidState::Exploring => self.explore(),
-            RepairDroidState::FullyExplored | RepairDroidState::PathFinding => {
-                self.find_shortest_path()
-            }
-            RepairDroidState::ShortestPathFound => (), // done
+            DroidState::Exploring => self.explore(),
+            DroidState::FullyExplored
+            | DroidState::PathFinding
+            | DroidState::ShortestPathFound
+            | DroidState::Oxygenating => self.find_shortest_path(),
+            DroidState::FullyOxygenated => (), // done
         }
     }
 }
@@ -142,7 +156,7 @@ impl CoordinateTransformation {
             self.tile_size * (self.y_range.end() - pos.1 as f32),
         )
     }
-    fn triangle_at(&self, pos: &Point2D, dir: &MovementCommand) -> Shape {
+    fn robot_at(&self, pos: &Point2D, dir: &MovementCommand) -> Shape {
         let top_left = self.point_at(pos);
         let top_right = self.point_at(&pos.offset_by(1, 0));
         let bottom_left = self.point_at(&pos.offset_by(0, 1));
@@ -153,10 +167,10 @@ impl CoordinateTransformation {
         let right = Point::new(top_right.x, (top_right.y + bottom_right.y) / 2.0);
 
         let points = match dir {
-            MovementCommand::North => vec![top, bottom_left, bottom_right],
-            MovementCommand::South => vec![bottom, top_left, top_right],
-            MovementCommand::West => vec![left, top_right, bottom_right],
-            MovementCommand::East => vec![right, top_left, bottom_left],
+            MovementCommand::North => vec![top, left, bottom_left, bottom_right, right],
+            MovementCommand::South => vec![bottom, left, top_left, top_right, right],
+            MovementCommand::West => vec![left, top, top_right, bottom_right, bottom],
+            MovementCommand::East => vec![right, top, top_left, bottom_left, bottom],
         };
 
         Shape::Polyline { points }
@@ -165,11 +179,11 @@ impl CoordinateTransformation {
 
 // day 15
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum PathFinderState {
-    Searching,
-    HitDeadEnd,
-    FoundTarget,
+    SearchingOxygenSystem,
+    FoundOxygenSystem,
+    Oxygenating,
 }
 
 #[derive(Debug, Clone)]
@@ -180,61 +194,74 @@ struct PathFinder {
     state: PathFinderState,
 }
 impl PathFinder {
-    fn new(start: Point2D, board: &HashMap<Point2D, BoardState>) -> Self {
+    fn oxygen_system_finder(start: Point2D, board: &HashMap<Point2D, BoardState>) -> Self {
+        PathFinder::new(start, PathFinderState::SearchingOxygenSystem, board)
+    }
+    fn oxygenator(start: Point2D, board: &HashMap<Point2D, BoardState>) -> Self {
+        PathFinder::new(start, PathFinderState::Oxygenating, board)
+    }
+    fn new(start: Point2D, state: PathFinderState, board: &HashMap<Point2D, BoardState>) -> Self {
         PathFinder {
             path: vec![start],
             board_state: board.clone(),
             from_origin: false,
-            state: PathFinderState::Searching,
+            state,
         }
     }
     fn curr_pos(&self) -> Point2D {
         *self.path.last().unwrap()
     }
-    // Returns starting points for next path finders
+    fn found_oxygen_system(&self, pos: &Point2D) -> bool {
+        self.state == PathFinderState::SearchingOxygenSystem
+            && self.board_state.get(pos).unwrap() == &BoardState::OxygenSystem
+    }
+    /// Return zero to three starting points for next path finders
     fn find_path(&mut self) -> Vec<Point2D> {
         let curr_pos = self.curr_pos();
-        if self.board_state.get(&curr_pos).unwrap() == &BoardState::OxygenSystem {
-            self.state = PathFinderState::FoundTarget;
+        if self.found_oxygen_system(&curr_pos) {
+            self.state = PathFinderState::FoundOxygenSystem;
             return vec![];
         } else {
-            self.board_state.insert(curr_pos, BoardState::BeingSearched);
+            if self.state == PathFinderState::SearchingOxygenSystem {
+                self.board_state.insert(curr_pos, BoardState::Searched);
+            } else {
+                assert_eq!(self.state, PathFinderState::Oxygenating);
+                self.board_state.insert(curr_pos, BoardState::Oxygenated);
+            }
         }
 
         // Explore possibilities
-        let next_starting_points: Vec<Point2D> = vec![
-            curr_pos.offset_by_1_into(&MovementCommand::North),
-            curr_pos.offset_by_1_into(&MovementCommand::East),
-            curr_pos.offset_by_1_into(&MovementCommand::South),
-            curr_pos.offset_by_1_into(&MovementCommand::West),
-        ]
-        .into_iter()
-        .filter(|maybe_next_pos| {
-            maybe_next_pos != &curr_pos
-                && match self.board_state.get(maybe_next_pos).unwrap() {
-                    BoardState::Clear | BoardState::OxygenSystem => true,
-                    BoardState::Wall | BoardState::ShortestPath | BoardState::BeingSearched => {
-                        false
-                    }
-                    BoardState::Unexplored => unreachable!(),
-                }
-        })
-        .collect();
-
-        if next_starting_points.is_empty() {
-            self.state = PathFinderState::HitDeadEnd;
-        }
+        let next_starting_points: Vec<Point2D> = curr_pos
+            .neighbors()
+            .into_iter()
+            .filter(|possible_pos| self.is_worth_going_to(possible_pos))
+            .collect();
 
         return next_starting_points;
+    }
+    fn is_worth_going_to(&self, maybe_next_pos: &Point2D) -> bool {
+        if *maybe_next_pos == self.curr_pos() {
+            false
+        } else {
+            let board = self.board_state.get(maybe_next_pos).unwrap();
+            if self.state == PathFinderState::SearchingOxygenSystem {
+                board.needs_path_finding()
+            } else {
+                assert_eq!(self.state, PathFinderState::Oxygenating);
+                board.needs_oxygen()
+            }
+        }
     }
 }
 
 #[derive(Debug, PartialEq)]
-enum RepairDroidState {
+enum DroidState {
     Exploring,
     FullyExplored,
     PathFinding,
     ShortestPathFound,
+    Oxygenating,
+    FullyOxygenated,
 }
 
 #[derive(Debug)]
@@ -243,7 +270,7 @@ struct RepairDroid {
     curr_pos: Point2D,
     dir: MovementCommand,
     board_state: HashMap<Point2D, BoardState>,
-    droid_state: RepairDroidState,
+    droid_state: DroidState,
     goal_pos: Option<Point2D>,
     pathfinders: Vec<PathFinder>,
     counter: usize,
@@ -258,7 +285,7 @@ impl RepairDroid {
             curr_pos,
             dir: MovementCommand::North,
             board_state,
-            droid_state: RepairDroidState::Exploring,
+            droid_state: DroidState::Exploring,
             goal_pos: None,
             pathfinders: vec![],
             counter: 0,
@@ -269,29 +296,48 @@ impl RepairDroid {
     fn find_shortest_path(&mut self) {
         self.counter += 1;
         if self.counter > 500 {
+            println!("Reached counter of {}", self.counter);
             return;
         };
-        if self.droid_state == RepairDroidState::FullyExplored {
+        if self.droid_state == DroidState::FullyExplored {
+            // start finding shortest path
             let origin = Point2D::default();
-            self.board_state.insert(origin, BoardState::BeingSearched);
+            //            self.board_state.insert(origin, BoardState::Searched);
             self.pathfinders
-                .push(PathFinder::new(origin, &self.board_state));
-            self.droid_state = RepairDroidState::PathFinding;
+                .push(PathFinder::oxygen_system_finder(origin, &self.board_state));
+            self.droid_state = DroidState::PathFinding;
         }
-        if self.droid_state == RepairDroidState::PathFinding {
+        if self.droid_state == DroidState::ShortestPathFound {
+            // start oxygenation
+            self.counter = 0;
+            let oxygen_pos = self.goal_pos.unwrap();
+            assert_eq!(
+                self.board_state.get(&oxygen_pos).unwrap(),
+                &BoardState::OxygenSystem
+            );
+            self.pathfinders
+                .push(PathFinder::oxygenator(oxygen_pos, &self.board_state));
+            self.droid_state = DroidState::Oxygenating;
+        }
+        if self.droid_state == DroidState::PathFinding
+            || self.droid_state == DroidState::Oxygenating
+        {
             let mut spawns: Vec<PathFinder> = vec![];
             let mut updated_board_states: HashMap<Point2D, BoardState> = HashMap::new();
             self.pathfinders.drain(0..).for_each(|mut pf| {
                 let mut next_starting_points = pf.find_path();
                 match pf.state {
-                    PathFinderState::Searching | PathFinderState::HitDeadEnd => {
-                        updated_board_states.insert(pf.curr_pos(), BoardState::BeingSearched);
+                    PathFinderState::SearchingOxygenSystem => {
+                        updated_board_states.insert(pf.curr_pos(), BoardState::Searched);
                     }
-                    PathFinderState::FoundTarget => {
+                    PathFinderState::FoundOxygenSystem => {
                         println!("Shortest path has length {}", pf.path.len() - 1);
-                        pf.path.iter().for_each(|pos| {
+                        pf.path.iter().rev().skip(1).for_each(|pos| {
                             updated_board_states.insert(*pos, BoardState::ShortestPath);
                         });
+                    }
+                    PathFinderState::Oxygenating => {
+                        updated_board_states.insert(pf.curr_pos(), BoardState::Oxygenated);
                     }
                 }
                 next_starting_points.drain(0..).for_each(|next_pos| {
@@ -300,18 +346,31 @@ impl RepairDroid {
                     spawns.push(fork)
                 });
             });
-            updated_board_states.into_iter().for_each(|(k, v)| {
-                self.board_state.insert(k, v);
+            updated_board_states.into_iter().for_each(|(pos, state)| {
+                if self.board_state.get(&pos) == Some(&BoardState::ShortestPath)
+                    && state == BoardState::Oxygenated
+                {
+                    self.board_state.insert(pos, BoardState::OxygenatedPath);
+                } else {
+                    self.board_state.insert(pos, state);
+                }
             });
             assert!(self.pathfinders.is_empty());
             self.pathfinders.append(&mut spawns);
             if self.pathfinders.is_empty() {
-                self.droid_state = RepairDroidState::ShortestPathFound;
+                if self.droid_state == DroidState::PathFinding {
+                    self.droid_state = DroidState::ShortestPathFound;
+                } else {
+                    // oxygenating
+                    assert_eq!(self.droid_state, DroidState::Oxygenating);
+                    self.droid_state = DroidState::FullyOxygenated;
+                    println!("Oxygenation took {} ticks", self.counter);
+                }
             }
         }
     }
     fn explore_full_maze(&mut self) {
-        while self.droid_state == RepairDroidState::Exploring {
+        while self.droid_state == DroidState::Exploring {
             self.explore();
         }
     }
@@ -330,7 +389,7 @@ impl RepairDroid {
                     self.set_state(BoardState::Clear);
                     self.follow_left_wall();
                     if self.curr_pos == Point2D::default() {
-                        self.droid_state = RepairDroidState::FullyExplored;
+                        self.droid_state = DroidState::FullyExplored;
                     }
                 }
                 StatusCode::ReachedTarget => {
@@ -339,14 +398,6 @@ impl RepairDroid {
                     self.goal_pos = Some(self.curr_pos);
                 }
             }
-            /*
-            println!(
-                "Pos {:?}, dir {:?}, state {:?}",
-                self.position,
-                self.direction,
-                self.board.get(&self.position).unwrap()
-            );
-            */
         }
     }
     fn follow_left_wall(&mut self) {
@@ -354,13 +405,6 @@ impl RepairDroid {
         if !self.is_wall_to_the_left() {
             self.turn_counter_clockwise();
         }
-        // else go forward – unless already visited, then go right instead
-        //        else if self.front_state() == &BoardState::Clear {
-        //            if !self.is_wall_to_the_right() {
-        //                self.turn_clockwise();
-        //            }
-        //        }
-        // TODO possibly more
     }
     fn state_at_current_pos(&self) -> &BoardState {
         self.board_state.get(&self.curr_pos).unwrap()
@@ -481,13 +525,38 @@ impl From<isize> for StatusCode {
 
 #[derive(Debug, Clone, PartialEq)]
 enum BoardState {
+    // phase 1: exploring
+    Unexplored,
     Clear, // implies visited
     Wall,
     OxygenSystem,
-    Unexplored,
-    // The next two are for phase 2
+    // phase 2: path finding
+    Searched,
     ShortestPath,
-    BeingSearched,
+    // phase 3: oxygenating
+    Oxygenated,
+    OxygenatedPath,
+}
+impl BoardState {
+    fn needs_path_finding(&self) -> bool {
+        match self {
+            BoardState::Clear | BoardState::OxygenSystem => true,
+            BoardState::Wall | BoardState::ShortestPath | BoardState::Searched => false,
+            BoardState::Unexplored | BoardState::Oxygenated | BoardState::OxygenatedPath => {
+                unreachable!()
+            }
+        }
+    }
+    fn needs_oxygen(&self) -> bool {
+        match self {
+            BoardState::ShortestPath | BoardState::Searched => true,
+            BoardState::OxygenSystem
+            | BoardState::Wall
+            | BoardState::Oxygenated
+            | BoardState::OxygenatedPath => false,
+            BoardState::Unexplored | BoardState::Clear => unreachable!(),
+        }
+    }
 }
 
 fn day_15_puzzle_input() -> Vec<isize> {
@@ -781,6 +850,14 @@ impl Point2D {
     }
     fn offset_by(self, x: isize, y: isize) -> Point2D {
         Point2D(self.0 + x, self.1 + y)
+    }
+    fn neighbors(&self) -> Vec<Point2D> {
+        vec![
+            self.offset_by_1_into(&MovementCommand::North),
+            self.offset_by_1_into(&MovementCommand::East),
+            self.offset_by_1_into(&MovementCommand::South),
+            self.offset_by_1_into(&MovementCommand::West),
+        ]
     }
 }
 #[derive(Debug)]
