@@ -113,10 +113,10 @@ impl ASCII {
         while let Some(output) = icc.process_int_code_with_default_input() {
             let out = CameraOutput::from(output);
             if out == CameraOutput::NewLine {
-                y -= 1;
+                y += 1;
                 x = 0;
             } else {
-                camera_output.insert(Point2D(x, y), out);
+                camera_output.insert(Point2D(x, 34 - y), out);
                 x += 1;
             }
         }
@@ -125,16 +125,10 @@ impl ASCII {
         ascii
     }
     fn mark_intersections(&mut self) {
-        let min_x = self.camera_output.keys().map(|p| p.0).min().unwrap();
-        let max_x = self.camera_output.keys().map(|p| p.0).max().unwrap();
-        let min_y = self.camera_output.keys().map(|p| p.1).min().unwrap();
-        let max_y = self.camera_output.keys().map(|p| p.1).max().unwrap();
-        println!("x: {} to {}, y: {} to {}", min_x, max_x, min_y, max_y);
-
         let mut sum = 0;
-        for y in min_y + 1..max_y {
+        for y in 1..34 {
             //            println!("y = {}, x's:", y);
-            for x in min_x + 1..max_x {
+            for x in 1..58 {
                 //                println!("{}", x);
                 let center = &Point2D(x, y);
                 if self.is_scaffold(center)
@@ -145,15 +139,8 @@ impl ASCII {
                 {
                     self.camera_output
                         .insert(*center, CameraOutput::ScaffoldCrossing);
-                    println!(
-                        "crossing ({}, {}), sum = {} += {} * {}",
-                        x,
-                        y,
-                        sum,
-                        (max_y - y),
-                        x
-                    );
-                    sum += (max_y - y) * x;
+                    //                    println!("crossing ({}, {}), sum = {}", x, y, sum);
+                    sum += y * x;
                 }
             }
         }
@@ -187,11 +174,16 @@ impl Game for ASCII {
 
         frame.clear(GREY);
         let mut mesh = Mesh::new();
+        self.camera_output
+            .iter()
+            .filter(|(_, state)| state == &&CameraOutput::EmptySpace)
+            .for_each(|(pos, _)| {
+                mesh.fill(ct.square_at(pos), Color::BLACK);
+            });
         for (pos, state) in self.camera_output.iter() {
             match state {
-                CameraOutput::Scaffold => mesh.fill(ct.square_at(pos), Color::WHITE),
+                CameraOutput::Scaffold => mesh.stroke(ct.square_at(pos), Color::WHITE, 4),
                 CameraOutput::ScaffoldCrossing => mesh.fill(ct.square_at(pos), GREEN),
-                CameraOutput::EmptySpace => mesh.fill(ct.square_at(pos), Color::BLACK),
                 CameraOutput::RobotDown => {
                     mesh.fill(ct.robot_at(pos, &MovementCommand::South), RED)
                 }
@@ -397,8 +389,8 @@ impl CoordinateTransformation {
     fn robot_at(&self, pos: &Point2D, dir: &MovementCommand) -> Shape {
         let top_left = self.point_at(pos);
         let top_right = self.point_at(&pos.offset_by(1, 0));
-        let bottom_left = self.point_at(&pos.offset_by(0, 1));
-        let bottom_right = self.point_at(&pos.offset_by(1, 1));
+        let bottom_left = self.point_at(&pos.offset_by(0, -1));
+        let bottom_right = self.point_at(&pos.offset_by(1, -1));
         let top = Point::new((top_left.x + top_right.x) / 2.0, top_left.y);
         let bottom = Point::new((bottom_left.x + bottom_right.x) / 2.0, bottom_left.y);
         let left = Point::new(top_left.x, (top_left.y + bottom_left.y) / 2.0);
