@@ -1,7 +1,7 @@
 mod intcode;
 mod point2d;
 
-use crate::intcode::IntCodeComputer;
+use crate::intcode::{IntCodeComputer, State, State::*};
 use crate::point2d::Point2D;
 use coffee::graphics::{Color, Frame, Mesh, Point, Rectangle, Shape, Window, WindowSettings};
 use coffee::load::Task;
@@ -64,35 +64,22 @@ enum CameraOutput {
     RobotFallenOff,
 }
 impl From<isize> for CameraOutput {
-    fn from(co: isize) -> Self {
-        match co {
-            35 => CameraOutput::Scaffold,       // #
-            46 => CameraOutput::EmptySpace,     // .
-            10 => CameraOutput::NewLine,        // \n (line feed)
-            94 => CameraOutput::RobotUp,        // ^
-            118 => CameraOutput::RobotDown,     // v
-            60 => CameraOutput::RobotLeft,      // <
-            62 => CameraOutput::RobotRight,     // >
-            88 => CameraOutput::RobotFallenOff, // X
-            _ => panic!("Invalid camera output number {}", co),
-        }
-    }
-}
-impl From<char> for CameraOutput {
-    fn from(c: char) -> Self {
-        match c {
-            '#' => CameraOutput::Scaffold,       // #
-            '.' => CameraOutput::EmptySpace,     // .
-            '\n' => CameraOutput::NewLine,       // \n (line feed)
-            '^' => CameraOutput::RobotUp,        // ^
-            'v' => CameraOutput::RobotDown,      // v
-            '<' => CameraOutput::RobotLeft,      // <
-            '>' => CameraOutput::RobotRight,     // >
-            'X' => CameraOutput::RobotFallenOff, // X
-            _ => {
-                println!("Unknown output '{}'", c);
-                CameraOutput::NewLine
+    fn from(i: isize) -> Self {
+        if i <= std::u8::MAX as isize {
+            let c = i as u8 as char;
+            match c {
+                '#' => CameraOutput::Scaffold,       // #
+                '.' => CameraOutput::EmptySpace,     // .
+                '\n' => CameraOutput::NewLine,       // \n (line feed)
+                '^' => CameraOutput::RobotUp,        // ^
+                'v' => CameraOutput::RobotDown,      // v
+                '<' => CameraOutput::RobotLeft,      // <
+                '>' => CameraOutput::RobotRight,     // >
+                'X' => CameraOutput::RobotFallenOff, // X
+                _ => panic!("Unknown output '{}'", c),
             }
+        } else {
+            panic!("Output value '{}' is too large for a char", i);
         }
     }
 }
@@ -101,36 +88,6 @@ struct ASCII {
     camera_output: HashMap<Point2D, CameraOutput>,
 }
 impl ASCII {
-    fn get_camera_output(&mut self) {
-        let mut x = 0;
-        let mut y = 0;
-        let mut line = vec![];
-        while let Some(output) = self.icc.process_int_code() {
-            line.push(output as u8 as char);
-
-            let out = CameraOutput::from(output as u8 as char);
-            if out == CameraOutput::NewLine {
-                y += 1;
-                x = 0;
-                print!("{}", line.into_iter().collect::<String>());
-                line = vec![];
-            } else {
-                self.camera_output.insert(Point2D::new(x, 34 - y), out);
-                x += 1;
-            }
-        }
-    }
-    fn wake_robot_and_add_inputs(&mut self) {
-        let input = &mut day_17_puzzle_input();
-        println!("Waking up robot");
-        input[0] = 2;
-        self.icc = IntCodeComputer::new(input);
-        println!("Adding inputs to queue providing inputs");
-        self.icc.add_inputs(VecDeque::from(ASCII::inputs()));
-    }
-    //    fn update(&mut self) {
-    //        self.get_camera_output();
-    //    }
     fn new() -> Self {
         let input = &mut day_17_puzzle_input();
         let icc = IntCodeComputer::new(input);
@@ -141,6 +98,25 @@ impl ASCII {
         ascii.mark_intersections();
         ascii.wake_robot_and_add_inputs();
         ascii
+    }
+    fn get_camera_output(&mut self) {
+        let mut x = 0;
+        let mut y = 0;
+        let mut line = vec![];
+        self.icc.run_until_halted();
+        for output in self.icc.outputs.clone() {
+            line.push(output as u8 as char);
+            let out = CameraOutput::from(output /*as u8 as char*/);
+            if out == CameraOutput::NewLine {
+                y += 1;
+                x = 0;
+                print!("{}", line.into_iter().collect::<String>());
+                line = vec![];
+            } else {
+                self.camera_output.insert(Point2D::new(x, 34 - y), out);
+                x += 1;
+            }
+        }
     }
     fn mark_intersections(&mut self) {
         let mut sum = 0;
@@ -161,14 +137,12 @@ impl ASCII {
         }
         println!("alignment_parameter_sum = {}", sum);
     }
-    fn is_scaffold(&self, p: &Point2D) -> bool {
-        if let Some(&CameraOutput::Scaffold) = self.camera_output.get(p) {
-            true
-        } else {
-            false
-        }
-    }
-    fn inputs() -> Vec<isize> {
+    fn wake_robot_and_add_inputs(&mut self) {
+        println!("Creating new int code computer with woken up robot");
+        let input = &mut day_17_puzzle_input();
+        input[0] = 2;
+        self.icc = IntCodeComputer::new(input);
+
         // R,8,L,12,R,8,        :A
         // R,8,L,12,R,8,        :A
         // L,10,L,10,R,8,       :B
@@ -183,32 +157,57 @@ impl ASCII {
         let fn_a = "R,8,L,12,R,8\n";
         let fn_b = "L,10,L,10,R,8\n";
         let fn_c = "L,12,L,12,L,10,R,10\n";
-        let feed = "y\n";
-        let program = format!("{}{}{}{}{}", main, fn_a, fn_b, fn_c, feed);
-        println!("program = {}", program);
-        let ascii = program.chars().map(|c| ascii(c) as isize).collect();
-        println!("ascii = {:?}", ascii);
-        ascii
-        //        let l = ascii('L');
-        //        let r = ascii('R');
-        //        let c = ascii(',');
-        //        let n = ascii('\n');
-        //        let func_A = vec![r, c, 8, c, l, c, 12, c, r, c, 8, n];
-        //        let func_B = vec![l, c, 10, c, l, c, 10, c, r, c, 8, n];
-        //        let func_C = vec![l, c, 12, c, l, c, 12, c, l, c, 10, c, r, c, 10, n];
-        //        let feed = vec![ascii('y'), n];
-        //        main.chars()
-        //            .map(|c| ascii(c))
-        //            .chain(func_A.into_iter())
-        //            .chain(func_B.into_iter())
-        //            .chain(func_C.into_iter())
-        //            .chain(feed.into_iter())
-        //            .map(|i| i as isize)
-        //            .collect()
+        let feed = "n\n";
+
+        self.run_until_waiting_for_input();
+
+        println!("Adding main");
+        self.icc.add_inputs(&ASCII::codes(main));
+        self.run_until_waiting_for_input();
+
+        self.icc.add_inputs(&ASCII::codes(fn_a));
+        self.run_until_waiting_for_input();
+
+        self.icc.add_inputs(&ASCII::codes(fn_b));
+        self.run_until_waiting_for_input();
+
+        self.icc.add_inputs(&ASCII::codes(fn_c));
+        self.run_until_waiting_for_input();
+
+        self.icc.add_inputs(&ASCII::codes(feed));
     }
-}
-fn ascii(c: char) -> u8 {
-    c as u8
+    fn run_until_waiting_for_input(&mut self) {
+        let mut line = vec![];
+        while self.icc.ptr < self.icc.instr.len() {
+            match self.icc.step() {
+                State::Idle => (),
+                State::ExpectingInput => return,
+                State::WroteOutput(output) => {
+                    let c = output as u8 as char;
+                    if c == '\n' {
+                        println!("{}", line.into_iter().collect::<String>());
+                        line = vec![];
+                    } else {
+                        line.push(c);
+                    }
+                }
+                State::Halted => (),
+            }
+        }
+    }
+    fn is_scaffold(&self, p: &Point2D) -> bool {
+        if let Some(&CameraOutput::Scaffold) = self.camera_output.get(p) {
+            true
+        } else {
+            false
+        }
+    }
+    fn codes(s: &str) -> Vec<isize> {
+        s.chars().map(|c| ASCII::code(c) as isize).collect()
+    }
+    fn code(c: char) -> u8 {
+        c as u8
+    }
 }
 
 impl Game for ASCII {
@@ -360,7 +359,7 @@ struct CoordinateTransformation {
     tile_size: f32,
 }
 impl CoordinateTransformation {
-    fn from_points(w: f32, h: f32, points: &[&Point2D]) -> Self {
+    fn from_points(width: f32, height: f32, points: &[&Point2D]) -> Self {
         let min_x = points.iter().map(|p| p.x()).min().unwrap() as f32;
         let max_x = points.iter().map(|p| p.x()).max().unwrap() as f32;
         let min_y = points.iter().map(|p| p.y()).min().unwrap() as f32;
@@ -368,19 +367,19 @@ impl CoordinateTransformation {
         let x_range = min_x..=max_x;
         let y_range = min_y..=max_y;
 
-        let board_width = (max_x - min_x) + 1.0;
-        let board_height = (max_y - min_y) + 1.0;
-        let tile_size = f32::min(w / board_width, h / board_height);
-        /*
-        println!(
-            "Board: w: {}, h: {}, x: {} to {}, y: {} to {}, tile_size: {}",
-            board_width, board_height, min_x, max_x, min_y, max_y, tile_size
-        );
-        */
+        let w_count = (max_x - min_x) + 1.0;
+        let h_count = (max_y - min_y) + 1.0;
+        let ppp = f32::min(width / w_count, height / h_count); // pixels-per-point
+
+        //        println!(
+        //            "Board: w: {}, h: {}, x: {} to {}, y: {} to {}, ppd: {}",
+        //            w_count, h_count, min_x, max_x, min_y, max_y, ppp
+        //        );
+
         CoordinateTransformation {
             x_range,
             y_range,
-            tile_size,
+            tile_size: ppp,
         }
     }
     fn square_at(&self, pos: &Point2D) -> Shape {
@@ -439,17 +438,17 @@ impl From<isize> for MovementCommand {
 }
 
 mod tests {
-    use crate::ascii;
+    use crate::ASCII;
 
     #[test]
     fn ascii_from_char() {
-        assert_eq!(ascii(','), 44);
-        assert_eq!(ascii('A'), 65);
-        assert_eq!(ascii('B'), 66);
-        assert_eq!(ascii('C'), 67);
-        assert_eq!(ascii('L'), 76);
-        assert_eq!(ascii('R'), 82);
-        assert_eq!(ascii('8'), 56);
-        assert_eq!(ascii('\n'), 10);
+        assert_eq!(ASCII::code(','), 44);
+        assert_eq!(ASCII::code('A'), 65);
+        assert_eq!(ASCII::code('B'), 66);
+        assert_eq!(ASCII::code('C'), 67);
+        assert_eq!(ASCII::code('L'), 76);
+        assert_eq!(ASCII::code('R'), 82);
+        assert_eq!(ASCII::code('8'), 56);
+        assert_eq!(ASCII::code('\n'), 10);
     }
 }

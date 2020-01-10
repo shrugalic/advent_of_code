@@ -5,12 +5,20 @@ use Op::*;
 const TEST_MODE_INPUT: isize = 1;
 const PRINT_INT_CODE_COMPUTER_OUTPUT: bool = false;
 
+pub enum State {
+    Idle,
+    ExpectingInput,
+    WroteOutput(isize),
+    Halted,
+}
+
 #[derive(Debug)]
 pub struct IntCodeComputer {
-    instr: Vec<isize>,            // program
-    ptr: usize,                   // instruction pointer
-    base: isize,                  // relative base
-    input_queue: VecDeque<isize>, // inputs to use from when needed
+    pub(crate) instr: Vec<isize>,        // program
+    pub(crate) ptr: usize,               // instruction pointer
+    base: isize,                         // relative base
+    inputs: VecDeque<isize>,             // input queue to read from when needed
+    pub(crate) outputs: VecDeque<isize>, // outputs it generated
 }
 impl IntCodeComputer {
     pub fn new(instr: &mut Vec<isize>) -> Self {
@@ -18,11 +26,12 @@ impl IntCodeComputer {
             instr: instr.to_vec(),
             ptr: 0,
             base: 0,
-            input_queue: VecDeque::new(),
+            inputs: VecDeque::new(),
+            outputs: VecDeque::new(),
         }
     }
-    pub fn add_inputs(&mut self, iq: VecDeque<isize>) {
-        self.input_queue = iq;
+    pub fn add_inputs(&mut self, iq: &Vec<isize>) {
+        self.inputs.append(&mut VecDeque::from(iq.clone()));
     }
     fn next_op_as_5_digit_string_padded_with_leading_zeroes(&self) -> String {
         let s = self.instr[self.ptr].to_string();
@@ -76,86 +85,104 @@ impl IntCodeComputer {
         self.process_int_code_with_input(TEST_MODE_INPUT)
     }
     pub fn process_int_code_with_input(&mut self, input: isize) -> Option<isize> {
-        self.input_queue.push_back(input);
-        self.process_int_code()
+        self.inputs.push_back(input);
+        self.run_until_halted()
     }
-    pub fn process_int_code(&mut self) -> Option<isize> {
-        let mut output = None;
+    pub fn run_until_halted(&mut self) -> Option<isize> {
         if self.ptr >= self.instr.len() {
             println!("ptr >= len");
         }
         while self.ptr < self.instr.len() {
-            let s = self.next_op_as_5_digit_string_padded_with_leading_zeroes();
-            let code = to_num(&s[(s.len() - 2)..s.len()]);
-            let op = Op::from_code(code);
-            let modes = Mode::extract_modes(&s);
-            let pre = format!("{:?}: {:?}", s, op);
-            match op {
-                Add | Multiply | LessThan | Equals => {
-                    let p1 = self.get_value(1, &modes[0]);
-                    let p2 = self.get_value(2, &modes[1]);
-                    let res = match op {
-                        Add => p1 + p2,
-                        Multiply => p1 * p2,
-                        LessThan => eval(p1 < p2),
-                        Equals => eval(p1 == p2),
-                        _ => unreachable!(),
-                    };
-                    //                    print!("{}({}, {})", pre, p1, p2);
-                    self.set_result(3, &modes[2], res);
-                }
-                Input => {
-                    if PRINT_INT_CODE_COMPUTER_OUTPUT {
-                        print!("{}", pre);
-                    }
-                    if let Some(input) = self.input_queue.pop_front() {
-                        println!("Consuming input {} ({})", input, input as u8 as char);
-                        self.set_result(1, &modes[0], input);
-                    } else {
-                        println!("Waiting for input!")
-                    }
-                    return None;
-                }
-                Output => {
-                    let value = self.get_value(1, &modes[0]);
-                    if PRINT_INT_CODE_COMPUTER_OUTPUT {
-                        println!("{} = {}", pre, value);
-                    }
-                    output = Some(value);
-                }
-                ShiftRelativeBase => {
-                    let shift = self.get_value(1, &modes[0]);
-                    let _old_base = self.base;
-                    self.base = self.base + shift;
-                    //                    println!("{} by {} from {} to {}", pre, shift, old_base, self.base);
-                }
-                JumpIfTrue | JumpIfFalse => {
-                    let p1 = self.get_value(1, &modes[0]);
-                    let p2 = self.get_value(2, &modes[1]);
-                    if op == JumpIfTrue && p1 != 0 || op == JumpIfFalse && p1 == 0 {
-                        self.ptr = p2 as usize;
-                        //                        println!("{} ({}) == true -> jump to {}", pre, p1, p2);
-                        continue; // jump, rather than increasing idx below
-                    }
-                    //                    println!("{} ({}) == false -> NO jump (to {})", pre, p1, p2);
-                }
-                Stop => {
-                    println!("Stopping");
-                    if PRINT_INT_CODE_COMPUTER_OUTPUT {
-                        println!("{}", pre);
-                    }
-                    break;
-                }
-            }
-            self.ptr += op.value_count();
-            if output.is_some() {
-                break;
+            match self.step() {
+                State::Idle => (),
+                State::ExpectingInput => (),
+                State::WroteOutput(out) => self.outputs.push_back(out),
+                State::Halted => return self.outputs.back().cloned(),
             }
         }
-        output
+        None
+    }
+    pub fn step(&mut self) -> State {
+        let s = self.next_op_as_5_digit_string_padded_with_leading_zeroes();
+        let code = str_to_num(&s[(s.len() - 2)..s.len()]);
+        let op = Op::from(code);
+        let modes = Mode::extract_modes(&s);
+        let pre = format!("{:?}: {:?}", s, op);
+        match op {
+            Add | Multiply | LessThan | Equals => {
+                let p1 = self.get_value(1, &modes[0]);
+                let p2 = self.get_value(2, &modes[1]);
+                let res = match op {
+                    Add => p1 + p2,
+                    Multiply => p1 * p2,
+                    LessThan => eval(p1 < p2),
+                    Equals => eval(p1 == p2),
+                    _ => unreachable!(),
+                };
+                //                    print!("{}({}, {})", pre, p1, p2);
+                self.set_result(3, &modes[2], res);
+                self.ptr += op.value_count();
+                State::Idle
+            }
+            Input => {
+                if PRINT_INT_CODE_COMPUTER_OUTPUT {
+                    print!("{}", pre);
+                }
+                if let Some(input) = self.inputs.pop_front() {
+                    println!("Consuming input {} ({})", input, input as u8 as char);
+                    self.set_result(1, &modes[0], input);
+                    self.ptr += op.value_count();
+                    State::Idle
+                } else {
+                    println!("Waiting for input, ptr = {}", self.ptr);
+                    State::ExpectingInput
+                }
+            }
+            Output => {
+                let value = self.get_value(1, &modes[0]);
+                if PRINT_INT_CODE_COMPUTER_OUTPUT {
+                    println!("{} = {}", pre, value);
+                }
+                self.ptr += op.value_count();
+                State::WroteOutput(value)
+            }
+            ShiftRelativeBase => {
+                let shift = self.get_value(1, &modes[0]);
+                let old_base = self.base;
+                self.base = self.base + shift;
+                if PRINT_INT_CODE_COMPUTER_OUTPUT {
+                    println!("{} by {} from {} to {}", pre, shift, old_base, self.base);
+                }
+                self.ptr += op.value_count();
+                State::Idle
+            }
+            JumpIfTrue | JumpIfFalse => {
+                let p1 = self.get_value(1, &modes[0]);
+                let p2 = self.get_value(2, &modes[1]);
+                if op == JumpIfTrue && p1 != 0 || op == JumpIfFalse && p1 == 0 {
+                    self.ptr = p2 as usize;
+                    if PRINT_INT_CODE_COMPUTER_OUTPUT {
+                        println!("{} ({}) == true -> jump to {}", pre, p1, p2);
+                    }
+                // Not increasing self.ptr here to actually jump
+                } else {
+                    if PRINT_INT_CODE_COMPUTER_OUTPUT {
+                        println!("{} ({}) == false -> NO jump (to {})", pre, p1, p2);
+                    }
+                    self.ptr += op.value_count();
+                }
+                State::Idle
+            }
+            Stop => {
+                if PRINT_INT_CODE_COMPUTER_OUTPUT {
+                    println!("{}", pre);
+                }
+                State::Halted
+            }
+        }
     }
 }
-fn to_num(s: &str) -> isize {
+fn str_to_num(s: &str) -> isize {
     s.parse::<isize>().unwrap()
 }
 fn eval(b: bool) -> isize {
@@ -168,20 +195,30 @@ fn eval(b: bool) -> isize {
 
 #[derive(PartialEq, Debug)]
 enum Op {
-    Add,
-    Multiply,
-    Input,
-    Output,
-    JumpIfTrue,
-    JumpIfFalse,
-    LessThan,
-    Equals,
-    ShiftRelativeBase,
-    Stop,
+    Add = 1,
+    Multiply = 2,
+    Input = 3,
+    Output = 4,
+    JumpIfTrue = 5,
+    JumpIfFalse = 6,
+    LessThan = 7,
+    Equals = 8,
+    ShiftRelativeBase = 9,
+    Stop = 99,
 }
 
 impl Op {
-    fn from_code(code: isize) -> Op {
+    fn value_count(&self) -> usize {
+        match self {
+            Add | Multiply | LessThan | Equals => 4,
+            JumpIfTrue | JumpIfFalse => 3,
+            Input | Output | ShiftRelativeBase => 2,
+            Stop => 1,
+        }
+    }
+}
+impl From<isize> for Op {
+    fn from(code: isize) -> Self {
         match code {
             1 => Add,
             2 => Multiply,
@@ -196,31 +233,25 @@ impl Op {
             _ => panic!("Unknown Op code {:?}", code),
         }
     }
-    fn value_count(&self) -> usize {
-        match self {
-            Add | Multiply | LessThan | Equals => 4,
-            JumpIfTrue | JumpIfFalse => 3,
-            Input | Output | ShiftRelativeBase => 2,
-            Stop => 1,
-        }
-    }
 }
 
 #[derive(Debug, PartialEq)]
 enum Mode {
-    Position,
-    Immediate,
-    Relative,
+    Position = 0,
+    Immediate = 1,
+    Relative = 2,
 }
 impl Mode {
     fn extract_modes(s: &str) -> Vec<Mode> {
         vec![
-            Mode::from_code(to_num(&s[2..=2])),
-            Mode::from_code(to_num(&s[1..=1])),
-            Mode::from_code(to_num(&s[0..=0])),
+            Mode::from(str_to_num(&s[2..=2])),
+            Mode::from(str_to_num(&s[1..=1])),
+            Mode::from(str_to_num(&s[0..=0])),
         ]
     }
-    fn from_code(code: isize) -> Mode {
+}
+impl From<isize> for Mode {
+    fn from(code: isize) -> Self {
         match code {
             0 => Position,
             1 => Immediate,
@@ -231,7 +262,7 @@ impl Mode {
 }
 
 mod tests {
-    use crate::intcode::{IntCodeComputer, Op, Op::*};
+    use crate::intcode::{IntCodeComputer, Op};
 
     #[test]
     fn test_autoextend_on_get() {
@@ -248,7 +279,6 @@ mod tests {
         assert_eq!(icc.get(0), 123);
     }
 
-    #[ignore]
     #[test]
     fn day9_part1_example1() {
         let mut icc = IntCodeComputer::new(&mut vec![
@@ -313,7 +343,6 @@ mod tests {
         let mut icc = IntCodeComputer::new(&mut day9_puzzle_input());
         assert_eq!(icc.process_int_code_with_input(1), Some(3518157894));
     }
-    #[ignore]
     #[test]
     fn day9_part2() {
         let mut icc = IntCodeComputer::new(&mut day9_puzzle_input());
@@ -379,8 +408,17 @@ mod tests {
     // day 5 below
 
     #[test]
-    fn op_from_int_code() {
-        assert_eq!(Add, Op::from_code(1));
+    fn ops_from_int_code() {
+        assert_eq!(Op::Add, Op::from(1));
+        assert_eq!(Op::Multiply, Op::from(2));
+        assert_eq!(Op::Input, Op::from(3));
+        assert_eq!(Op::Output, Op::from(4));
+        assert_eq!(Op::JumpIfTrue, Op::from(5));
+        assert_eq!(Op::JumpIfFalse, Op::from(6));
+        assert_eq!(Op::LessThan, Op::from(7));
+        assert_eq!(Op::Equals, Op::from(8));
+        assert_eq!(Op::ShiftRelativeBase, Op::from(9));
+        assert_eq!(Op::Stop, Op::from(99));
     }
 
     #[test]
