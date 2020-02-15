@@ -8,3 +8,5 @@ edition = "2018"
 
 [dependencies]
 coffee = { version = "0.3.2", features = ["opengl"] }
+itertools = "0.8.2"
+rayon = "1.3.0"

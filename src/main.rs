@@ -1,8 +1,12 @@
 use coffee::graphics::{Color, Frame, Mesh, Point, Rectangle, Shape, Window, WindowSettings};
 use coffee::load::Task;
 use coffee::{Game, Result, Timer};
+use itertools::Itertools;
+use rayon::prelude::*;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt;
 use std::fmt::{Display, Formatter};
+use std::iter::FromIterator;
 use std::ops::RangeInclusive;
 
 const RED: Color = Color {
@@ -50,7 +54,7 @@ impl Game for UndergroundVault {
 
     fn load(_window: &Window) -> Task<UndergroundVault> {
         // Load your game assets here. Check out the `load` module!
-        Task::new(|| UndergroundVault::from(day_18_puzzle_input()))
+        Task::new(|| UndergroundVault::from(day_18_larger_example_3()))
     }
 
     fn draw(&mut self, frame: &mut Frame, _timer: &Timer) {
@@ -73,12 +77,22 @@ impl Game for UndergroundVault {
                 Obj::Door(_) => mesh.fill(ct.square_at(pos), RED),
             });
 
+        self.ongoing
+            .iter()
+            .for_each(|search| mesh.fill(ct.square_at(&search.start), BLUE));
+
         mesh.draw(&mut frame.as_target());
     }
 
     fn update(&mut self, _window: &Window) {
-        self.explore();
-        std::thread::sleep(std::time::Duration::from_millis(1));
+        if !self.ongoing.is_empty() {
+            println!("\n\nRunning {} ongoing searches", self.ongoing.len());
+            self.run_searches();
+            if self.ongoing.len() > 300_000 {
+                panic!("Breaking because of too many searches()");
+            }
+        }
+        std::thread::sleep(std::time::Duration::from_millis(1_000));
     }
 }
 
@@ -183,6 +197,12 @@ impl Obj {
 }
 #[derive(PartialEq, Debug)]
 struct Map {
+    // map[y[x]] = object
+    // Example:
+    // x: 012345789
+    // y: 0 [[#########],
+    // y: 1  [#b.A.@.a#],
+    // y: 2  [#########]]
     map: Vec<Vec<Obj>>,
     width: usize,
     height: usize,
@@ -200,11 +220,15 @@ impl From<&str> for Map {
     }
 }
 impl Map {
-    fn can_be_moved_onto(&self, pos: &Vec2, keys: &[char]) -> bool {
-        match self.object_at(pos) {
-            Obj::Player | Obj::EmptySpace | Obj::Key(_) => true,
-            Obj::Wall => false,
-            d @ Obj::Door(_) => keys.contains(&d.matching_key()),
+    fn can_be_moved_onto_with_optional_key(&self, pos: &Vec2) -> (bool, Option<char>) {
+        if pos.x >= 0 && pos.y >= 0 && pos.x < self.width && pos.y < self.height {
+            match self.object_at(pos) {
+                Obj::Player | Obj::EmptySpace | Obj::Key(_) => (true, None),
+                Obj::Wall => (false, None),
+                door @ Obj::Door(_) => (true, Some(door.matching_key())),
+            }
+        } else {
+            (false, None)
         }
     }
     fn player_pos(&self) -> Vec2 {
@@ -222,6 +246,13 @@ impl Map {
     }
     fn object_at(&self, pos: &Vec2) -> &Obj {
         &self.map[pos.y][pos.x]
+    }
+    fn key_at(&self, pos: &Vec2) -> Option<char> {
+        if let Obj::Key(key) = self.object_at(pos) {
+            Some(*key)
+        } else {
+            None
+        }
     }
     fn key_count(&self) -> usize {
         self.map
@@ -249,200 +280,415 @@ impl Map {
             .map(|(pos, _obj)| pos)
             .collect()
     }
+    fn sorted_keys(&self) -> Vec<char> {
+        let mut keys: Vec<char> = self
+            .point_obj_pairs()
+            .into_iter()
+            .filter_map(|(_pos, obj)| match obj {
+                Obj::Key(key) => Some(key),
+                _ => None,
+            })
+            .collect();
+        keys.sort();
+        keys
+    }
+    fn key_set(&self) -> BTreeSet<char> {
+        BTreeSet::from_iter(self.sorted_keys())
+    }
+    fn pos_of_key(&self, wanted: char) -> Vec2 {
+        self.point_obj_pairs()
+            .iter()
+            .find_map(|(pos, obj)| {
+                if let Obj::Key(key) = obj {
+                    if *key == wanted {
+                        Some(pos.clone())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .expect(&format!("Map contains no key '{}'", wanted))
+    }
+    /// Distances from the player/all keys to all other keys
+    fn all_distances(&self) -> BTreeMap<(char, char), usize> {
+        // Distances from a key or player a to another key b.
+        // The two chars are different (distance to self is 0)
+        // The first char is smaller than the second char alphabetically to
+        // half the map size, as distance ('a', 'b') == dist('b', 'a')
+        let mut distances: BTreeMap<(char, char), usize> = BTreeMap::new();
+
+        let mut source = '@';
+        let mut keys_wanted = self.key_set();
+        while !keys_wanted.is_empty() {
+            println!("Distances from {} to {:?}", source, keys_wanted);
+            for (target, dist) in self.distances(source, &keys_wanted) {
+                //                println!(" to {}: {}", target, dist);
+                distances.insert((source, target), dist);
+            }
+            // Remove first element from the set (is there no better method?) to be the next source
+            source = keys_wanted.iter().next().cloned().unwrap();
+            keys_wanted.take(&source).unwrap();
+        }
+        distances
+    }
+    /// Distances from the player/a key to some other keys
+    fn distances(&self, source: char, keys_wanted: &BTreeSet<char>) -> Vec<(char, usize)> {
+        let mut distances: Vec<(char, usize)> = vec![];
+        let mut keys_found = BTreeSet::new();
+        let mut path_lengths: HashMap<Vec2, usize> = HashMap::new();
+
+        let start = if source == '@' {
+            self.player_pos()
+        } else {
+            self.pos_of_key(source)
+        };
+        let mut explorers: Vec<Explorer> = vec![Explorer {
+            start,
+            pos: start,
+            path_len: 0,
+            keys: BTreeSet::new(),
+        }];
+        while !explorers.is_empty() {
+            // Move current explorers to unexplored neighboring positions
+            explorers = explorers
+                .par_iter() // Note: Not worth it for puzzle input (3.1s parallel vs 2.5s serial)
+                .flat_map(|explorer| explorer.next_explorers(self, &path_lengths, false))
+                .collect();
+            // TODO handle (store?) required keys
+            // Update path_lengths, found_keys, distances, and remove duplicate explorers
+            explorers = explorers
+                .drain(0..)
+                .filter(|explorer| {
+                    // println!("{:?}", explorer);
+                    // Only keep better ones (this gets rid of duplicates as well)
+                    if !path_lengths.contains_key(&explorer.pos) {
+                        path_lengths.insert(explorer.pos, explorer.path_len);
+                        match self.object_at(&explorer.pos) {
+                            Obj::Key(key) => {
+                                if keys_wanted.contains(key) {
+                                    keys_found.insert(*key);
+                                    distances.push((*key, explorer.path_len));
+                                }
+                            }
+                            Obj::Door(door) => {}
+                            _ => {}
+                        }
+                        true
+                    } else {
+                        // Position already visited by an earlier (=faster) explorer
+                        false
+                    }
+                })
+                .collect();
+            // Are we done yet?
+            if keys_found == *keys_wanted {
+                return distances;
+            }
+        }
+        distances
+    }
 }
-#[derive(PartialEq, Debug)]
+
+#[derive(Debug)]
+struct Search {
+    start: Vec2,          // Starting position
+    keys: BTreeSet<char>, // Collected keys
+    path_len: usize,      // Total path lengths
+}
+impl From<Vec2> for Search {
+    fn from(start: Vec2) -> Self {
+        Search {
+            start,
+            keys: BTreeSet::new(),
+            path_len: 0,
+        }
+    }
+}
+impl From<Explorer> for Search {
+    fn from(explorer: Explorer) -> Self {
+        Search {
+            start: explorer.pos,
+            keys: explorer.keys,
+            path_len: explorer.path_len,
+        }
+    }
+}
+impl From<&Map> for Search {
+    fn from(map: &Map) -> Self {
+        Search {
+            start: map.player_pos(),
+            keys: BTreeSet::new(),
+            path_len: 0,
+        }
+    }
+}
+impl From<&UndergroundVault> for Search {
+    fn from(vault: &UndergroundVault) -> Self {
+        Search::from(&vault.map)
+    }
+}
+impl Search {
+    // Return new Searches that can be started from keys reachable by this search
+    fn new_searches_from_reachable_keys(&self, map: &Map) -> Vec<Search> {
+        //        println!(
+        //            "\nStarting new search from {} with path_len {} and keys {:?}",
+        //            self.start, self.path_len, self.keys
+        //        );
+        let mut path_lengths: HashMap<Vec2, usize> = HashMap::new();
+        let mut steps = 0;
+        let mut next_searches: Vec<Search> = vec![];
+        let mut explorers: Vec<Explorer> = vec![Explorer::from(self)];
+        while !explorers.is_empty() {
+            let (finished, searching) = self.expand_search(explorers, map, &mut path_lengths);
+            next_searches.extend(
+                finished
+                    .into_iter()
+                    .map(|on_key| Search {
+                        start: on_key.pos,
+                        keys: on_key.keys,
+                        path_len: self.path_len + on_key.path_len,
+                    })
+                    .collect::<Vec<Search>>(),
+            );
+            explorers = searching;
+
+            steps += 1;
+            if steps > 40 {
+                //                println!("breaking. explorers = {:?}", explorers);
+                //                return next_searches;
+            }
+        }
+        next_searches
+    }
+    fn expand_search(
+        &self,
+        explorers: Vec<Explorer>,
+        map: &Map,
+        path_lengths: &mut HashMap<Vec2, usize>,
+    ) -> (
+        Vec<Explorer>, // Finished (found a key)
+        Vec<Explorer>, // Still searching for a key
+    ) {
+        //        println!("Expanding key search with {} explorers.", explorers.len()); //, collectors);
+        let mut finished: Vec<Explorer> = vec![];
+        let mut searching: Vec<Explorer> = vec![];
+
+        for mut explorer in explorers {
+            if !path_lengths.contains_key(&explorer.pos) {
+                path_lengths.insert(explorer.pos, explorer.path_len);
+                if let Some(key) = explorer.new_key_at_current_pos(&map) {
+                    // This explorer reached a key and is finished
+                    //                    println!("New key {} at pos {:?}", key, explorer.pos);
+                    explorer.keys.insert(key);
+                    finished.push(explorer);
+                } else {
+                    // Continue searching for keys
+                    searching.extend(
+                        explorer
+                            .next_explorers(map, &path_lengths, true)
+                            .drain(0..)
+                            .filter(|next| // only better ones
+                                        !path_lengths.contains_key(&next.pos))
+                            .collect::<Vec<Explorer>>(),
+                    )
+                }
+            }
+            // Else position already visited by an earlier/faster explorer
+        }
+        (finished, searching)
+    }
+}
+#[derive(Debug)]
 struct UndergroundVault {
-    /// A map of the tunnels
-    // map[y[x]] = object
-    // Example:
-    // x: 012345789
-    // y: 0 [[#########],
-    // y: 1  [#b.A.@.a#],
-    // y: 2  [#########]]
-    map: Map,
-    explorer: Explorer,
+    map: Map,              // Map of the tunnels
+    ongoing: Vec<Search>,  // Ongoing searches
+    complete: Vec<Search>, // Complete searches
 }
 impl From<&str> for UndergroundVault {
     fn from(input: &str) -> Self {
         let map = Map::from(input);
-        let explorer = Explorer::initial(map.player_pos());
-        UndergroundVault { map, explorer }
+        let search = Search::from(&map);
+        UndergroundVault {
+            map,
+            ongoing: vec![search],
+            complete: vec![],
+        }
     }
 }
 impl From<Map> for UndergroundVault {
     fn from(map: Map) -> Self {
-        let explorer = Explorer::initial(map.player_pos());
-        UndergroundVault { map, explorer }
-    }
-}
-impl Map {
-    fn set(&mut self, pos: Vec2, obj: Obj) {
-        self.map[pos.y][pos.x] = obj;
+        let search = Search::from(&map);
+        UndergroundVault {
+            map,
+            ongoing: vec![search],
+            complete: vec![],
+        }
     }
 }
 impl UndergroundVault {
-    fn move_to_keys_with(&self, start: &Explorer) -> Vec<Explorer> {
-        let mut explorers_on_keys: Vec<Explorer> = vec![];
-        let mut explorers: Vec<Explorer> = vec![start.clone()];
-        while !explorers.is_empty() {
-            // println!("explorers = {}", explorers.len());
-            let mut next_explorers: Vec<Explorer> = vec![];
-            explorers.drain(0..).for_each(|mut explorer| {
-                if let Some(key) = explorer.new_key_at_current_pos(&self.map) {
-                    // println!("New key {} at pos {:?}", key, pf.pos);
-                    explorer.keys.push(key);
-                    explorers_on_keys.push(explorer);
-                } else {
-                    self.possible_next_positions(&explorer)
-                        .drain(0..)
-                        .for_each(|next_explorer| next_explorers.push(next_explorer))
-                }
-            });
-            explorers.extend(next_explorers);
+    /// Search repeatedly until all keys are collected
+    fn shortest_path_collecting_all_keys(&mut self) -> usize {
+        while !self.ongoing.is_empty() {
+            self.run_searches();
         }
-        explorers_on_keys
-    }
-    fn possible_next_positions(&self, explorer: &Explorer) -> Vec<Explorer> {
-        explorer
-            .reachable_positions(&self.map)
-            .into_iter()
-            .filter(|next_pos| self.map.includes(&next_pos) && !explorer.just_visited(&next_pos))
-            .map(|next_pos| explorer.visit(next_pos))
-            .collect()
-    }
-    fn explore(&mut self) {
-        let mut explorers_on_keys = self.move_to_keys_with(&self.explorer);
-        if !explorers_on_keys.is_empty() {
-            self.explorer = explorers_on_keys.remove(0);
-
-            // println!("{:?}", self.explorer);
-
-            // Move player the to the key position, replacing the key
-            let curr_path = self.explorer.curr_path();
-            let player_pos = curr_path[0];
-            // println!("player_pos = {:?}", player_pos);
-            self.map.set(player_pos, Obj::EmptySpace);
-
-            let key_pos = curr_path.last().unwrap();
-            // println!("key_pos = {:?}", key_pos);
-
-            let key = self.map.object_at(key_pos);
-            // println!("key = {:?}", key);
-            // remove the corresponding door
-            if let Some((door_pos, _door)) = self
-                .map
-                .point_obj_pairs()
-                .iter()
-                .find(|(_pos, obj)| obj == &Obj::Door(key.matching_door()))
-            {
-                // println!("door_pos = {:?}", door_pos);
-                self.map.set(*door_pos, Obj::EmptySpace);
-            } else {
-                // println!("door for key {:?} not found", key);
-            }
-
-            self.map.set(*key_pos, Obj::Player);
-
-            self.explorer.paths.push(vec![*key_pos]); // Start of next leg
-        } else {
-            println!("All keys found");
-        }
-    }
-    fn shortest_path_collecting_all_keys(&self) -> usize {
-        let key_count = self.map.key_count();
-        // println!("key count = {}", key_count);
-        let mut finished_explorers = vec![];
-
-        let mut explorers_on_keys = self.move_to_keys_with(&self.explorer);
-        while !explorers_on_keys.is_empty() {
-            let mut next_explorers = vec![];
-            explorers_on_keys.drain(0..).for_each(|mut explorer| {
-                // println!("{}/{} keys {:?}", explorer.keys.len(), key_count, explorer);
-                if explorer.keys.len() == key_count {
-                    finished_explorers.push(explorer);
-                } else {
-                    explorer
-                        .paths
-                        .push(vec![*explorer.curr_path().last().unwrap()]); // Start of next leg
-                    let new_explorers = self.move_to_keys_with(&explorer);
-                    // println!("New explorers = {:?}", new_explorers);
-                    next_explorers.extend(new_explorers);
-                }
-            });
-            explorers_on_keys = next_explorers;
-        }
-        println!("Finished with {} explorers", finished_explorers.len());
-        let shortest = finished_explorers
+        println!("Finished with {} searches", self.complete.len());
+        let shortest = self
+            .complete
             .iter()
-            .min_by_key(|explorer| explorer.path_length())
+            .min_by_key(|search| search.path_len)
             .unwrap();
         // println!("Shortest = {:?}", shortest);
-        shortest.path_length() - shortest.paths.len() // Don't count the starting position for each leg
+        shortest.path_len
     }
-    fn initial_explorer(&self) -> Explorer {
-        Explorer::initial(self.map.player_pos())
+    fn run_searches(&mut self) {
+        let key_count = self.map.key_count();
+        // println!("key count = {}", key_count);
+        // Next line avoids "cannot borrow `self` as immutable because it is also borrowed as mutable"
+        let map = &self.map;
+        // Next line avoids "closure requires unique access to `self` but it is already borrowed"
+        let mut complete = vec![];
+        let mut ongoing: Vec<Search> = self
+            .ongoing
+            .drain(0..)
+            .flat_map(|curr| curr.new_searches_from_reachable_keys(map))
+            .filter_map(|next| {
+                if next.keys.len() == key_count {
+                    println!("Search finished with length {}", next.path_len);
+                    complete.push(next);
+                    None
+                } else {
+                    // ongoing
+                    Some(next)
+                }
+            })
+            .collect();
+        self.complete.extend(complete);
+        ongoing.sort_unstable_by_key(|s| s.start);
+        //        println!("\n{} ongoing searches:", ongoing.len());
+        let unmerged_len = ongoing.len();
+        ongoing
+            .iter()
+            .take(30)
+            .for_each(|s| println!("{}, {:?}, {}", s.start, s.keys, s.path_len));
+
+        let merged: Vec<Search> = ongoing
+            .into_iter()
+            .coalesce(|prev, curr| {
+                if prev.start == curr.start && prev.keys == curr.keys {
+                    if prev.path_len <= curr.path_len {
+                        Ok(prev)
+                    } else {
+                        Ok(curr)
+                    }
+                } else {
+                    Err((prev, curr))
+                }
+            })
+            .collect();
+        println!(
+            "\n{} merged (from {}) ongoing searches:",
+            merged.len(),
+            unmerged_len
+        );
+        //        merged
+        //            .iter()
+        //            .take(10)
+        //            .for_each(|s| println!("{}, {:?}, {}", s.start, s.keys, s.path_len));
+
+        self.ongoing = merged;
     }
 }
 
 #[derive(Debug, PartialEq, Clone)]
+/// Key collectors
 struct Explorer {
-    pos: Vec2,        // Current position
-    paths: Vec<Path>, // Key collection paths. Last one is current search path, may be incomplete
-    keys: Vec<char>,  // Collected keys
+    start: Vec2,          // Starting pos
+    pos: Vec2,            // Current position
+    path_len: usize,      // Path length
+    keys: BTreeSet<char>, // Collected keys
+}
+impl From<&Search> for Explorer {
+    fn from(search: &Search) -> Self {
+        Explorer {
+            start: search.start,
+            pos: search.start,
+            path_len: 0,
+            keys: search.keys.clone(),
+        }
+    }
 }
 impl Explorer {
     fn initial(pos: Vec2) -> Self {
-        let paths = vec![vec![pos]];
-        let keys = vec![];
-        Explorer { pos, keys, paths }
-    }
-    fn curr_path(&self) -> Path {
-        self.paths.last().unwrap().clone()
-    }
-    fn visit(&self, pos: Vec2) -> Explorer {
-        let mut paths = self.paths.clone();
-        paths.last_mut().unwrap().push(pos);
-        let keys = self.keys.clone();
-        Explorer { pos, paths, keys }
-    }
-    fn just_visited(&self, pos: &Vec2) -> bool {
-        self.curr_path().contains(pos)
-    }
-    fn reachable_positions(&self, map: &Map) -> Vec<Vec2> {
-        let mut dirs = vec![];
-        let pos = &self.pos;
-        let keys = &self.keys;
-        if pos.x + 1 < map.width && map.can_be_moved_onto(&pos.offset_by(1, 0), keys) {
-            dirs.push(Vec2::new(pos.x + 1, pos.y));
+        Explorer {
+            start: pos,
+            pos,
+            path_len: 0,
+            keys: BTreeSet::new(),
         }
-        if pos.y + 1 < map.height && map.can_be_moved_onto(&pos.offset_by(0, 1), keys) {
-            dirs.push(Vec2::new(pos.x, pos.y + 1));
-        }
-        if pos.x > 0 && map.can_be_moved_onto(&pos.offset_by(-1, 0), keys) {
-            dirs.push(Vec2::new(pos.x - 1, pos.y));
-        }
-        if pos.y > 0 && map.can_be_moved_onto(&pos.offset_by(0, -1), keys) {
-            dirs.push(Vec2::new(pos.x, pos.y - 1));
-        }
-        dirs
     }
-    fn path_length(&self) -> usize {
-        self.paths.iter().map(|path| path.len()).sum()
+    fn new_explorer_at(&self, pos: Vec2) -> Explorer {
+        Explorer {
+            start: self.start,
+            pos,
+            path_len: self.path_len + 1,
+            keys: self.keys.clone(),
+        }
+    }
+    fn reachable_positions(&self, map: &Map) -> Vec<(Vec2, Option<char>)> {
+        let cross_positions = vec![
+            self.pos.offset_by(1, 0),
+            self.pos.offset_by(0, 1),
+            self.pos.offset_by(-1, 0),
+            self.pos.offset_by(0, -1),
+        ];
+        cross_positions
+            .into_iter()
+            .filter_map(|pos| match map.can_be_moved_onto_with_optional_key(&pos) {
+                (false, _) => None,
+                (true, key) => Some((pos, key)),
+            })
+            .collect()
     }
     fn new_key_at_current_pos(&self, map: &Map) -> Option<char> {
-        if let Obj::Key(key) = map.object_at(&Vec2::new(self.pos.x, self.pos.y)) {
-            if self.keys.contains(&key) {
-                None
-            } else {
-                Some(*key)
+        if let Some(key) = map.key_at(&self.pos) {
+            if !self.keys.contains(&key) {
+                return Some(key);
             }
-        } else {
-            None
         }
+        None
+    }
+    fn next_explorers(
+        &self,
+        map: &Map,
+        path_lengths: &HashMap<Vec2, usize>,
+        check_keys: bool,
+    ) -> Vec<Explorer> {
+        self.reachable_positions(map)
+            .into_iter()
+            .filter_map(|(next_pos, optional_key)| match optional_key {
+                None => Some(self.new_explorer_at(next_pos)),
+                Some(required_key) => {
+                    if check_keys {
+                        if self.keys.contains(&required_key) {
+                            Some(self.new_explorer_at(next_pos))
+                        } else {
+                            None
+                        }
+                    } else {
+                        let mut next = self.new_explorer_at(next_pos);
+                        next.keys.insert(required_key);
+                        Some(next)
+                    }
+                }
+            })
+            .filter(|next| map.includes(&next.pos) && !path_lengths.contains_key(&next.pos))
+            .collect()
     }
 }
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord)]
 struct Vec2 {
     x: usize,
     y: usize,
@@ -463,7 +709,6 @@ impl Display for Vec2 {
         write!(f, "({}, {})", self.x, self.y)
     }
 }
-type Path = Vec<Vec2>;
 
 fn day_18_example_1() -> &'static str {
     "#########
@@ -471,7 +716,7 @@ fn day_18_example_1() -> &'static str {
 #########"
 }
 
-fn day_18_example_2() -> &'static str {
+fn day_18_larger_example_1() -> &'static str {
     "########################
 #f.D.E.e.C.b.A.@.a.B.c.#
 ######################.#
@@ -479,7 +724,7 @@ fn day_18_example_2() -> &'static str {
 ########################"
 }
 
-fn day_18_example_3() -> &'static str {
+fn day_18_larger_example_2() -> &'static str {
     "########################
 #...............b.C.D.f#
 #.######################
@@ -487,7 +732,7 @@ fn day_18_example_3() -> &'static str {
 ########################"
 }
 
-fn day_18_example_4() -> &'static str {
+fn day_18_larger_example_3() -> &'static str {
     "#################
 #i.G..c...e..H.p#
 ########.########
@@ -498,8 +743,15 @@ fn day_18_example_4() -> &'static str {
 #l.F..d...h..C.m#
 #################"
 }
+fn rotated_h_map() -> &'static str {
+    "#########
+#eDa.bAf#
+####@####
+#gCc.dBh#
+#########"
+}
 
-fn day_18_example_5() -> &'static str {
+fn day_18_larger_example_4() -> &'static str {
     "########################
 #@..............ac.GI.b#
 ###d#e#f################
@@ -514,6 +766,30 @@ fn challenging_input() -> &'static str {
 #.B..@.###
 #...######
 ##########"
+}
+
+fn almost_empty_map() -> &'static str {
+    "##########
+#a.......#
+#........#
+#........#
+#........#
+#........#
+#........#
+#........#
+#.......@#
+##########"
+}
+fn short_and_long_way() -> &'static str {
+    "#########
+#a......#
+#.#####.#
+#.#.....#
+#.#.#####
+#.#.....#
+#.#####.#
+#......@#
+#########"
 }
 
 fn day_18_puzzle_input() -> &'static str {
@@ -601,9 +877,13 @@ fn day_18_puzzle_input() -> &'static str {
 }
 mod tests {
     use crate::{
-        challenging_input, day_18_example_1, day_18_example_2, day_18_example_3, day_18_example_4,
-        day_18_example_5, day_18_puzzle_input, Explorer, Map, Obj, UndergroundVault, Vec2,
+        almost_empty_map, challenging_input, day_18_example_1, day_18_larger_example_1,
+        day_18_larger_example_2, day_18_larger_example_3, day_18_larger_example_4,
+        day_18_puzzle_input, rotated_h_map, short_and_long_way, Explorer, Map, Obj, Search,
+        UndergroundVault, Vec2,
     };
+    use std::collections::{BTreeMap, BTreeSet, HashSet};
+    use std::iter::FromIterator;
 
     #[test]
     fn object_from_char() {
@@ -663,44 +943,58 @@ a@A
     fn player_pos() {
         assert_eq!(simple_3x3_map().player_pos(), Vec2::new(1, 1));
     }
-
     #[test]
-    fn reachable_positions_without_key() {
-        let vault = simple_3x3_map();
+    fn need_key_to_reach_position_with_door() {
+        let start = Vec2::new(1, 1);
         assert_eq!(
-            Explorer::initial(vault.player_pos()).reachable_positions(&vault),
-            vec![Vec2::new(0, 1)]
+            Explorer {
+                start,
+                pos: start,
+                path_len: 0,
+                keys: set_with_key_a()
+            }
+            .reachable_positions(&simple_3x3_map()),
+            vec![(Vec2::new(2, 1), Some('a')), (Vec2::new(0, 1), None)]
         );
     }
-    #[test]
-    fn reachable_positions_with_key() {
-        let vault = simple_3x3_map();
-        let pos = Vec2::new(1, 1);
-        let paths = vec![vec![]];
-        let keys = vec!['a'];
-        assert_eq!(
-            Explorer { pos, paths, keys }.reachable_positions(&vault),
-            vec![Vec2::new(2, 1), Vec2::new(0, 1)]
-        );
-    }
-
-    #[test]
-    fn reachable_key_path_simple() {
-        let vault = UndergroundVault::from(simple_3x3_map());
-        assert_eq!(
-            vault.move_to_keys_with(&vault.initial_explorer())[0].curr_path(),
-            vec![Vec2::new(1, 1), Vec2::new(0, 1)]
-        );
+    fn set_with_key_a() -> BTreeSet<char> {
+        let mut keys = BTreeSet::new();
+        keys.insert('a');
+        keys
     }
     #[test]
-    fn reachable_key_path_example_1() {
+    fn next_searches_simple() {
+        let map = simple_3x3_map();
+        let next = &Search::from(&map).new_searches_from_reachable_keys(&map)[0];
+        assert_eq!(next.path_len, 1);
+    }
+    #[test]
+    fn next_searches_example_1() {
         let vault = UndergroundVault::from(day_18_example_1());
         assert_eq!(vault.map.player_pos(), Vec2::new(5, 1));
-        assert_eq!(
-            vault.move_to_keys_with(&vault.initial_explorer())[0].curr_path(),
-            vec![Vec2::new(5, 1), Vec2::new(6, 1), Vec2::new(7, 1)]
-        );
+        let next = &Search::from(&vault).new_searches_from_reachable_keys(&vault.map)[0];
+        assert_eq!(next.path_len, 2);
+        assert_eq!(next.keys, set_with_key_a());
     }
+
+    #[test]
+    fn search_almost_empty_map() {
+        let vault = UndergroundVault::from(almost_empty_map());
+        assert_eq!(vault.map.player_pos(), Vec2::new(8, 8));
+        let next = &Search::from(&vault).new_searches_from_reachable_keys(&vault.map)[0];
+        assert_eq!(next.path_len, 14);
+        assert_eq!(next.keys, set_with_key_a());
+    }
+
+    #[test]
+    fn search_short_and_long_way() {
+        let vault = UndergroundVault::from(short_and_long_way());
+        assert_eq!(vault.map.player_pos(), Vec2::new(7, 7));
+        let next = &Search::from(&vault).new_searches_from_reachable_keys(&vault.map)[0];
+        assert_eq!(next.path_len, 12);
+        assert_eq!(next.keys, set_with_key_a());
+    }
+
     #[test]
     fn collect_all_keys_simple() {
         assert_eq!(
@@ -711,8 +1005,8 @@ a@A
     #[test]
     fn can_be_moved_onto_example_1() {
         assert_eq!(
-            Map::from(day_18_example_1()).can_be_moved_onto(&Vec2::new(3, 1), &vec!['a']),
-            true
+            Map::from(day_18_example_1()).can_be_moved_onto_with_optional_key(&Vec2::new(3, 1)),
+            (true, Some('a'))
         );
     }
     #[test]
@@ -723,30 +1017,31 @@ a@A
         );
     }
     #[test]
-    fn collect_all_keys_example_2() {
+    fn collect_all_keys_larger_example_1() {
         assert_eq!(
-            UndergroundVault::from(day_18_example_2()).shortest_path_collecting_all_keys(),
+            UndergroundVault::from(day_18_larger_example_1()).shortest_path_collecting_all_keys(),
             86
         );
     }
     #[test]
-    fn collect_all_keys_example_3() {
+    fn collect_all_keys_larger_example_2() {
         assert_eq!(
-            UndergroundVault::from(day_18_example_3()).shortest_path_collecting_all_keys(),
+            UndergroundVault::from(day_18_larger_example_2()).shortest_path_collecting_all_keys(),
             132
         );
     }
+    #[ignore]
     #[test]
-    fn collect_all_keys_example_4() {
+    fn collect_all_keys_larger_example_3() {
         assert_eq!(
-            UndergroundVault::from(day_18_example_4()).shortest_path_collecting_all_keys(),
+            UndergroundVault::from(day_18_larger_example_3()).shortest_path_collecting_all_keys(),
             136
         );
     }
     #[test]
-    fn collect_all_keys_example_5() {
+    fn collect_all_keys_larger_example_4() {
         assert_eq!(
-            UndergroundVault::from(day_18_example_5()).shortest_path_collecting_all_keys(),
+            UndergroundVault::from(day_18_larger_example_4()).shortest_path_collecting_all_keys(),
             81
         );
     }
@@ -758,11 +1053,107 @@ a@A
             20
         );
     }
+    #[ignore]
     #[test]
     fn collect_all_keys_part_1() {
         assert_eq!(
             UndergroundVault::from(day_18_puzzle_input()).shortest_path_collecting_all_keys(),
             1
         );
+    }
+    #[test]
+    fn collect_all_keys_rotated_h_map() {
+        assert_eq!(
+            UndergroundVault::from(rotated_h_map()).shortest_path_collecting_all_keys(),
+            28
+        );
+    }
+    #[test]
+    fn unsorted_vec_equals() {
+        // OK then, better use a set for the keys
+        assert_ne!(vec!['g', 'c', 'i'], vec!['c', 'g', 'i']);
+    }
+    #[test]
+    fn set_equals() {
+        let mut ab = HashSet::new();
+        ab.insert('a');
+        ab.insert('b');
+        let mut ba = HashSet::new();
+        ba.insert('b');
+        ba.insert('a');
+        assert_eq!(ab, ba);
+    }
+    #[test]
+    fn ascii() {
+        assert_eq!('a' as u8, 97);
+        assert_eq!('@' as u8, 64);
+        assert_eq!(96 as char, '`');
+    }
+    #[test]
+    fn keys_rotated_h_map() {
+        let map = Map::from(rotated_h_map());
+        assert_eq!(
+            map.key_set(),
+            BTreeSet::from_iter(vec!['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].into_iter())
+        );
+    }
+    #[test]
+    fn distances_rotated_h_map() {
+        let map = Map::from(rotated_h_map());
+        let mut distances: BTreeMap<(char, char), usize> = BTreeMap::new();
+        // @
+        distances.insert(('@', 'a'), 2);
+        distances.insert(('@', 'b'), 2);
+        distances.insert(('@', 'c'), 2);
+        distances.insert(('@', 'd'), 2);
+        distances.insert(('@', 'e'), 4);
+        distances.insert(('@', 'f'), 4);
+        distances.insert(('@', 'g'), 4);
+        distances.insert(('@', 'h'), 4);
+        // a
+        distances.insert(('a', 'b'), 2);
+        distances.insert(('a', 'c'), 4);
+        distances.insert(('a', 'd'), 4);
+        distances.insert(('a', 'e'), 2);
+        distances.insert(('a', 'f'), 4);
+        distances.insert(('a', 'g'), 6);
+        distances.insert(('a', 'h'), 6);
+        // b
+        distances.insert(('b', 'c'), 4);
+        distances.insert(('b', 'd'), 4);
+        distances.insert(('b', 'e'), 4);
+        distances.insert(('b', 'f'), 2);
+        distances.insert(('b', 'g'), 6);
+        distances.insert(('b', 'h'), 6);
+        // c
+        distances.insert(('c', 'd'), 2);
+        distances.insert(('c', 'e'), 6);
+        distances.insert(('c', 'f'), 6);
+        distances.insert(('c', 'g'), 2);
+        distances.insert(('c', 'h'), 4);
+        // d
+        distances.insert(('d', 'e'), 6);
+        distances.insert(('d', 'f'), 6);
+        distances.insert(('d', 'g'), 4);
+        distances.insert(('d', 'h'), 2);
+        // e
+        distances.insert(('e', 'f'), 6);
+        distances.insert(('e', 'g'), 8);
+        distances.insert(('e', 'h'), 8);
+        // f
+        distances.insert(('f', 'g'), 8);
+        distances.insert(('f', 'h'), 8);
+        // g
+        distances.insert(('g', 'h'), 6);
+
+        assert_eq!(map.all_distances(), distances)
+    }
+    // Feasibility check only. It takes less than 2 seconds, which is acceptable.
+    #[ignore]
+    #[test]
+    fn distances_puzzle_input() {
+        let map = Map::from(day_18_puzzle_input());
+        let distances: BTreeMap<(char, char), usize> = BTreeMap::new();
+        assert_eq!(map.all_distances(), distances)
     }
 }
