@@ -196,6 +196,48 @@ impl Obj {
     }
 }
 #[derive(PartialEq, Debug)]
+struct Graph {
+    distances: BTreeMap<(char, char), usize>,
+    req_keys: BTreeMap<(char, char), BTreeSet<char>>,
+    keys: BTreeSet<char>,
+}
+impl From<Map> for Graph {
+    fn from(map: Map) -> Self {
+        let (distances, req_keys) = map.all_distances_and_keys();
+        let mut keys = BTreeSet::from_iter(
+            distances
+                .keys()
+                .flat_map(|(a, b)| vec![*a, *b])
+                .filter(|&a| a != '@'),
+        );
+        Graph {
+            distances,
+            req_keys,
+            keys,
+        }
+    }
+}
+impl From<&str> for Graph {
+    fn from(input: &str) -> Self {
+        Graph::from(Map::from(input))
+    }
+}
+impl Graph {
+    // nop
+    fn keys_other_than(&self, key: &char) -> BTreeSet<char> {
+        BTreeSet::from_iter(self.keys.iter().filter(|&other| other != key).cloned())
+    }
+    fn req_keys(&self, key1: &char, key2: &char) -> &BTreeSet<char> {
+        if key1 < key2 {
+            self.req_keys.get(&(*key1, *key2)).unwrap()
+        } else if key1 > key2 {
+            self.req_keys.get(&(*key2, *key1)).unwrap()
+        } else {
+            panic!("req_keys called two of the same key '{}'", key1);
+        }
+    }
+}
+#[derive(PartialEq, Debug)]
 struct Map {
     // map[y[x]] = object
     // Example:
@@ -420,18 +462,154 @@ impl Map {
         distances
     }
 }
+#[derive(Debug, PartialEq)]
+struct GraphSearch {
+    start: char,               // Starting char
+    coll_keys: BTreeSet<char>, // Collected keys
+    path_len: usize,           // Total path length (sum of individual paths)
+}
+impl From<char> for GraphSearch {
+    fn from(start: char) -> Self {
+        GraphSearch {
+            start,
+            coll_keys: BTreeSet::new(),
+            path_len: 0,
+        }
+    }
+}
+impl GraphSearch {
+    fn initial() -> Self {
+        GraphSearch {
+            start: '@',
+            coll_keys: BTreeSet::new(),
+            path_len: 0,
+        }
+    }
+    fn initial_from_key(start: char) -> Self {
+        GraphSearch {
+            start,
+            coll_keys: BTreeSet::from_iter(vec![start]),
+            path_len: 0,
+        }
+    }
+    fn add_key(&self, new_key: char, path_len: usize) -> GraphSearch {
+        let mut coll_keys = self.coll_keys.clone();
+        coll_keys.insert(new_key);
+        GraphSearch {
+            start: new_key,
+            coll_keys,
+            path_len: self.path_len + path_len,
+        }
+    }
+    fn new_searches_from_reachable_keys(&self, graph: &Graph) -> Vec<GraphSearch> {
+        let mut searches = vec![];
+        for other_key in graph.keys_other_than(&self.start) {
+            if self.can_reach(&other_key, graph) {
+                // other_key is reachable
+                if let Some(dist) = graph.distances.get(&(self.start, other_key)) {
+                    searches.push(self.add_key(other_key, *dist));
+                }
+            }
+            //
+        }
+        // TODO implement
+        searches
+    }
+    fn can_reach(&self, other_key: &char, graph: &Graph) -> bool {
+        let req_keys = graph.req_keys(&self.start, &other_key);
+        self.coll_keys.is_superset(req_keys)
+    }
+}
+#[derive(Debug)]
+struct GraphSearchBot {
+    graph: Graph,               // Graph to search
+    ongoing: Vec<GraphSearch>,  // Ongoing searches
+    complete: Vec<GraphSearch>, // Complete searches
+}
+impl GraphSearchBot {
+    /// Search repeatedly until all keys are collected
+    fn shortest_path_collecting_all_keys(&mut self) -> usize {
+        while !self.ongoing.is_empty() {
+            self.run_searches();
+        }
+        println!("Finished with {} searches", self.complete.len());
+        let shortest = self
+            .complete
+            .iter()
+            .min_by_key(|search| search.path_len)
+            .unwrap();
+        // println!("Shortest = {:?}", shortest);
+        shortest.path_len
+    }
+    fn run_searches(&mut self) {
+        let key_count = self.graph.keys.len();
+        // println!("key count = {}", key_count);
+        // Next line avoids "cannot borrow `self` as immutable because it is also borrowed as mutable"
+        let graph = &self.graph;
+        // Next line avoids "closure requires unique access to `self` but it is already borrowed"
+        let mut complete = vec![];
+        let mut ongoing: Vec<GraphSearch> = self
+            .ongoing
+            .drain(0..)
+            .flat_map(|curr| curr.new_searches_from_reachable_keys(graph))
+            .filter_map(|next| {
+                if next.coll_keys.len() == key_count {
+                    println!("Search finished with length {}", next.path_len);
+                    complete.push(next);
+                    None
+                } else {
+                    // ongoing
+                    Some(next)
+                }
+            })
+            .collect();
+        self.complete.extend(complete);
+        ongoing.sort_unstable_by_key(|s| s.start);
+        //        println!("\n{} ongoing searches:", ongoing.len());
+        let unmerged_len = ongoing.len();
+        ongoing
+            .iter()
+            .take(30)
+            .for_each(|s| println!("{}, {:?}, {}", s.start, s.coll_keys, s.path_len));
 
+        let merged: Vec<GraphSearch> = ongoing
+            .into_iter()
+            .coalesce(|prev, curr| {
+                if prev.start == curr.start && prev.coll_keys == curr.coll_keys {
+                    if prev.path_len <= curr.path_len {
+                        Ok(prev)
+                    } else {
+                        Ok(curr)
+                    }
+                } else {
+                    Err((prev, curr))
+                }
+            })
+            .collect();
+        println!(
+            "\n{} merged (from {}) ongoing searches:",
+            merged.len(),
+            unmerged_len
+        );
+        //        merged
+        //            .iter()
+        //            .take(10)
+        //            .for_each(|s| println!("{}, {:?}, {}", s.start, s.keys, s.path_len));
+
+        self.ongoing = merged;
+    }
+}
 #[derive(Debug)]
 struct Search {
-    start: Vec2,          // Starting position
-    keys: BTreeSet<char>, // Collected keys
-    path_len: usize,      // Total path lengths
+    start: Vec2,               // Starting position
+    coll_keys: BTreeSet<char>, // Collected keys
+    path_len: usize,           // Total path length (sum of individual paths)
 }
 impl From<Vec2> for Search {
     fn from(start: Vec2) -> Self {
         Search {
             start,
-            keys: BTreeSet::new(),
+            coll_keys: BTreeSet::new(),
             path_len: 0,
         }
     }
@@ -440,7 +618,7 @@ impl From<Explorer> for Search {
     fn from(explorer: Explorer) -> Self {
         Search {
             start: explorer.pos,
-            keys: explorer.coll_keys,
+            coll_keys: explorer.coll_keys,
             path_len: explorer.path_len,
         }
     }
@@ -449,7 +627,7 @@ impl From<&Map> for Search {
     fn from(map: &Map) -> Self {
         Search {
             start: map.player_pos(),
-            keys: BTreeSet::new(),
+            coll_keys: BTreeSet::new(),
             path_len: 0,
         }
     }
@@ -477,7 +655,7 @@ impl Search {
                     .into_iter()
                     .map(|on_key| Search {
                         start: on_key.pos,
-                        keys: on_key.coll_keys,
+                        coll_keys: on_key.coll_keys,
                         path_len: self.path_len + on_key.path_len,
                     })
                     .collect::<Vec<Search>>(),
@@ -584,7 +762,7 @@ impl UndergroundVault {
             .drain(0..)
             .flat_map(|curr| curr.new_searches_from_reachable_keys(map))
             .filter_map(|next| {
-                if next.keys.len() == key_count {
+                if next.coll_keys.len() == key_count {
                     println!("Search finished with length {}", next.path_len);
                     complete.push(next);
                     None
@@ -601,12 +779,12 @@ impl UndergroundVault {
         ongoing
             .iter()
             .take(30)
-            .for_each(|s| println!("{}, {:?}, {}", s.start, s.keys, s.path_len));
+            .for_each(|s| println!("{}, {:?}, {}", s.start, s.coll_keys, s.path_len));
 
         let merged: Vec<Search> = ongoing
             .into_iter()
             .coalesce(|prev, curr| {
-                if prev.start == curr.start && prev.keys == curr.keys {
+                if prev.start == curr.start && prev.coll_keys == curr.coll_keys {
                     if prev.path_len <= curr.path_len {
                         Ok(prev)
                     } else {
@@ -646,7 +824,7 @@ impl From<&Search> for Explorer {
             start: search.start,
             pos: search.start,
             path_len: 0,
-            coll_keys: search.keys.clone(),
+            coll_keys: search.coll_keys.clone(),
             req_keys: BTreeSet::new(),
         }
     }
@@ -904,8 +1082,8 @@ mod tests {
     use crate::{
         almost_empty_map, challenging_input, day_18_example_1, day_18_larger_example_1,
         day_18_larger_example_2, day_18_larger_example_3, day_18_larger_example_4,
-        day_18_puzzle_input, rotated_h_map, short_and_long_way, Explorer, Map, Obj, Search,
-        UndergroundVault, Vec2,
+        day_18_puzzle_input, rotated_h_map, short_and_long_way, Explorer, Graph, GraphSearch, Map,
+        Obj, Search, UndergroundVault, Vec2,
     };
     use std::collections::{BTreeMap, BTreeSet, HashSet};
     use std::iter::FromIterator;
@@ -1000,7 +1178,7 @@ a@A
         assert_eq!(vault.map.player_pos(), Vec2::new(5, 1));
         let next = &Search::from(&vault).new_searches_from_reachable_keys(&vault.map)[0];
         assert_eq!(next.path_len, 2);
-        assert_eq!(next.keys, set_with_key_a());
+        assert_eq!(next.coll_keys, set_with_key_a());
     }
 
     #[test]
@@ -1009,7 +1187,7 @@ a@A
         assert_eq!(vault.map.player_pos(), Vec2::new(8, 8));
         let next = &Search::from(&vault).new_searches_from_reachable_keys(&vault.map)[0];
         assert_eq!(next.path_len, 14);
-        assert_eq!(next.keys, set_with_key_a());
+        assert_eq!(next.coll_keys, set_with_key_a());
     }
 
     #[test]
@@ -1018,7 +1196,7 @@ a@A
         assert_eq!(vault.map.player_pos(), Vec2::new(7, 7));
         let next = &Search::from(&vault).new_searches_from_reachable_keys(&vault.map)[0];
         assert_eq!(next.path_len, 12);
-        assert_eq!(next.keys, set_with_key_a());
+        assert_eq!(next.coll_keys, set_with_key_a());
     }
 
     #[test]
@@ -1091,7 +1269,7 @@ a@A
     fn collect_all_keys_rotated_h_map() {
         assert_eq!(
             UndergroundVault::from(rotated_h_map()).shortest_path_collecting_all_keys(),
-            28
+            30
         );
     }
     #[test]
@@ -1232,5 +1410,72 @@ a@A
         let map = Map::from(day_18_puzzle_input());
         let distances: BTreeMap<(char, char), usize> = BTreeMap::new();
         assert_eq!(map.all_distances(), distances)
+    }
+    #[test]
+    fn rotated_h_map_key_count() {
+        let graph = Graph::from(rotated_h_map());
+        assert_eq!(graph.keys.len(), 8);
+    }
+
+    #[test]
+    fn keys_other_than_starting_pos() {
+        let graph = Graph::from(rotated_h_map());
+        assert_eq!(
+            graph.keys_other_than(&'@'),
+            BTreeSet::from_iter(vec!['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'])
+        );
+    }
+    #[test]
+    fn keys_other_than_a() {
+        let graph = Graph::from(rotated_h_map());
+        assert_eq!(
+            graph.keys_other_than(&'a'),
+            BTreeSet::from_iter(vec!['b', 'c', 'd', 'e', 'f', 'g', 'h'])
+        );
+    }
+
+    #[test]
+    fn req_keys_right_order() {
+        let graph = Graph::from(rotated_h_map());
+        assert_eq!(
+            graph.req_keys(&'e', &'h'),
+            &BTreeSet::from_iter(vec!['a', 'c'])
+        );
+    }
+    #[test]
+    fn req_keys_wrong_order() {
+        let graph = Graph::from(rotated_h_map());
+        assert_eq!(
+            graph.req_keys(&'h', &'e'),
+            &BTreeSet::from_iter(vec!['a', 'c'])
+        );
+    }
+    #[test]
+    fn initial_new_searches_from_reachable_keys() {
+        let search = GraphSearch::initial();
+        let graph = Graph::from(rotated_h_map());
+        assert_eq!(
+            search.new_searches_from_reachable_keys(&graph),
+            vec![
+                search.add_key('a', 2),
+                search.add_key('b', 2),
+                search.add_key('c', 2),
+                search.add_key('d', 2)
+            ]
+        );
+    }
+    #[test]
+    fn new_searches_from_reachable_keys() {
+        let search = GraphSearch::initial_from_key('a');
+        let graph = Graph::from(rotated_h_map());
+        assert_eq!(
+            search.new_searches_from_reachable_keys(&graph),
+            vec![
+                search.add_key('b', 2),
+                search.add_key('c', 4),
+                search.add_key('d', 4),
+                search.add_key('h', 6)
+            ]
+        );
     }
 }
