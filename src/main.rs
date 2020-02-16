@@ -221,7 +221,7 @@ impl From<&str> for Map {
 }
 impl Map {
     fn can_be_moved_onto_with_optional_key(&self, pos: &Vec2) -> (bool, Option<char>) {
-        if pos.x >= 0 && pos.y >= 0 && pos.x < self.width && pos.y < self.height {
+        if pos.x < self.width && pos.y < self.height {
             match self.object_at(pos) {
                 Obj::Player | Obj::EmptySpace | Obj::Key(_) => (true, None),
                 Obj::Wall => (false, None),
@@ -292,6 +292,7 @@ impl Map {
         keys.sort();
         keys
     }
+    /// Set of all keys
     fn key_set(&self) -> BTreeSet<char> {
         BTreeSet::from_iter(self.sorted_keys())
     }
@@ -313,30 +314,53 @@ impl Map {
     }
     /// Distances from the player/all keys to all other keys
     fn all_distances(&self) -> BTreeMap<(char, char), usize> {
+        let (distances, _keys) = self.all_distances_and_keys();
+        distances
+    }
+    /// Required keys to go from the player/all keys to all other keys
+    fn required_keys(&self) -> BTreeMap<(char, char), BTreeSet<char>> {
+        let (_distances, keys) = self.all_distances_and_keys();
+        keys
+    }
+    /// Distances and required keys from the player/all keys to all other keys
+    fn all_distances_and_keys(
+        &self,
+    ) -> (
+        BTreeMap<(char, char), usize>,
+        BTreeMap<(char, char), BTreeSet<char>>,
+    ) {
         // Distances from a key or player a to another key b.
         // The two chars are different (distance to self is 0)
         // The first char is smaller than the second char alphabetically to
         // half the map size, as distance ('a', 'b') == dist('b', 'a')
         let mut distances: BTreeMap<(char, char), usize> = BTreeMap::new();
+        let mut req_keys: BTreeMap<(char, char), BTreeSet<char>> = BTreeMap::new();
 
         let mut source = '@';
         let mut keys_wanted = self.key_set();
         while !keys_wanted.is_empty() {
             println!("Distances from {} to {:?}", source, keys_wanted);
-            for (target, dist) in self.distances(source, &keys_wanted) {
+            for (target, (dist, keys)) in self.distances_and_keys(source, &keys_wanted) {
                 //                println!(" to {}: {}", target, dist);
                 distances.insert((source, target), dist);
+                req_keys.insert((source, target), keys);
             }
             // Remove first element from the set (is there no better method?) to be the next source
             source = keys_wanted.iter().next().cloned().unwrap();
             keys_wanted.take(&source).unwrap();
         }
-        distances
+        (distances, req_keys)
     }
     /// Distances from the player/a key to some other keys
-    fn distances(&self, source: char, keys_wanted: &BTreeSet<char>) -> Vec<(char, usize)> {
-        let mut distances: Vec<(char, usize)> = vec![];
+    fn distances_and_keys(
+        &self,
+        source: char,
+        keys_wanted: &BTreeSet<char>,
+    ) -> Vec<(char, (usize, BTreeSet<char>))> {
+        // Distance to key
+        let mut distances: Vec<(char, (/*dist*/ usize, /*req_keys*/ BTreeSet<char>))> = vec![];
         let mut keys_found = BTreeSet::new();
+        // Shortest distance to given position
         let mut path_lengths: HashMap<Vec2, usize> = HashMap::new();
 
         let start = if source == '@' {
@@ -348,37 +372,43 @@ impl Map {
             start,
             pos: start,
             path_len: 0,
-            keys: BTreeSet::new(),
+            coll_keys: BTreeSet::new(),
+            req_keys: BTreeSet::new(),
         }];
         while !explorers.is_empty() {
             // Move current explorers to unexplored neighboring positions
             explorers = explorers
-                .par_iter() // Note: Not worth it for puzzle input (3.1s parallel vs 2.5s serial)
+                .iter() // Note: `par_iter` not worth it for puzzle input (3.1s parallel vs 2.5s serial)
                 .flat_map(|explorer| explorer.next_explorers(self, &path_lengths, false))
                 .collect();
-            // TODO handle (store?) required keys
-            // Update path_lengths, found_keys, distances, and remove duplicate explorers
+            // Update path_lengths, found_keys and distances while also removing duplicate explorers
             explorers = explorers
                 .drain(0..)
-                .filter(|explorer| {
+                .filter_map(|mut explorer| {
                     // println!("{:?}", explorer);
                     // Only keep better ones (this gets rid of duplicates as well)
-                    if !path_lengths.contains_key(&explorer.pos) {
+                    if path_lengths.contains_key(&explorer.pos) {
+                        // Position already visited by an earlier (=faster) explorer
+                        None
+                    } else {
+                        // First explorer on this position -> store
                         path_lengths.insert(explorer.pos, explorer.path_len);
                         match self.object_at(&explorer.pos) {
                             Obj::Key(key) => {
                                 if keys_wanted.contains(key) {
                                     keys_found.insert(*key);
-                                    distances.push((*key, explorer.path_len));
+                                    distances.push((
+                                        *key,
+                                        (explorer.path_len, explorer.req_keys.clone()),
+                                    ));
                                 }
                             }
-                            Obj::Door(door) => {}
+                            Obj::Door(door) => {
+                                explorer.req_keys.insert(Obj::from(*door).matching_key());
+                            }
                             _ => {}
                         }
-                        true
-                    } else {
-                        // Position already visited by an earlier (=faster) explorer
-                        false
+                        Some(explorer)
                     }
                 })
                 .collect();
@@ -410,7 +440,7 @@ impl From<Explorer> for Search {
     fn from(explorer: Explorer) -> Self {
         Search {
             start: explorer.pos,
-            keys: explorer.keys,
+            keys: explorer.coll_keys,
             path_len: explorer.path_len,
         }
     }
@@ -447,7 +477,7 @@ impl Search {
                     .into_iter()
                     .map(|on_key| Search {
                         start: on_key.pos,
-                        keys: on_key.keys,
+                        keys: on_key.coll_keys,
                         path_len: self.path_len + on_key.path_len,
                     })
                     .collect::<Vec<Search>>(),
@@ -481,7 +511,7 @@ impl Search {
                 if let Some(key) = explorer.new_key_at_current_pos(&map) {
                     // This explorer reached a key and is finished
                     //                    println!("New key {} at pos {:?}", key, explorer.pos);
-                    explorer.keys.insert(key);
+                    explorer.coll_keys.insert(key);
                     finished.push(explorer);
                 } else {
                     // Continue searching for keys
@@ -604,10 +634,11 @@ impl UndergroundVault {
 #[derive(Debug, PartialEq, Clone)]
 /// Key collectors
 struct Explorer {
-    start: Vec2,          // Starting pos
-    pos: Vec2,            // Current position
-    path_len: usize,      // Path length
-    keys: BTreeSet<char>, // Collected keys
+    start: Vec2,               // Starting pos
+    pos: Vec2,                 // Current position
+    path_len: usize,           // Path length
+    coll_keys: BTreeSet<char>, // Collected keys
+    req_keys: BTreeSet<char>,  // Required keys
 }
 impl From<&Search> for Explorer {
     fn from(search: &Search) -> Self {
@@ -615,25 +646,19 @@ impl From<&Search> for Explorer {
             start: search.start,
             pos: search.start,
             path_len: 0,
-            keys: search.keys.clone(),
+            coll_keys: search.keys.clone(),
+            req_keys: BTreeSet::new(),
         }
     }
 }
 impl Explorer {
-    fn initial(pos: Vec2) -> Self {
-        Explorer {
-            start: pos,
-            pos,
-            path_len: 0,
-            keys: BTreeSet::new(),
-        }
-    }
     fn new_explorer_at(&self, pos: Vec2) -> Explorer {
         Explorer {
             start: self.start,
             pos,
             path_len: self.path_len + 1,
-            keys: self.keys.clone(),
+            coll_keys: self.coll_keys.clone(),
+            req_keys: self.req_keys.clone(),
         }
     }
     fn reachable_positions(&self, map: &Map) -> Vec<(Vec2, Option<char>)> {
@@ -653,7 +678,7 @@ impl Explorer {
     }
     fn new_key_at_current_pos(&self, map: &Map) -> Option<char> {
         if let Some(key) = map.key_at(&self.pos) {
-            if !self.keys.contains(&key) {
+            if !self.coll_keys.contains(&key) {
                 return Some(key);
             }
         }
@@ -663,22 +688,22 @@ impl Explorer {
         &self,
         map: &Map,
         path_lengths: &HashMap<Vec2, usize>,
-        check_keys: bool,
+        require_key_to_pass_door: bool,
     ) -> Vec<Explorer> {
         self.reachable_positions(map)
             .into_iter()
             .filter_map(|(next_pos, optional_key)| match optional_key {
                 None => Some(self.new_explorer_at(next_pos)),
                 Some(required_key) => {
-                    if check_keys {
-                        if self.keys.contains(&required_key) {
+                    if require_key_to_pass_door {
+                        if self.coll_keys.contains(&required_key) {
                             Some(self.new_explorer_at(next_pos))
                         } else {
                             None
                         }
                     } else {
                         let mut next = self.new_explorer_at(next_pos);
-                        next.keys.insert(required_key);
+                        next.coll_keys.insert(required_key);
                         Some(next)
                     }
                 }
@@ -745,9 +770,9 @@ fn day_18_larger_example_3() -> &'static str {
 }
 fn rotated_h_map() -> &'static str {
     "#########
-#eDa.bAf#
+#eCa.bDf#
 ####@####
-#gCc.dBh#
+#gBc.dAh#
 #########"
 }
 
@@ -951,7 +976,8 @@ a@A
                 start,
                 pos: start,
                 path_len: 0,
-                keys: set_with_key_a()
+                coll_keys: set_with_key_a(),
+                req_keys: BTreeSet::new(),
             }
             .reachable_positions(&simple_3x3_map()),
             vec![(Vec2::new(2, 1), Some('a')), (Vec2::new(0, 1), None)]
@@ -1148,7 +1174,58 @@ a@A
 
         assert_eq!(map.all_distances(), distances)
     }
-    // Feasibility check only. It takes less than 2 seconds, which is acceptable.
+    #[test]
+    fn required_keys_rotated_h_map() {
+        let map = Map::from(rotated_h_map());
+        let mut keys: BTreeMap<(char, char), BTreeSet<char>> = BTreeMap::new();
+        // @
+        keys.insert(('@', 'a'), BTreeSet::new());
+        keys.insert(('@', 'b'), BTreeSet::new());
+        keys.insert(('@', 'c'), BTreeSet::new());
+        keys.insert(('@', 'd'), BTreeSet::new());
+        keys.insert(('@', 'e'), BTreeSet::from_iter(vec!['c']));
+        keys.insert(('@', 'f'), BTreeSet::from_iter(vec!['d']));
+        keys.insert(('@', 'g'), BTreeSet::from_iter(vec!['b']));
+        keys.insert(('@', 'h'), BTreeSet::from_iter(vec!['a']));
+        // a
+        keys.insert(('a', 'b'), BTreeSet::new());
+        keys.insert(('a', 'c'), BTreeSet::new());
+        keys.insert(('a', 'd'), BTreeSet::new());
+        keys.insert(('a', 'e'), BTreeSet::from_iter(vec!['c']));
+        keys.insert(('a', 'f'), BTreeSet::from_iter(vec!['d']));
+        keys.insert(('a', 'g'), BTreeSet::from_iter(vec!['b']));
+        keys.insert(('a', 'h'), BTreeSet::from_iter(vec!['a']));
+        // b
+        keys.insert(('b', 'c'), BTreeSet::new());
+        keys.insert(('b', 'd'), BTreeSet::new());
+        keys.insert(('b', 'e'), BTreeSet::from_iter(vec!['c']));
+        keys.insert(('b', 'f'), BTreeSet::from_iter(vec!['d']));
+        keys.insert(('b', 'g'), BTreeSet::from_iter(vec!['b']));
+        keys.insert(('b', 'h'), BTreeSet::from_iter(vec!['a']));
+        // c
+        keys.insert(('c', 'd'), BTreeSet::new());
+        keys.insert(('c', 'e'), BTreeSet::from_iter(vec!['c']));
+        keys.insert(('c', 'f'), BTreeSet::from_iter(vec!['d']));
+        keys.insert(('c', 'g'), BTreeSet::from_iter(vec!['b']));
+        keys.insert(('c', 'h'), BTreeSet::from_iter(vec!['a']));
+        // d
+        keys.insert(('d', 'e'), BTreeSet::from_iter(vec!['c']));
+        keys.insert(('d', 'f'), BTreeSet::from_iter(vec!['d']));
+        keys.insert(('d', 'g'), BTreeSet::from_iter(vec!['b']));
+        keys.insert(('d', 'h'), BTreeSet::from_iter(vec!['a']));
+        // e
+        keys.insert(('e', 'f'), BTreeSet::from_iter(vec!['c', 'd']));
+        keys.insert(('e', 'g'), BTreeSet::from_iter(vec!['b', 'c']));
+        keys.insert(('e', 'h'), BTreeSet::from_iter(vec!['a', 'c']));
+        // f
+        keys.insert(('f', 'g'), BTreeSet::from_iter(vec!['b', 'd']));
+        keys.insert(('f', 'h'), BTreeSet::from_iter(vec!['a', 'd']));
+        // g
+        keys.insert(('g', 'h'), BTreeSet::from_iter(vec!['a', 'b']));
+
+        assert_eq!(map.required_keys(), keys)
+    }
+    // Feasibility check only. It takes less about one second, which is acceptable.
     #[ignore]
     #[test]
     fn distances_puzzle_input() {
