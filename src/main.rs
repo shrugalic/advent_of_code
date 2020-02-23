@@ -197,7 +197,9 @@ impl Obj {
 }
 #[derive(PartialEq, Debug)]
 struct Graph {
+    // distances from key to key
     distances: BTreeMap<(char, char), usize>,
+    // keys needed to get from a key to another key
     req_keys: BTreeMap<(char, char), BTreeSet<char>>,
     keys: BTreeSet<char>,
 }
@@ -223,11 +225,11 @@ impl From<&str> for Graph {
     }
 }
 impl Graph {
-    // nop
-    fn keys_other_than(&self, key: &char) -> BTreeSet<char> {
-        BTreeSet::from_iter(self.keys.iter().filter(|&other| other != key).cloned())
+    fn keys_other_than(&self, others: &BTreeSet<char>) -> BTreeSet<char> {
+        self.keys.difference(others).cloned().collect()
     }
     fn req_keys(&self, key1: &char, key2: &char) -> &BTreeSet<char> {
+        // self.req_keys pairs are stored with keys in alphabetical order
         if key1 < key2 {
             self.req_keys.get(&(*key1, *key2)).unwrap()
         } else if key1 > key2 {
@@ -466,54 +468,51 @@ impl Map {
 struct GraphSearch {
     start: char,               // Starting char
     coll_keys: BTreeSet<char>, // Collected keys
-    path_len: usize,           // Total path length (sum of individual paths)
+    tot_distance: usize,       // Total distance (sum of individual distances)
 }
 impl From<char> for GraphSearch {
     fn from(start: char) -> Self {
         GraphSearch {
             start,
             coll_keys: BTreeSet::new(),
-            path_len: 0,
+            tot_distance: 0,
         }
     }
 }
 impl GraphSearch {
-    fn initial() -> Self {
+    fn init_from_start() -> Self {
         GraphSearch {
             start: '@',
             coll_keys: BTreeSet::new(),
-            path_len: 0,
+            tot_distance: 0,
         }
     }
-    fn initial_from_key(start: char) -> Self {
+    fn init_from_key(key: char) -> Self {
         GraphSearch {
-            start,
-            coll_keys: BTreeSet::from_iter(vec![start]),
-            path_len: 0,
+            start: key,
+            coll_keys: BTreeSet::from_iter(vec![key]),
+            tot_distance: 0,
         }
     }
-    fn add_key(&self, new_key: char, path_len: usize) -> GraphSearch {
+    fn expanded_to(&self, new_key: char, path_len: usize) -> GraphSearch {
         let mut coll_keys = self.coll_keys.clone();
         coll_keys.insert(new_key);
         GraphSearch {
             start: new_key,
             coll_keys,
-            path_len: self.path_len + path_len,
+            tot_distance: self.tot_distance + path_len,
         }
     }
     fn new_searches_from_reachable_keys(&self, graph: &Graph) -> Vec<GraphSearch> {
-        let mut searches = vec![];
-        for other_key in graph.keys_other_than(&self.start) {
-            if self.can_reach(&other_key, graph) {
-                // other_key is reachable
-                if let Some(dist) = graph.distances.get(&(self.start, other_key)) {
-                    searches.push(self.add_key(other_key, *dist));
-                }
-            }
-            //
-        }
-        // TODO implement
-        searches
+        graph
+            .keys_other_than(&self.coll_keys)
+            .iter()
+            .filter(|other_key| self.can_reach(other_key, graph))
+            .map(|reachable_key| {
+                let dist = graph.distances.get(&(self.start, *reachable_key)).unwrap();
+                self.expanded_to(*reachable_key, *dist)
+            })
+            .collect()
     }
     fn can_reach(&self, other_key: &char, graph: &Graph) -> bool {
         let req_keys = graph.req_keys(&self.start, &other_key);
@@ -536,10 +535,10 @@ impl GraphSearchBot {
         let shortest = self
             .complete
             .iter()
-            .min_by_key(|search| search.path_len)
+            .min_by_key(|search| search.tot_distance)
             .unwrap();
         // println!("Shortest = {:?}", shortest);
-        shortest.path_len
+        shortest.tot_distance
     }
     fn run_searches(&mut self) {
         let key_count = self.graph.keys.len();
@@ -554,7 +553,7 @@ impl GraphSearchBot {
             .flat_map(|curr| curr.new_searches_from_reachable_keys(graph))
             .filter_map(|next| {
                 if next.coll_keys.len() == key_count {
-                    println!("Search finished with length {}", next.path_len);
+                    println!("Search finished with length {}", next.tot_distance);
                     complete.push(next);
                     None
                 } else {
@@ -570,13 +569,13 @@ impl GraphSearchBot {
         ongoing
             .iter()
             .take(30)
-            .for_each(|s| println!("{}, {:?}, {}", s.start, s.coll_keys, s.path_len));
+            .for_each(|s| println!("{}, {:?}, {}", s.start, s.coll_keys, s.tot_distance));
 
         let merged: Vec<GraphSearch> = ongoing
             .into_iter()
             .coalesce(|prev, curr| {
                 if prev.start == curr.start && prev.coll_keys == curr.coll_keys {
-                    if prev.path_len <= curr.path_len {
+                    if prev.tot_distance <= curr.tot_distance {
                         Ok(prev)
                     } else {
                         Ok(curr)
@@ -597,6 +596,8 @@ impl GraphSearchBot {
         //            .for_each(|s| println!("{}, {:?}, {}", s.start, s.keys, s.path_len));
 
         self.ongoing = merged;
+
+        // TODO check does this work yet?
     }
 }
 #[derive(Debug)]
@@ -1418,10 +1419,10 @@ a@A
     }
 
     #[test]
-    fn keys_other_than_starting_pos() {
+    fn keys_other_than_start() {
         let graph = Graph::from(rotated_h_map());
         assert_eq!(
-            graph.keys_other_than(&'@'),
+            graph.keys_other_than(&BTreeSet::from_iter(vec!['@'])),
             BTreeSet::from_iter(vec!['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'])
         );
     }
@@ -1429,7 +1430,7 @@ a@A
     fn keys_other_than_a() {
         let graph = Graph::from(rotated_h_map());
         assert_eq!(
-            graph.keys_other_than(&'a'),
+            graph.keys_other_than(&BTreeSet::from_iter(vec!['a'])),
             BTreeSet::from_iter(vec!['b', 'c', 'd', 'e', 'f', 'g', 'h'])
         );
     }
@@ -1452,29 +1453,29 @@ a@A
     }
     #[test]
     fn initial_new_searches_from_reachable_keys() {
-        let search = GraphSearch::initial();
+        let search = GraphSearch::init_from_start();
         let graph = Graph::from(rotated_h_map());
         assert_eq!(
             search.new_searches_from_reachable_keys(&graph),
             vec![
-                search.add_key('a', 2),
-                search.add_key('b', 2),
-                search.add_key('c', 2),
-                search.add_key('d', 2)
+                search.expanded_to('a', 2),
+                search.expanded_to('b', 2),
+                search.expanded_to('c', 2),
+                search.expanded_to('d', 2)
             ]
         );
     }
     #[test]
     fn new_searches_from_reachable_keys() {
-        let search = GraphSearch::initial_from_key('a');
+        let search = GraphSearch::init_from_key('a');
         let graph = Graph::from(rotated_h_map());
         assert_eq!(
             search.new_searches_from_reachable_keys(&graph),
             vec![
-                search.add_key('b', 2),
-                search.add_key('c', 4),
-                search.add_key('d', 4),
-                search.add_key('h', 6)
+                search.expanded_to('b', 2),
+                search.expanded_to('c', 4),
+                search.expanded_to('d', 4),
+                search.expanded_to('h', 6)
             ]
         );
     }
