@@ -27,7 +27,7 @@ fn seat_id(row_n_col: (usize, usize)) -> usize {
 #[cfg(test)]
 mod tests {
     use crate::{row_and_col, seat_id};
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use line_reader::read_file_to_lines;
 
     #[test]
     fn seat_id_works() {
@@ -51,5 +51,31 @@ mod tests {
             .max()
             .expect("Empty list?");
         assert_eq!(max_seat_id, 970);
+    }
+
+    #[test]
+    fn part2() {
+        let lines = read_file_to_lines("input.txt");
+        let mut seat_ids: Vec<usize> = lines
+            .iter()
+            .map(|line| seat_id(row_and_col(line)))
+            .collect();
+        seat_ids.sort_unstable();
+        let neighbors: Vec<usize> = seat_ids
+            .iter()
+            .zip(seat_ids.iter().skip(1))
+            .zip(seat_ids.iter().skip(2))
+            .filter_map(|((&a, &b), &c)| {
+                // println!("{} < {} < {}", a, b, c);
+                if a != b - 1 || b + 1 != c {
+                    Some(b)
+                } else {
+                    None
+                }
+                // } else
+            })
+            .collect();
+        assert_eq!(neighbors.len(), 2);
+        assert_eq!((neighbors[0] + neighbors[1]) / 2, 587);
     }
 }
