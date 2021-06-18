@@ -1,6 +1,28 @@
 use std::collections::{HashMap, HashSet};
 
 // Returns the number of possibilities allowing a bag of the given target_color
+fn number_of_bags_within_bag_of(target_color: &dyn AsRef<str>, rules: &[String]) -> usize {
+    let bags_by_color = &convert_to_bags_by_color(rules);
+    number_of_bags_within(target_color, bags_by_color) - 1 /* the outer-most bag should not count*/
+}
+fn number_of_bags_within(
+    target_color: &dyn AsRef<str>,
+    bags_by_color: &HashMap<String, HashMap<String, usize>>,
+) -> usize {
+    1 + // 1 for the bag itself,
+        // plus the inner bags it contains
+        bags_by_color
+        .get(target_color.as_ref())
+        .unwrap()
+        .iter()
+        .map(|(color, count)| {
+            // println!("{} contains {} * {}", target_color.as_ref(), count, color);
+            count * number_of_bags_within(color, bags_by_color)
+        })
+        .sum::<usize>()
+}
+
+// Returns the number of possibilities allowing a bag of the given target_color
 fn number_of_possible_bags_that_can_hold(target_color: &dyn AsRef<str>, rules: &[String]) -> usize {
     let bags_by_color = &convert_to_bags_by_color(rules);
     // Bags that can hold the target color directly
@@ -84,7 +106,7 @@ fn bag_counts_by_color(bags_desc: &str) -> HashMap<String, usize> {
 
 #[cfg(test)]
 mod tests {
-    use crate::number_of_possible_bags_that_can_hold;
+    use crate::{number_of_bags_within_bag_of, number_of_possible_bags_that_can_hold};
     use line_reader::{read_file_to_lines, read_str_to_lines};
 
     const EXAMPLE_1: &str = "light red bags contain 1 bright white bag, 2 muted yellow bags.
@@ -110,6 +132,38 @@ dotted black bags contain no other bags.";
         assert_eq!(
             number_of_possible_bags_that_can_hold(&"shiny gold", &read_file_to_lines("input.txt")),
             192
+        );
+    }
+
+    const EXAMPLE_2: &str = "shiny gold bags contain 2 dark red bags.
+dark red bags contain 2 dark orange bags.
+dark orange bags contain 2 dark yellow bags.
+dark yellow bags contain 2 dark green bags.
+dark green bags contain 2 dark blue bags.
+dark blue bags contain 2 dark violet bags.
+dark violet bags contain no other bags.";
+
+    #[test]
+    fn part2_example1() {
+        assert_eq!(
+            number_of_bags_within_bag_of(&"shiny gold", &read_str_to_lines(EXAMPLE_1)),
+            32
+        );
+    }
+
+    #[test]
+    fn part2_example2() {
+        assert_eq!(
+            number_of_bags_within_bag_of(&"shiny gold", &read_str_to_lines(EXAMPLE_2)),
+            126
+        );
+    }
+
+    #[test]
+    fn part2() {
+        assert_eq!(
+            number_of_bags_within_bag_of(&"shiny gold", &read_file_to_lines("input.txt")),
+            12128
         );
     }
 }
