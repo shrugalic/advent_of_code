@@ -3,14 +3,8 @@ struct Slope {
     down: usize,
 }
 
-impl Slope {
-    fn new(right: usize, down: usize) -> Self {
-        Slope { right, down }
-    }
-}
-
 // Traverse map with given slope and return number of trees encountered
-fn traverse_map(map: &Vec<String>, slope: Slope) -> usize {
+fn traverse_map(map: &Vec<String>, slope: &Slope) -> usize {
     let height = map.len();
     let width = map[0].len();
     let mut tree_count = 0usize;
@@ -47,12 +41,44 @@ mod tests {
     #[test]
     fn part1_example() {
         let map = read_str_to_lines(EXAMPLE_MAP);
-        assert_eq!(traverse_map(&map, Slope::new(3, 1)), 7);
+        assert_eq!(traverse_map(&map, &Slope { right: 3, down: 1 }), 7);
     }
 
     #[test]
     fn part1() {
         let map = read_file_to_lines("input.txt");
-        assert_eq!(traverse_map(&map, Slope::new(3, 1)), 244);
+        assert_eq!(traverse_map(&map, &Slope { right: 3, down: 1 }), 244);
+    }
+
+    const PART2_SLOPES: [Slope; 5] = [
+        Slope { right: 1, down: 1 },
+        Slope { right: 3, down: 1 },
+        Slope { right: 5, down: 1 },
+        Slope { right: 7, down: 1 },
+        Slope { right: 1, down: 2 },
+    ];
+
+    #[test]
+    fn part2_example() {
+        let map = read_str_to_lines(EXAMPLE_MAP);
+        let product = PART2_SLOPES
+            .iter()
+            .map(|slope| traverse_map(&map, slope))
+            .reduce(|a, b| a * b)
+            .unwrap();
+
+        assert_eq!(product, 336);
+    }
+
+    #[test]
+    fn part2() {
+        let map = read_file_to_lines("input.txt");
+        let product = PART2_SLOPES
+            .iter()
+            .map(|slope| traverse_map(&map, slope))
+            .reduce(|a, b| a * b)
+            .unwrap();
+
+        assert_eq!(product, 9406609920);
     }
 }
