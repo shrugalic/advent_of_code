@@ -1,6 +1,38 @@
 use std::cmp::Ordering;
 use std::collections::VecDeque;
 
+fn find_encryrption_weakness(numbers: &[String], target: usize) -> usize {
+    let v = set_of_numbers_summing_up_to_target(numbers, target);
+    v.iter().min().unwrap() + v.iter().max().unwrap()
+}
+
+fn set_of_numbers_summing_up_to_target(numbers: &[String], target: usize) -> Vec<usize> {
+    let numbers: Vec<usize> = numbers
+        .iter()
+        .map(|s| s.parse().unwrap())
+        .filter(|&n| n < target)
+        .collect();
+    println!("Numbers of remaining numbers =  {}", numbers.len());
+    // println!("Remaining numbers {:?}", numbers);
+    // let sum = |lo,hi| numbers.iter().skip(lo-1).take(hi-lo +1).sum();
+    let mut lo = 0;
+    let mut hi = lo + 1;
+    let group = |lo, hi| numbers.iter().skip(lo).take(hi - lo + 1);
+    while hi < numbers.len() {
+        match target.cmp(&group(lo, hi).sum()) {
+            Ordering::Equal => return group(lo, hi).cloned().collect(),
+            Ordering::Greater => hi += 1,
+            Ordering::Less => {
+                lo += 1;
+                hi = lo + 1;
+            }
+        }
+        // println!("Sum of {:?} = {}, target = {}", v, s, target);
+    }
+
+    vec![]
+}
+
 fn first_invalid_digit(numbers: &[String], window_len: usize) -> usize {
     let numbers: Vec<usize> = numbers.iter().map(|s| s.parse().unwrap()).collect();
     let mut candidates: VecDeque<_> = numbers.iter().take(window_len).collect();
@@ -33,7 +65,9 @@ fn is_valid(n: &usize, candidates: &VecDeque<&usize>) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::first_invalid_digit;
+    use crate::{
+        find_encryrption_weakness, first_invalid_digit, set_of_numbers_summing_up_to_target,
+    };
     use line_reader::{read_file_to_lines, read_str_to_lines};
 
     const EXAMPLE: &str = "35
@@ -67,6 +101,42 @@ mod tests {
         assert_eq!(
             first_invalid_digit(&read_file_to_lines("input.txt"), 25),
             258585477
+        );
+    }
+
+    #[test]
+    fn part2_example() {
+        assert_eq!(
+            set_of_numbers_summing_up_to_target(&read_str_to_lines(EXAMPLE), 127),
+            vec![15, 25, 47, 40]
+        );
+    }
+
+    #[test]
+    fn part2_example_weakness() {
+        assert_eq!(
+            find_encryrption_weakness(&read_str_to_lines(EXAMPLE), 127),
+            62
+        );
+    }
+
+    // #[test]
+    // fn part2_result() {
+    //     assert_eq!(
+    //         set_of_numbers_summing_up_to_target(&read_file_to_lines("input.txt"), 258585477),
+    //         vec![
+    //             13858643, 9455395, 9908827, 16794010, 13221299, 11563238, 12646458, 11137204,
+    //             11774548, 12220424, 14302571, 14304519, 14748447, 25865809, 22680253, 16578014,
+    //             27525818
+    //         ]
+    //     );
+    // }
+
+    #[test]
+    fn part2_weakness() {
+        assert_eq!(
+            find_encryrption_weakness(&read_file_to_lines("input.txt"), 258585477),
+            36981213
         );
     }
 }
