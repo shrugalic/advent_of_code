@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 enum Op {
     Acc,
     Jmp,
@@ -19,7 +19,7 @@ where
         }
     }
 }
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 struct Instr {
     op: Op,
     arg: isize,
@@ -39,11 +39,37 @@ where
     }
 }
 
-fn run_program(boot_code: &Vec<String>) -> Option<isize> {
+fn run_program_until_infinite_loop(boot_code: &[String]) -> (isize, bool) {
     let program: Vec<_> = boot_code.iter().map(Instr::from).collect();
+    run_program(&program)
+}
+
+fn fix_program_until_no_more_infinite_loop(boot_code: &[String]) -> (isize, bool) {
+    let program: Vec<_> = boot_code.iter().map(Instr::from).collect();
+    for (idx, instr) in program.iter().enumerate() {
+        match instr.op {
+            Op::Jmp | Op::Nop => {
+                let mut adapted_program = program.clone();
+                adapted_program[idx].op = if instr.op == Op::Jmp {
+                    Op::Nop
+                } else {
+                    Op::Jmp
+                };
+                if let (accu, false) = run_program(&adapted_program) {
+                    return (accu, false);
+                }
+            }
+            Op::Acc => {}
+        }
+    }
+    (-1, true)
+}
+
+fn run_program(program: &Vec<Instr>) -> (isize, bool) {
     let mut visited = HashSet::new();
     let mut accu = 0; // Start with accumulator 0
     let mut next = 0; // Start at instruction 0
+    let mut inf_loop = false;
     while let Some(instr) = program.get(next) {
         // println!("[{}]: {:?} {}; accu = {}", next, instr.op, instr.arg, accu);
         next += 1; // Here so the No-op can be a no-op, requires -1 adjustment on jump however!
@@ -52,19 +78,18 @@ fn run_program(boot_code: &Vec<String>) -> Option<isize> {
             Op::Jmp => next = (next as isize - 1 + instr.arg) as usize, // -1 because of +1 above
             Op::Nop => {}
         }
-        // Exit on infinite loop
-        if visited.contains(&next) {
-            return Some(accu);
-        } else {
-            visited.insert(next);
+        inf_loop = !visited.insert(next);
+        if inf_loop {
+            break;
         }
     }
-    // Successful termination
-    None
+    (accu, inf_loop)
 }
 
 mod tests {
-    use crate::{run_program, Instr, Op};
+    use crate::{
+        fix_program_until_no_more_infinite_loop, run_program_until_infinite_loop, Instr, Op,
+    };
     use line_reader::{read_file_to_lines, read_str_to_lines};
 
     #[test]
@@ -95,11 +120,33 @@ acc +6";
 
     #[test]
     fn part1_example() {
-        assert_eq!(run_program(&read_str_to_lines(EXAMPLE_PROGRAM)), Some(5));
+        assert_eq!(
+            run_program_until_infinite_loop(&read_str_to_lines(EXAMPLE_PROGRAM)),
+            (5, true)
+        );
     }
 
     #[test]
     fn part1() {
-        assert_eq!(run_program(&read_file_to_lines("input.txt")), Some(1810));
+        assert_eq!(
+            run_program_until_infinite_loop(&read_file_to_lines("input.txt")),
+            (1810, true)
+        );
+    }
+
+    #[test]
+    fn part2_example() {
+        assert_eq!(
+            fix_program_until_no_more_infinite_loop(&read_str_to_lines(EXAMPLE_PROGRAM)),
+            (8, false)
+        );
+    }
+
+    #[test]
+    fn part2() {
+        assert_eq!(
+            fix_program_until_no_more_infinite_loop(&read_file_to_lines("input.txt")),
+            (969, false)
+        );
     }
 }
