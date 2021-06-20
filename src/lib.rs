@@ -74,9 +74,59 @@ fn distance_from_origin_after_following_instructions(input: &[String]) -> usize 
     (pos.0.abs() + pos.1.abs()) as usize
 }
 
+fn distance_from_origin_after_following_instructions_part2(input: &[String]) -> usize {
+    let instructions: Vec<Instr> = input.iter().map(Instr::from).collect();
+
+    let mut pos: (isize, isize) = (0, 0); // start at origin…
+    let mut waypoint: (isize, isize) = (10, 1);
+    // println!(
+    //     "Pos ({},{}), Waypoint ({}, {}) Dir = {}",
+    //     pos.0, pos.1, waypoint.0, waypoint.1, dir
+    // );
+    for instr in instructions {
+        match instr.action {
+            Action::N => waypoint.1 += instr.value as isize,
+            Action::S => waypoint.1 -= instr.value as isize,
+            Action::E => waypoint.0 += instr.value as isize,
+            Action::W => waypoint.0 -= instr.value as isize,
+            Action::L => waypoint = rotate(waypoint, -(instr.value as isize)),
+            Action::R => waypoint = rotate(waypoint, instr.value as isize),
+            Action::F => {
+                pos.0 += instr.value as isize * waypoint.0;
+                pos.1 += instr.value as isize * waypoint.1;
+            }
+        }
+        // println!(
+        //     "Pos ({},{}) Waypoint ({}, {}) Dir = {}; Instr = {:?}",
+        //     pos.0, pos.1, waypoint.0, waypoint.1, dir, instr
+        // );
+    }
+    // println!(
+    //     "Pos ({},{}), Waypoint ({}, {}) Dir = {}",
+    //     pos.0, pos.1, waypoint.0, waypoint.1, dir
+    // );
+
+    (pos.0.abs() + pos.1.abs()) as usize
+}
+
+fn rotate(waypoint: (isize, isize), mut deg: isize) -> (isize, isize) {
+    if deg < 0 {
+        deg += 360;
+    }
+    match deg {
+        90 => (waypoint.1, -waypoint.0),
+        180 => (-waypoint.0, -waypoint.1),
+        270 => (-waypoint.1, waypoint.0),
+        _ => panic!("Unexpected rotation {}", deg),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{distance_from_origin_after_following_instructions, Action, Instr};
+    use crate::{
+        distance_from_origin_after_following_instructions,
+        distance_from_origin_after_following_instructions_part2, Action, Instr,
+    };
     use line_reader::{read_file_to_lines, read_str_to_lines};
 
     #[test]
@@ -114,6 +164,24 @@ F11";
         assert_eq!(
             distance_from_origin_after_following_instructions(&read_file_to_lines("input.txt")),
             923
+        );
+    }
+
+    #[test]
+    fn part2_example() {
+        assert_eq!(
+            distance_from_origin_after_following_instructions_part2(&read_str_to_lines(EXAMPLE)),
+            286
+        );
+    }
+
+    #[test]
+    fn part2() {
+        assert_eq!(
+            distance_from_origin_after_following_instructions_part2(&read_file_to_lines(
+                "input.txt"
+            ),),
+            24769
         );
     }
 }
