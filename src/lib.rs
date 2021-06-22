@@ -56,10 +56,10 @@ fn find_factors(base: Vec<usize>, offset: Vec<isize>) -> (Vec<usize>, usize) {
     for i in 0..len {
         // Make sure value never becomes negative (stays usize)
         while offset[i] > (factor[i] * base[i]) as isize {
-            println!(
-                "factor * base < offset: {} * {} < {}",
-                factor[i], base[i], offset[i]
-            );
+            // println!(
+            //     "factor * base < offset: {} * {} < {}",
+            //     factor[i], base[i], offset[i]
+            // );
             factor[i] += 1;
         }
         value[i] = (((factor[i] * base[i]) as isize) - offset[i]) as usize;
@@ -134,10 +134,46 @@ fn find_factors2(base: Vec<usize>, offset: Vec<usize>) -> (Vec<usize>, usize) {
     (factor, value[0])
 }
 
+fn part2impl(input: &[String]) -> usize {
+    let (offsets, freqs) = get_offsets_and_bases_as_separate_vecs(input);
+    let mut bus_count = 2; // Start with two and add one more at a time
+    let mut time = 0;
+    while bus_count <= freqs.len() {
+        time = find_meet_time(&freqs[0..bus_count], &offsets[0..bus_count], time);
+        bus_count += 1;
+    }
+    time
+}
+
+/// Find integer factors f[i] for all `time + offset[i] = f[i] * freq[i]` equations
+fn find_meet_time(freq: &[usize], offset: &[usize], start: usize) -> usize {
+    assert_eq!(freq.len(), offset.len());
+    let mut time = start;
+
+    // We add elements one by one, and all but the last were already synced
+    // If these weren't all primes, one could have to use their least common multiple
+    let inc: usize = freq.iter().rev().skip(1).product();
+    // Increase time until all equations hold
+    while !freq
+        .iter()
+        .enumerate()
+        .all(|(i, base)| (time + offset[i]) % base == 0)
+    {
+        time += inc;
+    }
+    println!(
+        "Time {} = {} steps @ size {}",
+        time,
+        (time - start) / inc,
+        inc
+    );
+    time
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
-        find_factors, find_factors2, part1impl, part2impl_brute_force,
+        find_factors, find_factors2, find_meet_time, part1impl, part2impl, part2impl_brute_force,
         part2impl_slightly_less_brute_force,
     };
     use line_reader::{read_file_to_lines, read_str_to_lines};
@@ -161,6 +197,20 @@ mod tests {
         assert_eq!(find_factors(vec!(7, 59), vec![0, 4]), (vec![50, 6], 350));
         assert_eq!(find_factors(vec!(7, 31), vec![0, 6]), (vec![8, 2], 56));
         assert_eq!(find_factors(vec!(7, 19), vec![0, 7]), (vec![18, 7], 126));
+    }
+
+    #[test]
+    fn part2_example1_incremental_with_find_factors() {
+        // Find the earliest time where the first two busses meet
+        assert_eq!(find_meet_time(&[7, 13], &[0, 1], 0), 77);
+        // From there, find where they meet the next bus. The step size is increased by the
+        // common multiple of previous bus frequencies
+        assert_eq!(find_meet_time(&[7, 13, 59], &[0, 1, 4], 77), 350);
+        assert_eq!(find_meet_time(&[7, 13, 59, 31], &[0, 1, 4, 6], 350), 70147);
+        assert_eq!(
+            find_meet_time(&[7, 13, 59, 31, 19], &[0, 1, 4, 6, 7], 70147),
+            1068781
+        );
     }
 
     #[test]
@@ -246,50 +296,35 @@ mod tests {
 
     #[test]
     fn part2_example_1() {
-        assert_eq!(
-            part2impl_slightly_less_brute_force(&read_str_to_lines(EXAMPLE1)),
-            1068781
-        );
+        assert_eq!(part2impl(&read_str_to_lines(EXAMPLE1)), 1068781);
     }
 
     const EXAMPLE2: &str = "whatever
 17,x,13,19";
     #[test]
     fn part2_example_2() {
-        assert_eq!(
-            part2impl_slightly_less_brute_force(&read_str_to_lines(EXAMPLE2)),
-            3417
-        );
+        assert_eq!(part2impl(&read_str_to_lines(EXAMPLE2)), 3417);
     }
 
     const EXAMPLE3: &str = "whatever
 67,7,59,61";
     #[test]
     fn part2_example_3() {
-        assert_eq!(
-            part2impl_slightly_less_brute_force(&read_str_to_lines(EXAMPLE3)),
-            754018
-        );
+        assert_eq!(part2impl(&read_str_to_lines(EXAMPLE3)), 754018);
     }
 
     const EXAMPLE4: &str = "whatever
 67,x,7,59,61";
     #[test]
     fn part2_example_4() {
-        assert_eq!(
-            part2impl_slightly_less_brute_force(&read_str_to_lines(EXAMPLE4)),
-            779210
-        );
+        assert_eq!(part2impl(&read_str_to_lines(EXAMPLE4)), 779210);
     }
 
     const EXAMPLE5: &str = "whatever
 67,7,x,59,61";
     #[test]
     fn part2_example_5() {
-        assert_eq!(
-            part2impl_slightly_less_brute_force(&read_str_to_lines(EXAMPLE5)),
-            1261476
-        );
+        assert_eq!(part2impl(&read_str_to_lines(EXAMPLE5)), 1261476);
     }
 
     const EXAMPLE6: &str = "whatever
@@ -298,18 +333,15 @@ mod tests {
     // takes 15ms with part2impl2
     #[test]
     fn part2_example_6() {
-        assert_eq!(
-            part2impl_slightly_less_brute_force(&read_str_to_lines(EXAMPLE6)),
-            1202161486
-        );
+        assert_eq!(part2impl(&read_str_to_lines(EXAMPLE6)), 1202161486);
     }
 
     // exceedingly slow…
-    // #[test]
+    #[test]
     fn part2() {
         assert_eq!(
-            part2impl_slightly_less_brute_force(&read_file_to_lines("input.txt"),),
-            24769
+            part2impl(&read_file_to_lines("input.txt"),),
+            672754131923874
         );
     }
 }
