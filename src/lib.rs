@@ -24,112 +24,130 @@ fn shortest_wait_multiplied_by_bus_id(earliest_time: usize, bus_ids: Vec<usize>)
     min * id
 }
 
-fn part2impl(input: &[String]) -> usize {
-    let mut offset_and_frequency: Vec<(usize, usize)> = input[1]
+fn part2impl_brute_force(input: &[String]) -> usize {
+    let offset_and_frequency: Vec<(isize, usize)> = input[1]
         .split(',')
         .enumerate()
         .filter_map(|(idx, id)| {
-            if let Ok(id) = id.parse() {
-                Some((idx, id))
+            // get rid of the 'x' entries
+            if let Ok(id) = id.parse::<usize>() {
+                Some((idx as isize, id))
             } else {
                 None
             }
         })
         .collect();
-    let base = offset_and_frequency.iter().map(|(_, freq)| *freq).collect();
-    let offset = offset_and_frequency
+
+    let bases = offset_and_frequency.iter().map(|(_, b)| *b).collect();
+    let offsets = offset_and_frequency
         .iter()
-        .map(|(offset, _)| *offset)
+        .map(|(o, _)| *o as isize)
         .collect();
-    find_factors(base, offset).1
+
+    find_factors(bases, offsets).1
 }
 
-/// Find factors a and b where a * first + offset = b * second
-fn base_factors_for_offset(first: isize, second: isize, offset: isize) -> (isize, isize) {
-    let mut a = 1;
-    let mut b = 1;
-    while a * first + offset != b * second {
-        if a * first + offset < b * second {
-            a += 1;
-        } else {
-            b += 1;
-        }
-    }
-    (a, b)
-}
-
-fn find_factors(base: Vec<usize>, offset: Vec<usize>) -> (Vec<usize>, usize) {
+/// find factors f[i] such that all values are the same, where value[i] = f[i] * base[i] - offset[i]
+fn find_factors(base: Vec<usize>, offset: Vec<isize>) -> (Vec<usize>, usize) {
     assert_eq!(base.len(), offset.len());
     let len = base.len();
     let mut factor = vec![1; len];
     let mut value = vec![0; len];
     for i in 0..len {
-        while offset[i] > factor[i] * base[i] {
+        // Make sure value never becomes negative (stays usize)
+        while offset[i] > (factor[i] * base[i]) as isize {
             println!(
                 "factor * base < offset: {} * {} < {}",
                 factor[i], base[i], offset[i]
             );
             factor[i] += 1;
         }
-        value[i] = factor[i] * base[i] - offset[i];
+        value[i] = (((factor[i] * base[i]) as isize) - offset[i]) as usize;
     }
     while !value.iter().all(|v| v == &value[0]) {
         // increase the factor of the smallest value and check again
-        if let Some((i, _)) = value
+        let (index_of_min, _) = value
             .iter()
             .enumerate()
             .min_by(|(_, v1), (_, v2)| v1.cmp(v2))
-        {
-            factor[i] += 1;
-            value[i] = factor[i] * base[i] - offset[i];
-        }
+            .unwrap();
+        factor[index_of_min] += 1;
+        value[index_of_min] = (((factor[index_of_min] * base[index_of_min]) as isize)
+            - offset[index_of_min]) as usize;
     }
     (factor, value[0])
 }
-fn find_factors_with_positive_offset(
-    base0: usize,
-    offset0: usize,
-    base1: usize,
-    offset1: usize,
-    base2: usize,
-    offset2: usize,
-) -> (usize, usize, usize) {
-    const LEN: usize = 3;
-    let mut factor = [1; LEN];
-    let base = [base0, base1, base2];
-    let offset = [offset0, offset1, offset2];
-    let mut value: [usize; LEN] = [0; LEN];
-    for i in 0..LEN {
+
+fn part2impl_slightly_less_brute_force(input: &[String]) -> usize {
+    let (mut offsets, mut bases) = get_offsets_and_bases_as_separate_vecs(input);
+
+    let last_offset = offsets.pop().unwrap();
+    let last_base = bases.pop().unwrap();
+    if offsets.is_empty() {
+        last_base // - last_offset
+    } else {
+        let mut new_factors = vec![];
+        for (idx, offset) in offsets.iter().enumerate() {
+            let (factors, _product) =
+                find_factors2(vec![last_base, bases[idx]], vec![0, last_offset - offset]);
+            new_factors.push(factors[0]);
+        }
+
+        find_factors2(bases, new_factors).1 * last_base - last_offset
+    }
+}
+
+fn get_offsets_and_bases_as_separate_vecs(input: &[String]) -> (Vec<usize>, Vec<usize>) {
+    input[1]
+        .split(',')
+        .enumerate()
+        .filter_map(|(idx, id)| {
+            // get rid of the 'x' entries
+            if let Ok(id) = id.parse::<usize>() {
+                Some((idx, id))
+            } else {
+                None
+            }
+        })
+        .unzip()
+}
+
+/// find factors f[i] such that all values are the same, where value[i] = f[i] * base[i] + offset[i]
+fn find_factors2(base: Vec<usize>, offset: Vec<usize>) -> (Vec<usize>, usize) {
+    assert_eq!(base.len(), offset.len());
+    let len = base.len();
+    let mut factor = vec![1; len];
+    let mut value = vec![0; len];
+    for i in 0..len {
         value[i] = factor[i] * base[i] + offset[i];
     }
-    while value[0] != value[1] || value[1] != value[2] {
+    while !value.iter().all(|v| v == &value[0]) {
         // increase the factor of the smallest value and check again
-        if let Some((i, _)) = value
+        let (index_of_min, _) = value
             .iter()
             .enumerate()
             .min_by(|(_, v1), (_, v2)| v1.cmp(v2))
-        {
-            factor[i] += 1;
-            value[i] = factor[i] * base[i] + offset[i];
-        }
+            .unwrap();
+        factor[index_of_min] += 1;
+        value[index_of_min] = factor[index_of_min] * base[index_of_min] + offset[index_of_min];
     }
-    (factor[0], factor[1], factor[2])
+    (factor, value[0])
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
-        base_factors_for_offset, find_factors, find_factors_with_positive_offset, part1impl,
-        part2impl,
+        find_factors, find_factors2, part1impl, part2impl_brute_force,
+        part2impl_slightly_less_brute_force,
     };
     use line_reader::{read_file_to_lines, read_str_to_lines};
 
-    const EXAMPLE: &str = "939
+    const EXAMPLE1: &str = "939
 7,13,x,x,59,x,31,19";
 
     #[test]
     fn part1_example() {
-        assert_eq!(part1impl(&read_str_to_lines(EXAMPLE)), 295);
+        assert_eq!(part1impl(&read_str_to_lines(EXAMPLE1)), 295);
     }
 
     #[test]
@@ -138,121 +156,160 @@ mod tests {
     }
 
     #[test]
-    fn part2_base_factors_for_offset_with_example1() {
-        assert_eq!(base_factors_for_offset(7, 13, 1), (11, 6));
-        assert_eq!(base_factors_for_offset(7, 59, 4), (50, 6));
-        assert_eq!(base_factors_for_offset(7, 31, 6), (8, 2));
-        assert_eq!(base_factors_for_offset(7, 19, 7), (18, 7));
-        //
-        assert_eq!(base_factors_for_offset(13, 59, -39), (62, 13));
-        assert_eq!(base_factors_for_offset(13, 31, 3), (26, 11));
-        assert_eq!(base_factors_for_offset(13, 19, -7), (2, 1));
-        //
-        assert_eq!(base_factors_for_offset(59, 31, -42), (17, 31));
-        assert_eq!(base_factors_for_offset(59, 19, -32), (16, 48));
-        //
-        assert_eq!(base_factors_for_offset(31, 19, 10), (15, 25));
+    fn part2_example1_find_factors() {
+        assert_eq!(find_factors(vec![7, 13], vec![0, 1]), (vec![11, 6], 77));
+        assert_eq!(find_factors(vec!(7, 59), vec![0, 4]), (vec![50, 6], 350));
+        assert_eq!(find_factors(vec!(7, 31), vec![0, 6]), (vec![8, 2], 56));
+        assert_eq!(find_factors(vec!(7, 19), vec![0, 7]), (vec![18, 7], 126));
     }
 
     #[test]
-    fn part2_base_factors_for_offset_with_example2() {
-        assert_eq!(base_factors_for_offset(17, 13, 2), (6, 8));
-        assert_eq!(base_factors_for_offset(17, 19, 3), (11, 10));
-        //
-        assert_eq!(base_factors_for_offset(13, 19, -5), (15, 10));
-        // Solve example 2 directly
+    fn part2_example2_direct_solve() {
         assert_eq!(
             find_factors(vec![17, 13, 19], vec![0, 2, 3]),
             (vec![201, 263, 180], 3417)
         );
     }
+    #[test]
+    fn part2_example2_two_step_solve_with_find_factors() {
+        // Find base factors for all combinations with first bus
+        assert_eq!(find_factors(vec![17, 13], vec![0, 2]), (vec![6, 8], 102));
+        assert_eq!(find_factors(vec![17, 19], vec![0, 3]), (vec![11, 10], 187));
+        // Solve resulting equations
+        assert_eq!(
+            find_factors(vec![13, 19], vec![-6, -11]),
+            (vec![15, 10], 201) // 201 * 17 = 3_417, the solution
+        );
+        // Same but with positive offsets using find_factors2
+        assert_eq!(
+            find_factors2(vec![13, 19], vec![6, 11]),
+            (vec![15, 10], 201) // 201 * 17 = 3_417, the solution
+        );
+    }
+    #[test]
+    fn part2_example2_two_step_solve_with_find_factors2() {
+        // Same, but starting from last bus, to have positive offsets, so find_factors2 can be used.
+        // The resulting time will be off by the offset of the last bus.
+        // Find base factors for all combinations with last bus
+        assert_eq!(find_factors2(vec![19, 17], vec![0, 3]), (vec![10, 11], 190));
+        assert_eq!(find_factors2(vec![19, 13], vec![0, 1]), (vec![11, 16], 209));
+        // Solve resulting equations
+        assert_eq!(
+            find_factors2(vec![17, 13], vec![10, 11]),
+            (vec![10, 13], 180) // 180 * 19 − 3 = 3_417, the solution
+        );
+    }
 
     #[test]
-    fn part2_base_factors_for_offset_with_example3() {
-        assert_eq!(base_factors_for_offset(67, 7, 1), (5, 48));
-        assert_eq!(base_factors_for_offset(67, 59, 2), (44, 50));
-        assert_eq!(base_factors_for_offset(67, 61, 3), (30, 33));
-        //
-        assert_eq!(base_factors_for_offset(7, 59, 5 - 44), (14, 1));
-        assert_eq!(base_factors_for_offset(59, 61, 44 - 30), (7, 7));
-        //
-        assert_eq!(base_factors_for_offset(7, 61, 5 - 30), (21, 2));
-        // solves second half of example 3
-        assert_eq!(
-            find_factors_with_positive_offset(7, 5, 59, 44, 61, 30),
-            (1607, 190, 184)
-        );
+    fn part2_example3_direct_solve() {
         // Solve example 3 directly
         assert_eq!(
             find_factors(vec![67, 7, 59, 61], vec![0, 1, 2, 3]),
-            (vec![11254, 107717, 12780, 12361], 754018)
+            (vec![11254, 107717, 12780, 12361], 754_018)
+        );
+    }
+    #[test]
+    fn part2_example3_two_step_solve_with_find_factors() {
+        // Find base factors for all combinations with first bus
+        assert_eq!(find_factors(vec![67, 7], vec![0, 1]), (vec![5, 48], 335));
+        assert_eq!(find_factors(vec![67, 59], vec![0, 2]), (vec![44, 50], 2948));
+        assert_eq!(find_factors(vec![67, 61], vec![0, 3]), (vec![30, 33], 2010));
+        // Solve resulting equations
+        assert_eq!(
+            find_factors(vec![7, 59, 61], vec![-5, -44, -30]),
+            (vec![1607, 190, 184], 11254) // 11_254 * 67 = 754_018, the solution
+        );
+        // Same but with positive offsets using find_factors2
+        assert_eq!(
+            find_factors2(vec![7, 59, 61], vec![5, 44, 30]),
+            (vec![1607, 190, 184], 11254) // 11_254 * 67 = 754_018, the solution
+        );
+    }
+    #[test]
+    fn part2_example3_two_step_solve_with_find_factors2() {
+        // Find base factors for all combinations with first bus
+        assert_eq!(
+            find_factors2(vec![61, 67], vec![0, 3]),
+            (vec![33, 30], 2013)
+        );
+        assert_eq!(find_factors2(vec![61, 7], vec![0, 2]), (vec![6, 52], 366));
+        assert_eq!(
+            find_factors2(vec![61, 59], vec![0, 1]),
+            (vec![30, 31], 1830)
+        );
+        // Solve resulting equations
+        assert_eq!(
+            find_factors2(vec![67, 7, 59], vec![33, 6, 30]),
+            (vec![184, 1765, 209], 12361) // 12361 * 61 - 3 = 754_018, the solution
         );
     }
 
     #[test]
     fn part2_example_1() {
-        assert_eq!(part2impl(&read_str_to_lines(EXAMPLE)), 1068781);
+        assert_eq!(
+            part2impl_slightly_less_brute_force(&read_str_to_lines(EXAMPLE1)),
+            1068781
+        );
     }
 
+    const EXAMPLE2: &str = "whatever
+17,x,13,19";
     #[test]
     fn part2_example_2() {
         assert_eq!(
-            part2impl(&read_str_to_lines(
-                "whatever
-17,x,13,19"
-            )),
+            part2impl_slightly_less_brute_force(&read_str_to_lines(EXAMPLE2)),
             3417
         );
     }
 
+    const EXAMPLE3: &str = "whatever
+67,7,59,61";
     #[test]
     fn part2_example_3() {
         assert_eq!(
-            part2impl(&read_str_to_lines(
-                "whatever
-67,7,59,61"
-            )),
+            part2impl_slightly_less_brute_force(&read_str_to_lines(EXAMPLE3)),
             754018
         );
     }
 
+    const EXAMPLE4: &str = "whatever
+67,x,7,59,61";
     #[test]
     fn part2_example_4() {
         assert_eq!(
-            part2impl(&read_str_to_lines(
-                "whatever
-67,x,7,59,61"
-            )),
+            part2impl_slightly_less_brute_force(&read_str_to_lines(EXAMPLE4)),
             779210
         );
     }
 
+    const EXAMPLE5: &str = "whatever
+67,7,x,59,61";
     #[test]
     fn part2_example_5() {
         assert_eq!(
-            part2impl(&read_str_to_lines(
-                "whatever
-67,7,x,59,61"
-            )),
+            part2impl_slightly_less_brute_force(&read_str_to_lines(EXAMPLE5)),
             1261476
         );
     }
 
-    // very slow, takes 29s!
+    const EXAMPLE6: &str = "whatever
+1789,37,47,1889";
+    // takes 29s! with part2impl
+    // takes 15ms with part2impl2
     #[test]
     fn part2_example_6() {
         assert_eq!(
-            part2impl(&read_str_to_lines(
-                "whatever
-1789,37,47,1889"
-            )),
+            part2impl_slightly_less_brute_force(&read_str_to_lines(EXAMPLE6)),
             1202161486
         );
     }
 
     // exceedingly slow…
-    #[test]
+    // #[test]
     fn part2() {
-        assert_eq!(part2impl(&read_file_to_lines("input.txt"),), 24769);
+        assert_eq!(
+            part2impl_slightly_less_brute_force(&read_file_to_lines("input.txt"),),
+            24769
+        );
     }
 }
