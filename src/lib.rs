@@ -24,29 +24,6 @@ fn shortest_wait_multiplied_by_bus_id(earliest_time: usize, bus_ids: Vec<usize>)
     min * id
 }
 
-fn part2impl_brute_force(input: &[String]) -> usize {
-    let offset_and_frequency: Vec<(isize, usize)> = input[1]
-        .split(',')
-        .enumerate()
-        .filter_map(|(idx, id)| {
-            // get rid of the 'x' entries
-            if let Ok(id) = id.parse::<usize>() {
-                Some((idx as isize, id))
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    let bases = offset_and_frequency.iter().map(|(_, b)| *b).collect();
-    let offsets = offset_and_frequency
-        .iter()
-        .map(|(o, _)| *o as isize)
-        .collect();
-
-    find_factors(bases, offsets).1
-}
-
 /// find factors f[i] such that all values are the same, where value[i] = f[i] * base[i] - offset[i]
 fn find_factors(base: Vec<usize>, offset: Vec<isize>) -> (Vec<usize>, usize) {
     assert_eq!(base.len(), offset.len());
@@ -77,26 +54,6 @@ fn find_factors(base: Vec<usize>, offset: Vec<isize>) -> (Vec<usize>, usize) {
     }
     (factor, value[0])
 }
-
-fn part2impl_slightly_less_brute_force(input: &[String]) -> usize {
-    let (mut offsets, mut bases) = get_offsets_and_bases_as_separate_vecs(input);
-
-    let last_offset = offsets.pop().unwrap();
-    let last_base = bases.pop().unwrap();
-    if offsets.is_empty() {
-        last_base // - last_offset
-    } else {
-        let mut new_factors = vec![];
-        for (idx, offset) in offsets.iter().enumerate() {
-            let (factors, _product) =
-                find_factors2(vec![last_base, bases[idx]], vec![0, last_offset - offset]);
-            new_factors.push(factors[0]);
-        }
-
-        find_factors2(bases, new_factors).1 * last_base - last_offset
-    }
-}
-
 fn get_offsets_and_bases_as_separate_vecs(input: &[String]) -> (Vec<usize>, Vec<usize>) {
     input[1]
         .split(',')
@@ -172,10 +129,7 @@ fn find_meet_time(freq: &[usize], offset: &[usize], start: usize) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        find_factors, find_factors2, find_meet_time, part1impl, part2impl, part2impl_brute_force,
-        part2impl_slightly_less_brute_force,
-    };
+    use crate::{find_factors, find_factors2, find_meet_time, part1impl, part2impl};
     use line_reader::{read_file_to_lines, read_str_to_lines};
 
     const EXAMPLE1: &str = "939
