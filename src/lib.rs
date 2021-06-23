@@ -1,13 +1,19 @@
-use line_reader::{read_file_to_lines, read_str_to_lines};
 use std::collections::HashMap;
 use std::option::Option;
 
 fn the_2020th_number_spoken(input: &[usize]) -> usize {
+    the_nth_number_spoken(input, 2_020)
+}
+
+fn the_30_000_000th_number_spoken(input: &[usize]) -> usize {
+    the_nth_number_spoken(input, 30_000_000)
+}
+
+fn the_nth_number_spoken(input: &[usize], limit: usize) -> usize {
     let mut last_turn_by_num: HashMap<usize, usize> = HashMap::new();
     let mut second_to_last: Option<usize> = None;
     let mut num = 0;
-    // let mut is_first = true;
-    for turn in 1..=2020 {
+    for turn in 1..=limit {
         num = if turn - 1 < input.len() {
             input[turn - 1]
         } else {
@@ -24,8 +30,7 @@ fn the_2020th_number_spoken(input: &[usize]) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use crate::the_2020th_number_spoken;
-    use line_reader::read_file_to_lines;
+    use crate::{the_2020th_number_spoken, the_30_000_000th_number_spoken};
 
     #[test]
     fn part1_examples() {
@@ -41,5 +46,50 @@ mod tests {
     #[test]
     fn part1() {
         assert_eq!(the_2020th_number_spoken(&[0, 6, 1, 7, 2, 19, 20]), 706);
+    }
+
+    // Warning: each of the part 2 tests runs about 25 seconds!
+
+    #[test]
+    fn part2_examples_1() {
+        assert_eq!(the_30_000_000th_number_spoken(&[0, 3, 6]), 175_594);
+    }
+
+    #[test]
+    fn part2_examples_2() {
+        assert_eq!(the_30_000_000th_number_spoken(&[1, 3, 2]), 2_578);
+    }
+
+    #[test]
+    fn part2_examples_3() {
+        assert_eq!(the_30_000_000th_number_spoken(&[2, 1, 3]), 3544_142);
+    }
+
+    #[test]
+    fn part2_examples_4() {
+        assert_eq!(the_30_000_000th_number_spoken(&[1, 2, 3]), 261_214);
+    }
+
+    #[test]
+    fn part2_examples_5() {
+        assert_eq!(the_30_000_000th_number_spoken(&[2, 3, 1]), 6_895_259);
+    }
+
+    #[test]
+    fn part2_examples_6() {
+        assert_eq!(the_30_000_000th_number_spoken(&[3, 2, 1]), 18);
+    }
+
+    #[test]
+    fn part2_examples_7() {
+        assert_eq!(the_30_000_000th_number_spoken(&[3, 1, 2]), 362);
+    }
+
+    #[test]
+    fn part2() {
+        assert_eq!(
+            the_30_000_000th_number_spoken(&[0, 6, 1, 7, 2, 19, 20]),
+            19331
+        );
     }
 }
