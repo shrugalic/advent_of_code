@@ -10,8 +10,8 @@ fn the_30_000_000th_number_spoken(input: &[usize]) -> usize {
 }
 
 fn the_nth_number_spoken(input: &[usize], limit: usize) -> usize {
-    let mut last_turn_by_num: HashMap<usize, usize> = HashMap::new();
-    let mut second_to_last: Option<usize> = None;
+    let mut last_turn_by_num = vec![None; limit];
+    let mut second_to_last = None;
     let mut num = 0;
     for turn in 1..=limit {
         num = if turn - 1 < input.len() {
@@ -22,8 +22,8 @@ fn the_nth_number_spoken(input: &[usize], limit: usize) -> usize {
                 None => 0,
             }
         };
-        second_to_last = last_turn_by_num.get(&num).cloned();
-        last_turn_by_num.insert(num, turn);
+        second_to_last = last_turn_by_num[num];
+        last_turn_by_num[num] = Some(turn);
     }
     num
 }
@@ -47,8 +47,6 @@ mod tests {
     fn part1() {
         assert_eq!(the_2020th_number_spoken(&[0, 6, 1, 7, 2, 19, 20]), 706);
     }
-
-    // Warning: each of the part 2 tests runs about 25 seconds!
 
     #[test]
     fn part2_examples_1() {
