@@ -1,6 +1,3 @@
-use std::collections::HashMap;
-use std::option::Option;
-
 fn the_2020th_number_spoken(input: &[usize]) -> usize {
     the_nth_number_spoken(input, 2_020)
 }
@@ -11,16 +8,16 @@ fn the_30_000_000th_number_spoken(input: &[usize]) -> usize {
 
 fn the_nth_number_spoken(input: &[usize], limit: usize) -> usize {
     let mut last_turn_by_num = vec![None; limit];
+    input
+        .iter()
+        .enumerate()
+        .for_each(|(i, num)| last_turn_by_num[*num] = Some(i + 1));
     let mut second_to_last = None;
-    let mut num = 0;
-    for turn in 1..=limit {
-        num = if turn - 1 < input.len() {
-            input[turn - 1]
-        } else {
-            match second_to_last {
-                Some(previous) => turn - 1 - previous,
-                None => 0,
-            }
+    let mut num = input[input.len() - 1];
+    for turn in input.len() + 1..=limit {
+        num = match second_to_last {
+            Some(previous) => turn - 1 - previous,
+            None => 0,
         };
         second_to_last = last_turn_by_num[num];
         last_turn_by_num[num] = Some(turn);
