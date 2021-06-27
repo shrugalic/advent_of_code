@@ -1,4 +1,4 @@
-mod pocket_dimension_map;
+mod pocket_dimension_map_3d;
 mod pocket_dimension_vec;
 mod tests;
 
