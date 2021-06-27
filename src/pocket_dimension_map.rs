@@ -79,111 +79,85 @@ impl PocketDimension<(isize, isize, isize)> for PocketDimensionMap {
 }
 impl ExecutableCycle for PocketDimensionMap {
     fn execute_cycle(self) -> Self {
-        let mut next_states = HashMap::new();
-        self.states.iter().for_each(|(old_pos, _old_state)| {
-            self.safe_neighbors_of(old_pos).iter().for_each(|new_pos| {
-                let curr_state = self.get_state_at(new_pos);
+        let states = self
+            .expand()
+            .iter()
+            .map(|(new_pos, curr_state)| {
                 let active_neighbor_count = self.active_neighbor_count_of(new_pos);
                 let new_state = match (&curr_state, active_neighbor_count) {
                     (State::Active, 2..=3) | (State::Inactive, 3) => State::Active,
                     (_, _) => State::Inactive,
                 };
-                next_states.insert(*new_pos, new_state);
-            });
-        });
+                (*new_pos, new_state)
+            })
+            .collect::<HashMap<_, _>>();
 
-        PocketDimensionMap {
-            states: next_states,
-        }
-        .trim()
+        PocketDimensionMap { states }.trim()
     }
 
     fn trim(mut self) -> Self {
-        // trim z:
-        for z in self.z_range() {
-            let pos_filter = |pos: &(isize, isize, isize)| pos.0 == z;
-            self.remove_inactive_values(pos_filter)
-        }
-        // trim y
-        for y in self.y_range() {
-            let pos_filter = |pos: &(isize, isize, isize)| pos.1 == y;
-            self.remove_inactive_values(pos_filter)
-        }
-        // trim x:
-        for x in self.x_range() {
-            let pos_filter = |pos: &(isize, isize, isize)| pos.2 == x;
-            self.remove_inactive_values(pos_filter)
-        }
+        self.z_range()
+            .for_each(|z| self.remove_values_if_all_are_inactive_where(|pos| pos.0 == z));
+        self.y_range()
+            .for_each(|y| self.remove_values_if_all_are_inactive_where(|pos| pos.1 == y));
+        self.x_range()
+            .for_each(|x| self.remove_values_if_all_are_inactive_where(|pos| pos.2 == x));
         self
     }
 }
 
 impl PocketDimensionMap {
     fn z_range(&self) -> RangeInclusive<isize> {
-        let z_min = *self
-            .states
-            .iter()
-            .map(|((z, _, _), _)| z)
-            .min()
-            .unwrap_or(&0);
-        let z_max = *self
-            .states
-            .iter()
-            .map(|((z, _, _), _)| z)
-            .max()
-            .unwrap_or(&-1);
+        let zs = self.states.iter().map(|((z, _, _), _)| z);
+        let z_min = *zs.clone().min().unwrap_or(&0);
+        let z_max = *zs.max().unwrap_or(&-1);
         z_min..=z_max
     }
 
     fn y_range(&self) -> RangeInclusive<isize> {
-        let y_min = *self
-            .states
-            .iter()
-            .map(|((_, y, _), _)| y)
-            .min()
-            .unwrap_or(&0);
-        let y_max = *self
-            .states
-            .iter()
-            .map(|((_, y, _), _)| y)
-            .max()
-            .unwrap_or(&-1);
+        let ys = self.states.iter().map(|((_, y, _), _)| y);
+        let y_min = *ys.clone().min().unwrap_or(&0);
+        let y_max = *ys.max().unwrap_or(&-1);
         y_min..=y_max
     }
 
     fn x_range(&self) -> RangeInclusive<isize> {
-        let x_min = *self
-            .states
-            .iter()
-            .map(|((_, _, x), _)| x)
-            .min()
-            .unwrap_or(&0);
-        let x_max = *self
-            .states
-            .iter()
-            .map(|((_, _, x), _)| x)
-            .max()
-            .unwrap_or(&-1);
+        let xs = self.states.iter().map(|((_, _, x), _)| x);
+        let x_min = *xs.clone().min().unwrap_or(&0);
+        let x_max = *xs.max().unwrap_or(&-1);
         x_min..=x_max
     }
 
-    fn remove_inactive_values<F>(&mut self, filter: F)
+    fn remove_values_if_all_are_inactive_where<F>(&mut self, position_filter: F)
     where
         F: Fn(&(isize, isize, isize)) -> bool,
     {
-        let states_in_this_plane: Vec<_> = self
+        let filtered: Vec<_> = self
             .states
             .iter()
-            .filter(|(pos, _)| filter(pos))
+            .filter(|(pos, _)| position_filter(pos))
             .map(|(pos, state)| (*pos, *state))
             .collect();
-        if states_in_this_plane
-            .iter()
-            .all(|(_, state)| state == &State::Inactive)
-        {
-            states_in_this_plane.iter().for_each(|(pos, _)| {
+        if filtered.iter().all(|(_, state)| state == &State::Inactive) {
+            filtered.iter().for_each(|(pos, _)| {
                 self.states.remove(pos);
             });
         }
+    }
+
+    fn expand(&self) -> HashMap<(isize, isize, isize), State> {
+        let z_range = (self.z_range().start() - 1)..=(self.z_range().end() + 1);
+        let y_range = (self.y_range().start() - 1)..=(self.y_range().end() + 1);
+        let x_range = (self.x_range().start() - 1)..=(self.x_range().end() + 1);
+
+        let mut states = self.states.clone();
+        z_range.for_each(|z| {
+            y_range.clone().for_each(|y| {
+                x_range.clone().for_each(|x| {
+                    states.entry((z, y, x)).or_insert(State::Inactive);
+                });
+            });
+        });
+        states
     }
 }
