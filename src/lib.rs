@@ -1,4 +1,5 @@
 mod pocket_dimension_map_3d;
+mod pocket_dimension_map_4d;
 mod pocket_dimension_vec;
 mod tests;
 
@@ -19,7 +20,7 @@ trait PocketDimension<POS> {
     fn set_state_at(&mut self, pos: &POS, state: State);
     fn safe_neighbors_of(&self, pos: &POS) -> Vec<POS>;
     fn active_neighbor_count_of(&self, pos: &POS) -> usize;
-    fn offsets(&self) -> Vec<POS>;
+    fn offsets() -> Vec<POS>;
 }
 
 trait ExecutableCycle {
@@ -27,35 +28,22 @@ trait ExecutableCycle {
     fn trim(self) -> Self;
 }
 
-const OFFSETS_3D: [(isize, isize, isize); 26] = [
-    (-1, -1, -1),
-    (-1, -1, 0),
-    (-1, -1, 1),
-    (-1, 0, -1),
-    (-1, 0, 0),
-    (-1, 0, 1),
-    (-1, 1, -1),
-    (-1, 1, 0),
-    (-1, 1, 1),
-    (0, -1, -1),
-    (0, -1, 0),
-    (0, -1, 1),
-    (0, 0, -1),
-    // (0, 0, 0),
-    (0, 0, 1),
-    (0, 1, -1),
-    (0, 1, 0),
-    (0, 1, 1),
-    (1, -1, -1),
-    (1, -1, 0),
-    (1, -1, 1),
-    (1, 0, -1),
-    (1, 0, 0),
-    (1, 0, 1),
-    (1, 1, -1),
-    (1, 1, 0),
-    (1, 1, 1),
-];
+type Coord3 = (isize, isize, isize);
+
+fn offsets_3d() -> Vec<Coord3> {
+    let range: RangeInclusive<isize> = -1..=1;
+    let mut offsets = vec![];
+    for z in range.clone() {
+        for y in range.clone() {
+            for x in range.clone() {
+                if z != 0 || y != 0 || x != 0 {
+                    offsets.push((z, y, x))
+                }
+            }
+        }
+    }
+    offsets
+}
 
 impl State {
     fn to_char(self) -> char {
