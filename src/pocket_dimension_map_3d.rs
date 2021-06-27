@@ -236,43 +236,6 @@ mod tests {
     }
 
     #[test]
-    fn part1_ex_map_neighbors() {
-        let pd = PocketDimensionMap3D::from(&example_1_initial());
-        assert_eq!(
-            pd.safe_neighbors_of(&(0, 0, 0)),
-            [
-                (-1, -1, -1),
-                (-1, -1, 0),
-                (-1, -1, 1),
-                (-1, 0, -1),
-                (-1, 0, 0),
-                (-1, 0, 1),
-                (-1, 1, -1),
-                (-1, 1, 0),
-                (-1, 1, 1),
-                (0, -1, -1),
-                (0, -1, 0),
-                (0, -1, 1),
-                (0, 0, -1),
-                // (0, 0, 0),
-                (0, 0, 1),
-                (0, 1, -1),
-                (0, 1, 0),
-                (0, 1, 1),
-                (1, -1, -1),
-                (1, -1, 0),
-                (1, -1, 1),
-                (1, 0, -1),
-                (1, 0, 0),
-                (1, 0, 1),
-                (1, 1, -1),
-                (1, 1, 0),
-                (1, 1, 1),
-            ]
-        );
-    }
-
-    #[test]
     fn part1_ex_map_execute_cycle() {
         let initial = PocketDimensionMap3D::from(&example_1_initial());
         let next = initial.execute_cycle();
