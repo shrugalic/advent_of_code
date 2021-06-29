@@ -14,19 +14,19 @@ impl Validator {
 
 #[derive(Debug)]
 struct Resolver {
-    resolved_rules: HashMap<usize, Vec<String>>,
+    resolved_rules: Vec<Option<Vec<String>>>,
     unresolved_rules: HashMap<usize, Vec<Vec<usize>>>,
 }
 impl From<&[String]> for Resolver {
     fn from(rules: &[String]) -> Resolver {
-        let mut resolved: HashMap<usize, Vec<String>> = HashMap::new();
+        let mut resolved: Vec<Option<Vec<String>>> = vec![None; rules.len()];
         let mut unresolved: HashMap<usize, Vec<Vec<usize>>> = HashMap::new();
         for rule in rules {
             if let Some((left, right)) = rule.split_once(": ") {
                 let index: usize = left.parse().unwrap();
                 if right.starts_with('\"') && right.ends_with('\"') {
                     let char = right.chars().nth(1).unwrap();
-                    resolved.insert(index, vec![char.to_string()]);
+                    resolved[index] = Some(vec![char.to_string()]);
                 } else {
                     let sequences: Vec<Vec<usize>> = right
                         .split(" | ")
@@ -49,16 +49,16 @@ impl From<&[String]> for Resolver {
     }
 }
 impl Resolver {
-    fn is_resolvable(resolved: &HashMap<usize, Vec<String>>, sequences: &[Vec<usize>]) -> bool {
+    fn is_resolvable(resolved: &Vec<Option<Vec<String>>>, sequences: &[Vec<usize>]) -> bool {
         sequences
             .iter()
             .flat_map(|indices| indices.iter())
-            .all(|idx| resolved.contains_key(idx))
+            .all(|idx| resolved[*idx].is_some())
     }
     fn resolve(mut self) -> Validator {
         println!("{:?}", self);
         while !self.unresolved_rules.is_empty() {
-            // Moved to avoid borrow-checker error when accessing self.resolveds in the loop
+            // Moved to avoid borrow-checker error when accessing self.resolved_rules in the loop
             let mut to_resolve = self.unresolved_rules;
             self.unresolved_rules = HashMap::new();
             for (index, sequences) in to_resolve.drain() {
@@ -68,7 +68,7 @@ impl Resolver {
                     for indices in &sequences {
                         let resolved: Vec<&Vec<String>> = indices
                             .iter()
-                            .map(|i| self.resolved_rules.get(i).unwrap())
+                            .map(|i| self.resolved_rules[*i].as_ref().unwrap())
                             .collect();
                         println!("Resolved = {:?}", resolved);
                         let inner_strings = Resolver::multiply(&resolved);
@@ -76,7 +76,7 @@ impl Resolver {
                         outer_strings.extend(inner_strings);
                     }
                     println!("Resolved outer {:?} to {:?}", sequences, outer_strings);
-                    self.resolved_rules.insert(index, outer_strings);
+                    self.resolved_rules[index] = Some(outer_strings);
                 } else {
                     // cannot fully resolve this rule yet
                     println!("Skipping and re-adding ({}, {:?})", index, sequences);
@@ -86,7 +86,7 @@ impl Resolver {
             println!("{:?}", self);
         }
 
-        let rule_0 = self.resolved_rules.get(&0).unwrap();
+        let rule_0 = self.resolved_rules[0].as_ref().unwrap();
         // println!("rule_0 = {:?}", rule_0);
         let valid_messages = rule_0.iter().cloned().collect();
         Validator { valid_messages }
