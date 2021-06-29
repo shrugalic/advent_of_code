@@ -12,89 +12,154 @@ impl Validator {
     }
 }
 
+type Index = usize;
+
 #[derive(Debug)]
 struct Resolver {
-    resolved_rules: Vec<Option<Vec<String>>>,
-    unresolved_rules: Vec<Option<Vec<Vec<usize>>>>,
+    choices: Vec<Option<(Vec<Index>, Vec<Index>)>>,
+    sequences: Vec<Option<Vec<Index>>>,
+    allowed_strings: Vec<Option<Vec<String>>>,
 }
+
 impl From<&[String]> for Resolver {
-    fn from(rules: &[String]) -> Resolver {
-        let mut resolved: Vec<Option<Vec<String>>> = vec![None; rules.len()];
-        let mut unresolved: Vec<Option<Vec<Vec<usize>>>> = vec![None; rules.len()];
-        for rule in rules {
+    fn from(input: &[String]) -> Resolver {
+        let mut choices: Vec<Option<(Vec<Index>, Vec<Index>)>> = vec![None; input.len()];
+        let mut sequences: Vec<Option<Vec<Index>>> = vec![None; input.len()];
+        let mut allowed_strings: Vec<Option<Vec<String>>> = vec![None; input.len()];
+        for rule in input {
             if let Some((left, right)) = rule.split_once(": ") {
                 let index: usize = left.parse().unwrap();
                 if right.starts_with('\"') && right.ends_with('\"') {
                     let char = right.chars().nth(1).unwrap();
-                    resolved[index] = Some(vec![char.to_string()]);
-                } else {
-                    let sequences: Vec<Vec<usize>> = right
-                        .split(" | ")
-                        .map(|seq| {
-                            seq.split_ascii_whitespace()
-                                .filter_map(|c| c.parse().ok())
-                                .collect()
-                        })
+                    allowed_strings[index] = Some(vec![char.to_string()]);
+                } else if let Some((left, right)) = right.split_once(" | ") {
+                    let left: Vec<usize> = left
+                        .split_ascii_whitespace()
+                        .filter_map(|s| s.parse().ok())
                         .collect();
-                    unresolved[index] = Some(sequences);
+                    let right: Vec<usize> = right
+                        .split_ascii_whitespace()
+                        .filter_map(|s| s.parse().ok())
+                        .collect();
+                    choices[index] = Some((left, right));
+                } else {
+                    let sequence: Vec<usize> = right
+                        .split_ascii_whitespace()
+                        .filter_map(|s| s.parse().ok())
+                        .collect();
+                    sequences[index] = Some(sequence);
                 }
             } else {
                 panic!("Invalid input rule '{}'", rule)
             };
         }
         Resolver {
-            resolved_rules: resolved,
-            unresolved_rules: unresolved,
+            choices,
+            sequences,
+            allowed_strings,
         }
     }
 }
 impl Resolver {
-    fn is_resolvable(resolved: &Vec<Option<Vec<String>>>, sequences: &[Vec<usize>]) -> bool {
-        sequences
-            .iter()
-            .flat_map(|indices| indices.iter())
-            .all(|idx| resolved[*idx].is_some())
+    fn is_resolvable(resolved: &[Option<Vec<String>>], indices: &[usize]) -> bool {
+        indices.iter().all(|idx| resolved[*idx].is_some())
     }
     fn resolve(mut self) -> Validator {
         println!("{:?}", self);
-        while !self.unresolved_rules.iter().all(|r| r.is_none()) {
-            // Moved to avoid borrow-checker error when accessing self.resolved_rules in the loop
-            let to_resolve = self.unresolved_rules;
-            self.unresolved_rules = vec![None; to_resolve.len()];
-            // let mut index = to_resolve.len() - 1;
-            for (index, sequences) in to_resolve.iter().enumerate() {
-                if let Some(sequences) = sequences.as_ref() {
-                    // while let Some(sequences) = to_resolve.remove(index) {
-                    println!("Trying to resolve ({}, {:?})", index, sequences);
-                    if Resolver::is_resolvable(&self.resolved_rules, &sequences) {
-                        let mut outer_strings: Vec<String> = vec![];
-                        for indices in sequences {
-                            let resolved: Vec<&Vec<String>> = indices
-                                .iter()
-                                .map(|i| self.resolved_rules[*i].as_ref().unwrap())
-                                .collect();
-                            println!("Resolved = {:?}", resolved);
-                            let inner_strings = Resolver::multiply(&resolved);
-                            println!("Resolved inner {:?} to {:?}", indices, inner_strings);
-                            outer_strings.extend(inner_strings);
-                        }
-                        println!("Resolved outer {:?} to {:?}", sequences, outer_strings);
-                        self.resolved_rules[index] = Some(outer_strings);
+
+        let mut counter = 0;
+        let mut resolved_something = true;
+        while (self.choices.iter().any(|choice| choice.is_some())
+            || self.sequences.iter().any(|sequence| sequence.is_some()))
+            && self.allowed_strings[0].is_none()
+            && resolved_something
+        {
+            resolved_something = false;
+            let mut allowed_strings = self.allowed_strings.clone();
+            for (i, choice) in self.choices.iter_mut().enumerate() {
+                if let Some((left, right)) = choice {
+                    if Resolver::is_resolvable(&self.allowed_strings, left)
+                        && Resolver::is_resolvable(&self.allowed_strings, right)
+                    {
+                        let left: Vec<Vec<String>> = left
+                            .iter()
+                            .map(|j| allowed_strings[*j].as_ref().unwrap())
+                            .cloned()
+                            .collect();
+                        let right: Vec<Vec<String>> = right
+                            .iter()
+                            .map(|j| allowed_strings[*j].as_ref().unwrap())
+                            .cloned()
+                            .collect();
+                        self.allowed_strings[i] =
+                            Some(Resolver::create_allowed_strings(&left, &right));
+                        *choice = None;
+                        resolved_something = true;
                     } else {
-                        // cannot fully resolve this rule yet
-                        println!("Skipping and re-adding ({}, {:?})", index, sequences);
-                        self.unresolved_rules[index] = Some(sequences.to_vec());
+                        println!("Choice {:?} not resolvable yet", choice);
                     }
-                    // index -= 1;
                 }
             }
+            // println!("{:?}", self);
+            // }
+            allowed_strings = self.allowed_strings.clone();
+            // while  {
+            for (i, sequence) in self.sequences.iter_mut().enumerate() {
+                if let Some(seq) = sequence {
+                    if Resolver::is_resolvable(&self.allowed_strings, seq) {
+                        let resolved: Vec<_> = seq
+                            .iter()
+                            .map(|j| allowed_strings[*j].as_ref().unwrap())
+                            .collect();
+                        // println!("Resolved = {:?}", resolved);
+                        let multiplied = Resolver::multiply(resolved.as_slice());
+                        // println!("Multiplied = {:?}", multiplied);
+                        self.allowed_strings[i] = Some(multiplied);
+                        *sequence = None;
+                        resolved_something = true;
+                    } else {
+                        println!("Sequence {:?} not resolvable yet", sequence);
+                    }
+                }
+            }
+            allowed_strings = self.allowed_strings.clone();
+            // break;
             println!("{:?}", self);
+            counter += 1;
+            println!("{} --------------------", counter);
+            if counter > 100 {
+                break;
+            }
         }
 
-        let rule_0 = self.resolved_rules[0].as_ref().unwrap();
-        // println!("rule_0 = {:?}", rule_0);
-        let valid_messages = rule_0.iter().cloned().collect();
+        let valid_messages = self
+            .allowed_strings
+            .iter()
+            .filter_map(|v| v.as_ref())
+            .cloned()
+            .flatten()
+            .collect();
         Validator { valid_messages }
+    }
+    fn create_allowed_strings(left: &[Vec<String>], right: &[Vec<String>]) -> Vec<String> {
+        if left.len() == 1 && right.len() == 1 {
+            vec![
+                // left[0].clone(), right[0].clone()
+            ]
+        } else if left.len() == 2 && right.len() == 2 {
+            vec![
+                // left[0].clone() + &l2[0],
+                // left[0].clone() + &l2[1],
+                // left[1].clone() + &l2[0],
+                // left[1].clone() + &l2[1],
+                // right[0].clone() + &r2[0],
+                // right[0].clone() + &r2[1],
+                // right[1].clone() + &r2[0],
+                // right[1].clone() + &r2[1],
+            ]
+        } else {
+            panic!("Unexpected lengths of {:?}, {:?}", left, right);
+        }
     }
     fn multiply(sequences: &[&Vec<String>]) -> Vec<String> {
         let first = sequences[0];
@@ -131,8 +196,8 @@ fn number_of_messages_matching_rule_0(input: &[String]) -> usize {
     let mut split = input.split(|line| line.is_empty());
     let (rules, messages) = (split.next().unwrap(), split.next().unwrap());
 
-    // println!("Rules: {:?}", rules);
-    // println!("Messages: {:?}", messages);
+    println!("Rules: {:?}", rules);
+    println!("Messages: {:?}", messages);
 
     let validator = Resolver::from(rules).resolve();
     // println!("Valid messages: {:?}", validator.valid_messages);
