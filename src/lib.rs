@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 mod tests;
 
@@ -15,12 +15,12 @@ impl Validator {
 #[derive(Debug)]
 struct Resolver {
     resolved_rules: Vec<Option<Vec<String>>>,
-    unresolved_rules: HashMap<usize, Vec<Vec<usize>>>,
+    unresolved_rules: Vec<Option<Vec<Vec<usize>>>>,
 }
 impl From<&[String]> for Resolver {
     fn from(rules: &[String]) -> Resolver {
         let mut resolved: Vec<Option<Vec<String>>> = vec![None; rules.len()];
-        let mut unresolved: HashMap<usize, Vec<Vec<usize>>> = HashMap::new();
+        let mut unresolved: Vec<Option<Vec<Vec<usize>>>> = vec![None; rules.len()];
         for rule in rules {
             if let Some((left, right)) = rule.split_once(": ") {
                 let index: usize = left.parse().unwrap();
@@ -36,7 +36,7 @@ impl From<&[String]> for Resolver {
                                 .collect()
                         })
                         .collect();
-                    unresolved.insert(index, sequences);
+                    unresolved[index] = Some(sequences);
                 }
             } else {
                 panic!("Invalid input rule '{}'", rule)
@@ -57,30 +57,35 @@ impl Resolver {
     }
     fn resolve(mut self) -> Validator {
         println!("{:?}", self);
-        while !self.unresolved_rules.is_empty() {
+        while !self.unresolved_rules.iter().all(|r| r.is_none()) {
             // Moved to avoid borrow-checker error when accessing self.resolved_rules in the loop
-            let mut to_resolve = self.unresolved_rules;
-            self.unresolved_rules = HashMap::new();
-            for (index, sequences) in to_resolve.drain() {
-                println!("Trying to resolve ({}, {:?})", index, sequences);
-                if Resolver::is_resolvable(&self.resolved_rules, &sequences) {
-                    let mut outer_strings: Vec<String> = vec![];
-                    for indices in &sequences {
-                        let resolved: Vec<&Vec<String>> = indices
-                            .iter()
-                            .map(|i| self.resolved_rules[*i].as_ref().unwrap())
-                            .collect();
-                        println!("Resolved = {:?}", resolved);
-                        let inner_strings = Resolver::multiply(&resolved);
-                        println!("Resolved inner {:?} to {:?}", indices, inner_strings);
-                        outer_strings.extend(inner_strings);
+            let to_resolve = self.unresolved_rules;
+            self.unresolved_rules = vec![None; to_resolve.len()];
+            // let mut index = to_resolve.len() - 1;
+            for (index, sequences) in to_resolve.iter().enumerate() {
+                if let Some(sequences) = sequences.as_ref() {
+                    // while let Some(sequences) = to_resolve.remove(index) {
+                    println!("Trying to resolve ({}, {:?})", index, sequences);
+                    if Resolver::is_resolvable(&self.resolved_rules, &sequences) {
+                        let mut outer_strings: Vec<String> = vec![];
+                        for indices in sequences {
+                            let resolved: Vec<&Vec<String>> = indices
+                                .iter()
+                                .map(|i| self.resolved_rules[*i].as_ref().unwrap())
+                                .collect();
+                            println!("Resolved = {:?}", resolved);
+                            let inner_strings = Resolver::multiply(&resolved);
+                            println!("Resolved inner {:?} to {:?}", indices, inner_strings);
+                            outer_strings.extend(inner_strings);
+                        }
+                        println!("Resolved outer {:?} to {:?}", sequences, outer_strings);
+                        self.resolved_rules[index] = Some(outer_strings);
+                    } else {
+                        // cannot fully resolve this rule yet
+                        println!("Skipping and re-adding ({}, {:?})", index, sequences);
+                        self.unresolved_rules[index] = Some(sequences.to_vec());
                     }
-                    println!("Resolved outer {:?} to {:?}", sequences, outer_strings);
-                    self.resolved_rules[index] = Some(outer_strings);
-                } else {
-                    // cannot fully resolve this rule yet
-                    println!("Skipping and re-adding ({}, {:?})", index, sequences);
-                    self.unresolved_rules.insert(index, sequences);
+                    // index -= 1;
                 }
             }
             println!("{:?}", self);
