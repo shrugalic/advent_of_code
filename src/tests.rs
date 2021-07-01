@@ -2,19 +2,6 @@
 use crate::*;
 use line_reader::{read_file_to_lines, read_str_to_lines};
 
-const EXAMPLE: &str = "0: 4 1 5
-1: 2 3 | 3 2
-2: 4 4 | 5 5
-3: 4 5 | 5 4
-4: \"a\"
-5: \"b\"
-
-ababbb
-bababa
-abbbab
-aaabbb
-aaaabbb";
-
 #[test]
 fn test_resolve_choices_with_example_rule2() {
     assert_eq!(
@@ -33,28 +20,10 @@ fn test_resolve_choices_with_example_rule3() {
     );
 }
 
-// #[test]
-// fn test_create_allowed_strings_with_example_rule1() {
-//     // rule 1: 2 3 | 3 2
-//     assert_eq!(
-//         Resolver::create_allowed_strings(
-//             // 2
-//             &[vec!["aa".to_string(), "bb".to_string()]],
-//             // 3
-//             &[vec!["ab".to_string(), "ba".to_string()]],
-//             // | 3
-//             &[vec!["ab".to_string(), "ba".to_string()]],
-//             // 2
-//             &[vec!["aa".to_string(), "bb".to_string()]],
-//         ),
-//         vec!["aaab", "aaba", "bbab", "bbba", "abaa", "abbb", "baaa", "babb"]
-//     );
-// }
-
 #[test]
 fn test_multiply_with_example_rules() {
     assert_eq!(
-        Resolver::multiply(&[
+        Resolver::generate_allowed_strings(&[
             vec!["aa".to_string(), "bb".to_string()],
             vec!["ab".to_string(), "ba".to_string()],
         ]),
@@ -65,28 +34,28 @@ fn test_multiply_with_example_rules() {
 #[test]
 fn test_multiply_more() {
     assert_eq!(
-        Resolver::multiply(&[
+        Resolver::generate_allowed_strings(&[
             vec!["b".to_string()],
             vec!["ba".to_string(), "aa".to_string()]
         ]),
         vec!["bba", "baa"]
     );
     assert_eq!(
-        Resolver::multiply(&[
+        Resolver::generate_allowed_strings(&[
             vec!["a".to_string(), "b".to_string()],
             vec!["c".to_string()]
         ]),
         vec!["ac", "bc"]
     );
     assert_eq!(
-        Resolver::multiply(&[
+        Resolver::generate_allowed_strings(&[
             vec!["a".to_string(), "b".to_string()],
             vec!["c".to_string(), "d".to_string()]
         ]),
         vec!["ac", "ad", "bc", "bd"]
     );
     assert_eq!(
-        Resolver::multiply(&[
+        Resolver::generate_allowed_strings(&[
             vec!["a".to_string(), "b".to_string()],
             vec!["c".to_string(), "d".to_string()],
             vec!["e".to_string(), "f".to_string()]
@@ -98,7 +67,7 @@ fn test_multiply_more() {
 #[test]
 fn test_multiply_example_rule0() {
     assert_eq!(
-        Resolver::multiply(&[
+        Resolver::generate_allowed_strings(&[
             vec!["a".to_string()],
             vec![
                 "aaab".to_string(),
@@ -116,6 +85,19 @@ fn test_multiply_example_rule0() {
     );
 }
 
+const EXAMPLE: &str = "0: 4 1 5
+1: 2 3 | 3 2
+2: 4 4 | 5 5
+3: 4 5 | 5 4
+4: \"a\"
+5: \"b\"
+
+ababbb
+bababa
+abbbab
+aaabbb
+aaaabbb";
+
 #[test]
 fn example1() {
     assert_eq!(
@@ -124,26 +106,6 @@ fn example1() {
     );
 }
 
-// #[test]
-// fn another_example() {
-//     let rules = read_str_to_lines(
-//         "0: 1 2 | 3 4 | 5 6
-// 1: \"a\"
-// 2: \"b\"
-// 3: \"c\"
-// 4: \"d\"
-// 5: \"e\"
-// 6: \"f\"",
-//     );
-//     assert_eq!(
-//         Resolver::from(rules.as_slice()).resolve(),
-//         Validator {
-//             valid_messages: HashSet::new()
-//         }
-//     );
-// }
-
-// Takes 1min 8 sec to complete
 #[test]
 fn part1() {
     assert_eq!(

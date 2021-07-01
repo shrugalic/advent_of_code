@@ -1,6 +1,6 @@
 mod tests;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, PartialEq)]
 struct Validator {
@@ -14,24 +14,24 @@ impl Validator {
 
 type Index = usize;
 
-#[derive(Debug)]
-struct Resolver {
-    choices: Vec<Option<(Vec<Index>, Vec<Index>)>>,
-    sequences: Vec<Option<Vec<Index>>>,
-    allowed: Vec<Option<Vec<String>>>,
+#[derive(Clone, Debug, PartialEq)]
+enum Rule {
+    Undefined,
+    Choice((Vec<Index>, Vec<Index>)),
+    Sequence(Vec<Index>),
+    AllowedStrings(Vec<String>),
 }
 
-impl From<&[String]> for Resolver {
-    fn from(input: &[String]) -> Resolver {
-        let mut choices: Vec<Option<(Vec<Index>, Vec<Index>)>> = vec![None; input.len()];
-        let mut sequences: Vec<Option<Vec<Index>>> = vec![None; input.len()];
-        let mut allowed: Vec<Option<Vec<String>>> = vec![None; input.len()];
+struct Resolver;
+impl Resolver {
+    fn input_to_rules(input: &[String]) -> Vec<Rule> {
+        let mut rules: Vec<Rule> = vec![Rule::Undefined; input.len()];
         for rule in input {
             if let Some((left, right)) = rule.split_once(": ") {
                 let index: usize = left.parse().unwrap();
                 if right.starts_with('\"') && right.ends_with('\"') {
                     let char = right.chars().nth(1).unwrap();
-                    allowed[index] = Some(vec![char.to_string()]);
+                    rules[index] = Rule::AllowedStrings(vec![char.to_string()]);
                 } else if let Some((left, right)) = right.split_once(" | ") {
                     let left: Vec<usize> = left
                         .split_ascii_whitespace()
@@ -41,93 +41,97 @@ impl From<&[String]> for Resolver {
                         .split_ascii_whitespace()
                         .filter_map(|s| s.parse().ok())
                         .collect();
-                    choices[index] = Some((left, right));
+                    rules[index] = Rule::Choice((left, right))
                 } else {
                     let sequence: Vec<usize> = right
                         .split_ascii_whitespace()
                         .filter_map(|s| s.parse().ok())
                         .collect();
-                    sequences[index] = Some(sequence);
+                    rules[index] = Rule::Sequence(sequence);
                 }
             } else {
                 panic!("Invalid input rule '{}'", rule)
             };
         }
-        Resolver {
-            choices,
-            sequences,
-            allowed,
+        rules
+    }
+    fn is_resolvable(rules: &HashMap<usize, Vec<String>>, indices: &[usize]) -> bool {
+        indices.iter().all(|idx| rules.contains_key(idx))
+    }
+    fn resolve(mut rules: Vec<Rule>) -> Validator {
+        while !matches!(rules[0], Rule::AllowedStrings(_)) {
+            Resolver::resolve_choices(&mut rules);
+            Resolver::resolve_sequences(&mut rules);
+        }
+        if let Rule::AllowedStrings(valid_messages) = &rules[0] {
+            println!("Solved with rules! 🥳");
+            Validator {
+                valid_messages: valid_messages.iter().cloned().collect(),
+            }
+        } else {
+            panic!("Not solved!")
         }
     }
-}
-impl Resolver {
-    fn is_resolvable(resolved: &[Option<Vec<String>>], indices: &[usize]) -> bool {
-        indices.iter().all(|idx| resolved[*idx].is_some())
-    }
-    fn resolve(
-        mut choices: Vec<Option<(Vec<Index>, Vec<Index>)>>,
-        mut sequences: Vec<Option<Vec<Index>>>,
-        mut allowed: Vec<Option<Vec<String>>>,
-    ) -> Validator {
-        while allowed[0].is_none() {
-            Resolver::resolve_choices(&mut choices, &mut allowed);
-            Resolver::resolve_sequences(&mut sequences, &mut allowed);
-        }
 
-        let valid_messages = allowed[0].as_ref().unwrap().iter().cloned().collect();
-        Validator { valid_messages }
-    }
-
-    fn resolve_choices(
-        choices: &mut Vec<Option<(Vec<Index>, Vec<Index>)>>,
-        allowed: &mut Vec<Option<Vec<String>>>,
-    ) {
-        for (rule_idx, choice_of_seq) in choices.iter_mut().enumerate() {
-            if let Some((left, right)) = choice_of_seq {
-                if Resolver::is_resolvable(&allowed, left)
-                    && Resolver::is_resolvable(&allowed, right)
+    fn resolve_choices(rules: &mut Vec<Rule>) {
+        let mut strings_by_idx = Resolver::allowed_strings_by_index(rules);
+        for (i, choice_rule) in rules.iter_mut().enumerate() {
+            if let Rule::Choice((left, right)) = choice_rule {
+                if Resolver::is_resolvable(&strings_by_idx, left)
+                    && Resolver::is_resolvable(&strings_by_idx, right)
                 {
-                    let res_left = Resolver::resolve_sequence(&allowed, left);
-                    let res_right = Resolver::resolve_sequence(&allowed, right);
-                    allowed[rule_idx] = Some(Resolver::concatenate_choice(res_left, res_right));
-                    *choice_of_seq = None;
+                    let res_left = Resolver::resolve_sequence(&strings_by_idx, left);
+                    let res_right = Resolver::resolve_sequence(&strings_by_idx, right);
+                    *choice_rule = Rule::AllowedStrings(Resolver::concatenate_choice(
+                        res_left.clone(),
+                        res_right.clone(),
+                    ));
+                    strings_by_idx.insert(i, Resolver::concatenate_choice(res_left, res_right));
                 }
             }
         }
     }
 
-    fn resolve_sequences(
-        sequences: &mut Vec<Option<Vec<Index>>>,
-        allowed: &mut Vec<Option<Vec<String>>>,
-    ) {
-        for (rule_idx, sequence) in sequences.iter_mut().enumerate() {
-            if let Some(seq) = sequence {
-                if Resolver::is_resolvable(&allowed, seq) {
-                    let resolved: Vec<_> = seq
-                        .iter()
-                        .map(|j| allowed[*j].as_ref().unwrap())
-                        .cloned()
-                        .collect();
-                    let multiplied = Resolver::multiply(resolved.as_slice());
-                    allowed[rule_idx] = Some(multiplied);
-                    *sequence = None;
+    fn allowed_strings_by_index(rules: &mut Vec<Rule>) -> HashMap<usize, Vec<String>> {
+        rules
+            .iter()
+            .enumerate()
+            .filter_map(|(i, r)| {
+                if let Rule::AllowedStrings(v) = r {
+                    Some((i, v.clone()))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    fn resolve_sequences(rules: &mut Vec<Rule>) {
+        let mut strings_by_idx = Resolver::allowed_strings_by_index(rules);
+        for (i, seq_rule) in rules.iter_mut().enumerate() {
+            if let Rule::Sequence(sequence) = seq_rule {
+                if Resolver::is_resolvable(&strings_by_idx, sequence) {
+                    let multiplied = Resolver::resolve_sequence(&strings_by_idx, sequence);
+                    *seq_rule = Rule::AllowedStrings(multiplied.clone());
+                    strings_by_idx.insert(i, multiplied);
                 }
             }
         }
     }
 
-    fn resolve_sequence(allowed: &[Option<Vec<String>>], sequence: &[usize]) -> Vec<String> {
+    fn resolve_sequence(strings: &HashMap<usize, Vec<String>>, sequence: &[usize]) -> Vec<String> {
         let resolved: Vec<Vec<String>> = sequence
             .iter()
-            .map(|i| allowed[*i].clone().unwrap())
+            .map(|i| strings.get(i).unwrap())
+            .cloned()
             .collect();
-        Resolver::multiply(&resolved)
+        Resolver::generate_allowed_strings(&resolved)
     }
     fn concatenate_choice(mut left: Vec<String>, mut right: Vec<String>) -> Vec<String> {
         left.append(&mut right);
         left
     }
-    fn multiply(sequences: &[Vec<String>]) -> Vec<String> {
+    fn generate_allowed_strings(sequences: &[Vec<String>]) -> Vec<String> {
         let first = &sequences[0];
         if sequences.len() == 1 {
             first.clone()
@@ -146,8 +150,8 @@ impl Resolver {
                 .collect();
             result
         } else {
-            let second = Resolver::multiply(&sequences[1..]);
-            Resolver::multiply(&[first.to_vec(), second])
+            let second = Resolver::generate_allowed_strings(&sequences[1..]);
+            Resolver::generate_allowed_strings(&[first.to_vec(), second])
         }
     }
 }
@@ -158,8 +162,8 @@ fn number_of_messages_matching_rule_0(input: &[String]) -> usize {
     // println!("Rules: {:?}", rules);
     // println!("Messages: {:?}", messages);
 
-    let r = Resolver::from(rules);
-    let validator = Resolver::resolve(r.choices, r.sequences, r.allowed);
+    let rules = Resolver::input_to_rules(rules);
+    let validator = Resolver::resolve(rules);
     // println!("Valid messages: {:?}", validator.valid_messages);
     messages
         .iter()
