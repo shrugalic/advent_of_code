@@ -64,13 +64,17 @@ impl Resolver {
     fn is_resolvable(resolved: &[Option<Vec<String>>], indices: &[usize]) -> bool {
         indices.iter().all(|idx| resolved[*idx].is_some())
     }
-    fn resolve(mut self) -> Validator {
-        while self.allowed_strings[0].is_none() {
-            self.resolve_choices();
-            self.resolve_sequences()
+    fn resolve(
+        mut choices: Vec<Option<Vec<Vec<Index>>>>,
+        mut sequences: Vec<Option<Vec<Index>>>,
+        mut allowed_strings: Vec<Option<Vec<String>>>,
+    ) -> Validator {
+        while allowed_strings[0].is_none() {
+            Resolver::resolve_choices(&mut choices, &mut allowed_strings);
+            Resolver::resolve_sequences(&mut sequences, &mut allowed_strings);
         }
 
-        let valid_messages = self.allowed_strings[0]
+        let valid_messages = allowed_strings[0]
             .as_ref()
             .unwrap()
             .iter()
@@ -79,11 +83,11 @@ impl Resolver {
         Validator { valid_messages }
     }
 
-    fn resolve_choices(&mut self) {
-        for (rule_idx, choice_of_seq) in self.choices.iter_mut().enumerate() {
-            // This copy allows the following error:
-            // 'cannot borrow `self` as immutable because it is also borrowed as mutable'
-            let allowed_strings = self.allowed_strings.clone();
+    fn resolve_choices(
+        choices: &mut Vec<Option<Vec<Vec<Index>>>>,
+        allowed_strings: &mut Vec<Option<Vec<String>>>,
+    ) {
+        for (rule_idx, choice_of_seq) in choices.iter_mut().enumerate() {
             if let Some(choice) = choice_of_seq {
                 if choice
                     .iter()
@@ -93,27 +97,27 @@ impl Resolver {
                         .iter()
                         .map(|sequence| Resolver::resolve_sequence(&allowed_strings, sequence))
                         .collect();
-                    self.allowed_strings[rule_idx] = Some(Resolver::concatenate(resolved_choices));
+                    allowed_strings[rule_idx] = Some(Resolver::concatenate(resolved_choices));
                     *choice_of_seq = None;
                 }
             }
         }
     }
 
-    fn resolve_sequences(&mut self) {
-        for (rule_idx, sequence) in self.sequences.iter_mut().enumerate() {
-            // This copy allows the following error:
-            // 'cannot borrow `self` as immutable because it is also borrowed as mutable'
-            let allowed_strings = self.allowed_strings.clone();
+    fn resolve_sequences(
+        sequences: &mut Vec<Option<Vec<Index>>>,
+        allowed_strings: &mut Vec<Option<Vec<String>>>,
+    ) {
+        for (rule_idx, sequence) in sequences.iter_mut().enumerate() {
             if let Some(seq) = sequence {
-                if Resolver::is_resolvable(&self.allowed_strings, seq) {
+                if Resolver::is_resolvable(&allowed_strings, seq) {
                     let resolved: Vec<_> = seq
                         .iter()
                         .map(|j| allowed_strings[*j].as_ref().unwrap())
                         .cloned()
                         .collect();
                     let multiplied = Resolver::multiply(resolved.as_slice());
-                    self.allowed_strings[rule_idx] = Some(multiplied);
+                    allowed_strings[rule_idx] = Some(multiplied);
                     *sequence = None;
                 }
             }
@@ -168,7 +172,8 @@ fn number_of_messages_matching_rule_0(input: &[String]) -> usize {
     // println!("Rules: {:?}", rules);
     // println!("Messages: {:?}", messages);
 
-    let validator = Resolver::from(rules).resolve();
+    let r = Resolver::from(rules);
+    let validator = Resolver::resolve(r.choices, r.sequences, r.allowed_strings);
     // println!("Valid messages: {:?}", validator.valid_messages);
     messages
         .iter()
