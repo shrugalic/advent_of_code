@@ -23,7 +23,7 @@ fn test_resolve_choices_with_example_rule3() {
 #[test]
 fn test_multiply_with_example_rules() {
     assert_eq!(
-        Resolver::generate_allowed_strings(&[
+        Resolver::generate_allowed_strings(vec![
             vec!["aa".to_string(), "bb".to_string()],
             vec!["ab".to_string(), "ba".to_string()],
         ]),
@@ -34,28 +34,28 @@ fn test_multiply_with_example_rules() {
 #[test]
 fn test_multiply_more() {
     assert_eq!(
-        Resolver::generate_allowed_strings(&[
+        Resolver::generate_allowed_strings(vec![
             vec!["b".to_string()],
             vec!["ba".to_string(), "aa".to_string()]
         ]),
         vec!["bba", "baa"]
     );
     assert_eq!(
-        Resolver::generate_allowed_strings(&[
+        Resolver::generate_allowed_strings(vec![
             vec!["a".to_string(), "b".to_string()],
             vec!["c".to_string()]
         ]),
         vec!["ac", "bc"]
     );
     assert_eq!(
-        Resolver::generate_allowed_strings(&[
+        Resolver::generate_allowed_strings(vec![
             vec!["a".to_string(), "b".to_string()],
             vec!["c".to_string(), "d".to_string()]
         ]),
         vec!["ac", "ad", "bc", "bd"]
     );
     assert_eq!(
-        Resolver::generate_allowed_strings(&[
+        Resolver::generate_allowed_strings(vec![
             vec!["a".to_string(), "b".to_string()],
             vec!["c".to_string(), "d".to_string()],
             vec!["e".to_string(), "f".to_string()]
@@ -67,7 +67,7 @@ fn test_multiply_more() {
 #[test]
 fn test_multiply_example_rule0() {
     assert_eq!(
-        Resolver::generate_allowed_strings(&[
+        Resolver::generate_allowed_strings(vec![
             vec!["a".to_string()],
             vec![
                 "aaab".to_string(),
