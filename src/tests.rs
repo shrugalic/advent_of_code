@@ -6,7 +6,7 @@ use line_reader::{read_file_to_lines, read_str_to_lines};
 fn test_resolve_choices_with_example_rule2() {
     assert_eq!(
         // rule 2: 4 4 | 5 5
-        Resolver::concatenate_choice(vec!["aa".to_string()], vec!["bb".to_string()],),
+        Resolver::concatenate(vec!["aa".to_string()], vec!["bb".to_string()],),
         vec!["aa", "bb",]
     );
 }
@@ -15,7 +15,7 @@ fn test_resolve_choices_with_example_rule2() {
 fn test_resolve_choices_with_example_rule3() {
     assert_eq!(
         // rule 3: 4 5 | 5 4
-        Resolver::concatenate_choice(vec!["ab".to_string()], vec!["ba".to_string()]),
+        Resolver::concatenate(vec!["ab".to_string()], vec!["ba".to_string()]),
         vec!["ab", "ba"]
     );
 }
