@@ -4,11 +4,11 @@ use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, PartialEq)]
 struct Validator {
-    valid_messages: HashSet<String>,
+    allowed_strings: HashSet<String>,
 }
 impl Validator {
     fn is_valid(&self, message: &str) -> bool {
-        self.valid_messages.contains(message)
+        self.allowed_strings.contains(message)
     }
 }
 
@@ -35,95 +35,85 @@ impl Resolvable for Sequence {
     }
 }
 
-struct Resolver;
+struct Resolver {
+    choices: Choices,
+    sequences: Sequences,
+    resolved: ResolvedStrings,
+}
 impl Resolver {
-    fn input_to_rules(input: &[String]) -> (Choices, Sequences, ResolvedStrings) {
+    fn from(input: &[String]) -> Resolver {
         let mut choices: Choices = HashMap::new();
         let mut sequences: Sequences = HashMap::new();
         let mut resolved: ResolvedStrings = HashMap::new();
-
+        let to_usize_vec = |s: &str| -> Vec<usize> {
+            s.split_ascii_whitespace()
+                .filter_map(|s| s.parse().ok())
+                .collect()
+        };
         for rule in input {
             if let Some((left, right)) = rule.split_once(": ") {
                 let index: usize = left.parse().unwrap();
                 if right.starts_with('\"') && right.ends_with('\"') {
                     resolved.insert(index, vec![right.chars().nth(1).unwrap().to_string()]);
                 } else if let Some((left, right)) = right.split_once(" | ") {
-                    choices.insert(
-                        index,
-                        (
-                            left.split_ascii_whitespace()
-                                .filter_map(|s| s.parse().ok())
-                                .collect(),
-                            right
-                                .split_ascii_whitespace()
-                                .filter_map(|s| s.parse().ok())
-                                .collect(),
-                        ),
-                    );
+                    choices.insert(index, (to_usize_vec(left), to_usize_vec(right)));
                 } else {
-                    sequences.insert(
-                        index,
-                        right
-                            .split_ascii_whitespace()
-                            .filter_map(|s| s.parse().ok())
-                            .collect(),
-                    );
+                    sequences.insert(index, to_usize_vec(right));
                 }
             } else {
                 panic!("Invalid input rule '{}'", rule)
             };
         }
-        (choices, sequences, resolved)
+        Resolver {
+            choices,
+            sequences,
+            resolved,
+        }
     }
 
-    fn resolve(
-        mut choices: Choices,
-        mut sequences: Sequences,
-        mut resolved: ResolvedStrings,
-    ) -> Validator {
-        while !resolved.contains_key(&0) {
-            Resolver::resolve_choices(&mut choices, &mut resolved);
-            Resolver::resolve_sequences(&mut sequences, &mut resolved);
+    fn resolve(mut self) -> Validator {
+        while !self.resolved.contains_key(&0) {
+            self.resolve_choices();
+            self.resolve_sequences();
         }
-        if let Some(allowed_strings) = resolved.get(&0) {
-            Validator {
-                valid_messages: allowed_strings.iter().cloned().collect(),
-            }
+        if let Some(allowed_strings) = self.resolved.get(&0) {
+            let allowed_strings = allowed_strings.iter().cloned().collect();
+            Validator { allowed_strings }
         } else {
             panic!("Not solved!")
         }
     }
 
-    fn resolve_choices(choices: &mut Choices, resolved: &mut ResolvedStrings) {
+    fn resolve_choices(&mut self) {
         let mut unresolved: Choices = HashMap::new();
-        for (i, choice) in choices.drain() {
-            if choice.is_resolvable(&resolved) {
+        for (i, choice) in self.choices.drain() {
+            if choice.is_resolvable(&self.resolved) {
                 let (left, right) = choice;
-                resolved.insert(
+                self.resolved.insert(
                     i,
                     Resolver::concatenate(
-                        Resolver::resolve_sequence(&resolved, &left),
-                        Resolver::resolve_sequence(&resolved, &right),
+                        Resolver::resolve_sequence(&self.resolved, &left),
+                        Resolver::resolve_sequence(&self.resolved, &right),
                     ),
                 );
             } else {
                 unresolved.insert(i, choice);
             }
         }
-        *choices = unresolved;
+        self.choices = unresolved;
     }
 
-    fn resolve_sequences(sequences: &mut Sequences, resolved: &mut ResolvedStrings) {
+    fn resolve_sequences(&mut self) {
         let mut unresolved: Sequences = HashMap::new();
-        for (i, sequence) in sequences.drain() {
-            if sequence.is_resolvable(&resolved) {
-                let multiplied = Resolver::resolve_sequence(&resolved, &sequence);
-                resolved.insert(i, multiplied);
+        for (i, sequence) in self.sequences.drain() {
+            if sequence.is_resolvable(&self.resolved) {
+                let multiplied = Resolver::resolve_sequence(&self.resolved, &sequence);
+                self.resolved.insert(i, multiplied);
             } else {
                 unresolved.insert(i, sequence);
             }
         }
-        *sequences = unresolved;
+        self.sequences = unresolved;
     }
 
     fn resolve_sequence(resolved: &ResolvedStrings, sequence: &[usize]) -> AllowedStrings {
@@ -169,8 +159,8 @@ fn number_of_messages_matching_rule_0(input: &[String]) -> usize {
     // println!("Rules: {:?}", rules);
     // println!("Messages: {:?}", messages);
 
-    let (choices, sequences, resolved) = Resolver::input_to_rules(rules);
-    let validator = Resolver::resolve(choices, sequences, resolved);
+    let resolver = Resolver::from(rules);
+    let validator = resolver.resolve();
     // println!("Valid messages: {:?}", validator.valid_messages);
     messages
         .iter()
