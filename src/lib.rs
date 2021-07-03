@@ -167,3 +167,87 @@ fn number_of_messages_matching_rule_0(input: &[String]) -> usize {
         .filter(|message| validator.is_valid(message))
         .count()
 }
+
+#[derive(Debug, Clone)]
+enum Rule {
+    Char(char),
+    Index(usize),
+    Choice(Box<Rule>, Box<Rule>),
+    // sequences
+    Single(Box<Rule>),
+    Pair(Box<Rule>, Box<Rule>),
+    Triple(Box<Rule>, Box<Rule>, Box<Rule>),
+}
+#[derive(Debug)]
+struct Rules {
+    rules: HashMap<usize, Rule>,
+}
+impl From<&[String]> for Rules {
+    fn from(input: &[String]) -> Self {
+        let mut rules = HashMap::new();
+        let to_rule = |s: &str| -> Rule {
+            let v: Vec<Rule> = s
+                .split_ascii_whitespace()
+                .filter_map(|s| s.parse().ok())
+                .map(Rule::Index)
+                .collect();
+            match v.len() {
+                1 => Rule::Single(Box::new(v[0].clone())),
+                2 => Rule::Pair(Box::new(v[0].clone()), Box::new(v[1].clone())),
+                3 => Rule::Triple(
+                    Box::new(v[0].clone()),
+                    Box::new(v[1].clone()),
+                    Box::new(v[2].clone()),
+                ),
+                _ => panic!("Unsupported rules {:?}", v),
+            }
+        };
+        for rule in input {
+            if let Some((left, right)) = rule.split_once(": ") {
+                let index: usize = left.parse().unwrap();
+                if right.starts_with('\"') && right.ends_with('\"') {
+                    rules.insert(index, Rule::Char(right.chars().nth(1).unwrap()));
+                } else if let Some((left, right)) = right.split_once(" | ") {
+                    rules.insert(
+                        index,
+                        Rule::Choice(Box::new(to_rule(left)), Box::new(to_rule(right))),
+                    );
+                } else {
+                    rules.insert(index, to_rule(right));
+                }
+            } else {
+                panic!("Invalid input rule '{}'", rule)
+            };
+        }
+        Rules { rules }
+    }
+}
+
+impl Rules {
+    fn allow(&self, message: &String) -> bool {
+        if let Some(rule) = self.rules.get(&0) {
+            rule.allows(message, self)
+        } else {
+            false
+        }
+    }
+}
+
+impl Rule {
+    fn allows(&self, message: &String, rules: &Rules) -> bool {
+        // TODO start from rule 0 and see if the strings match
+        false
+    }
+}
+
+fn alternate_number_of_messages_matching_rule_0(input: &[String]) -> usize {
+    let mut split = input.split(|line| line.is_empty());
+    let (rules, messages) = (split.next().unwrap(), split.next().unwrap());
+    // println!("Rules: {:?}", rules);
+    // println!("Messages: {:?}", messages);
+
+    let rules = Rules::from(rules);
+    println!("{:?}", rules);
+
+    messages.iter().filter(|m| rules.allow(m)).count()
+}
