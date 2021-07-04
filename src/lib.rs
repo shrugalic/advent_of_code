@@ -227,21 +227,19 @@ where
 }
 
 impl Rules {
-    fn allow<T>(&self, message: T) -> bool
+    fn allow<T>(&self, msg: T) -> bool
     where
         T: AsRef<str>,
     {
         // println!("Rules = {:?}", self.rules);
-        let message: Vec<char> = message.as_ref().chars().collect();
+        let msg_chars: Vec<char> = msg.as_ref().chars().collect();
         if let Some(rule) = self.rules.get(&0) {
-            if let Some(remainder) = rule.allows(&message, self) {
-                remainder.is_empty()
-            } else {
-                false
+            if let Some(remaining) = rule.allows(&msg_chars, self) {
+                // println!("\nMatched '{}'\n", msg.as_ref());
+                return remaining.iter().any(|rem| rem.is_empty());
             }
-        } else {
-            false
         }
+        false
     }
 
     fn get_rule(&self, index: &usize) -> Option<&Rule> {
@@ -255,35 +253,57 @@ impl Rules {
 }
 
 impl Rule {
-    /// Returns Some(tail) of the message if the head was matched, or None
-    fn allows<'a>(&self, message: &'a [char], rules: &Rules) -> Option<&'a [char]> {
-        // println!("Rule = {:?}", self);
-        if message.is_empty() {
+    /// Returns Some(possible_tails) of the message if the head was matched, or None
+    fn allows<'a>(&self, msg: &'a [char], rules: &Rules) -> Option<Vec<&'a [char]>> {
+        // println!("Rule = {:?}, message = {:?}", self, msg);
+        if msg.is_empty() {
             return None;
         }
         match self {
             Rule::Char(c) => {
-                if *c == message[0] {
-                    Some(&message[1..])
+                if *c == msg[0] {
+                    Some(vec![&msg[1..]])
                 } else {
                     None
                 }
             }
             Rule::Index(index) => rules
                 .get_rule(index)
-                .and_then(|rule| rule.allows(message, rules)),
+                .and_then(|rule| rule.allows(msg, rules)),
             // Rule::Index(index) => rules.rule_at_index_allows(index, message),
-            Rule::Choice(left, right) => left
-                .allows(message, rules)
-                .or_else(|| right.allows(message, rules)),
-            Rule::Single(rule) => rule.allows(message, rules),
-            Rule::Pair(first, second) => first
-                .allows(message, rules)
-                .and_then(|rem| second.allows(rem, rules)),
+            Rule::Choice(one, two) => {
+                let res_one = one.allows(msg, rules);
+                let res_two = two.allows(msg, rules);
+                match (res_one, res_two) {
+                    (Some(mut res1), Some(res2)) => {
+                        res1.extend(res2);
+                        Some(res1)
+                    }
+                    (Some(res), None) | (None, Some(res)) => Some(res),
+                    (None, None) => None,
+                }
+            }
+            Rule::Single(rule) => rule.allows(msg, rules),
+            Rule::Pair(first, second) => first.allows(msg, rules).map(|rems| {
+                rems.iter()
+                    .filter_map(|&rem| second.allows(&rem, rules))
+                    .flatten()
+                    .collect()
+            }),
             Rule::Triple(first, second, third) => first
-                .allows(message, rules)
-                .and_then(|rem1| second.allows(rem1, rules))
-                .and_then(|rem2| third.allows(rem2, rules)),
+                .allows(msg, rules)
+                .map(|rems| {
+                    rems.iter()
+                        .filter_map(|&rem| second.allows(&rem, rules))
+                        .flatten()
+                        .collect::<Vec<_>>()
+                })
+                .map(|rems: Vec<&[char]>| {
+                    rems.iter()
+                        .filter_map(|&rem| third.allows(&rem, rules))
+                        .flatten()
+                        .collect()
+                }),
         }
     }
 }

@@ -155,6 +155,38 @@ fn triple_of_direct_match() {
     assert_eq!(count_messages_matching_rules(messages.as_slice(), rules), 1);
 }
 
+#[test]
+fn loop_8() {
+    let rules = Rules::from(vec!["0: 8", "8: 42 | 42 8", "42: \"a\""].as_slice());
+    let messages = vec!["a", "aa"];
+    assert_eq!(count_messages_matching_rules(messages.as_slice(), rules), 2);
+}
+
+#[test]
+fn loop_11() {
+    let rules =
+        Rules::from(vec!["0: 11", "11: 42 31 | 42 11 31", "42: \"a\"", "31: \"b\""].as_slice());
+    let messages = vec!["ab", "aabb", "aaabbb", "a", "b", "abab"];
+    assert_eq!(count_messages_matching_rules(messages.as_slice(), rules), 3);
+}
+
+#[test]
+fn loop_8_and_11() {
+    let rules = Rules::from(
+        vec![
+            "0: 8 11",
+            "8: 42 | 42 8",
+            "11: 42 31 | 42 11 31",
+            "42: \"a\"",
+            "31: \"b\"",
+        ]
+        .as_slice(),
+    );
+    let messages = vec!["aab"];
+    assert_eq!(count_messages_matching_rules(messages.as_slice(), rules), 1);
+}
+
+// Slow: ~4s
 // #[test]
 fn part1() {
     assert_eq!(
@@ -168,6 +200,14 @@ fn part1_alternate() {
     assert_eq!(
         alternate_number_of_messages_matching_rule_0(&read_file_to_lines("input.txt")),
         156
+    );
+}
+
+#[test]
+fn part2_alternate() {
+    assert_eq!(
+        alternate_number_of_messages_matching_rule_0(&read_file_to_lines("input2.txt")),
+        363
     );
 }
 
@@ -282,6 +322,8 @@ aaaabbaaaabbaaa
 aaaabbaabbaaaaaaabbbabbbaaabbaabaaa
 babaaabbbaaabaababbaabababaaab
 aabbbbbaabbbaaaaaabbbbbababaaaaabbaaabba";
+
+// Infinite loop
 // #[test]
 fn example2_with_loops() {
     assert_eq!(
