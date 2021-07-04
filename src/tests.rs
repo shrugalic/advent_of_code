@@ -114,9 +114,59 @@ fn example1_alternate() {
 }
 
 #[test]
+fn direct_match() {
+    let rules = Rules::from(vec!["0: \"a\""].as_slice());
+    let messages = vec!["a", "b"];
+    assert_eq!(count_messages_matching_rules(messages.as_slice(), rules), 1);
+}
+
+#[test]
+fn direct_match_no_remaining_suffix() {
+    let rules = Rules::from(vec!["0: \"a\""].as_slice());
+    let messages = vec!["a", "aa"];
+    assert_eq!(count_messages_matching_rules(messages.as_slice(), rules), 1);
+}
+
+#[test]
+fn index_of_direct_match() {
+    let rules = Rules::from(vec!["0: 1", "1: \"a\""].as_slice());
+    let messages = vec!["a", "b", "aa"];
+    assert_eq!(count_messages_matching_rules(messages.as_slice(), rules), 1);
+}
+
+#[test]
+fn choice_of_direct_match() {
+    let rules = Rules::from(vec!["0: 1 | 2", "1: \"a\"", "2: \"b\""].as_slice());
+    let messages = vec!["a", "b", "c", "ab", "aa"];
+    assert_eq!(count_messages_matching_rules(messages.as_slice(), rules), 2);
+}
+
+#[test]
+fn pair_of_direct_match() {
+    let rules = Rules::from(vec!["0: 1 2", "1: \"a\"", "2: \"b\""].as_slice());
+    let messages = vec!["a", "b", "c", "ab", "ba", "aa"];
+    assert_eq!(count_messages_matching_rules(messages.as_slice(), rules), 1);
+}
+
+#[test]
+fn triple_of_direct_match() {
+    let rules = Rules::from(vec!["0: 1 2 3", "1: \"a\"", "2: \"b\"", "3: \"c\""].as_slice());
+    let messages = vec!["a", "b", "c", "d", "ab", "bc", "ac", "abc", ""];
+    assert_eq!(count_messages_matching_rules(messages.as_slice(), rules), 1);
+}
+
+// #[test]
 fn part1() {
     assert_eq!(
         number_of_messages_matching_rule_0(&read_file_to_lines("input.txt")),
+        156
+    );
+}
+
+#[test]
+fn part1_alternate() {
+    assert_eq!(
+        alternate_number_of_messages_matching_rule_0(&read_file_to_lines("input.txt")),
         156
     );
 }
@@ -177,6 +227,14 @@ fn example2_no_loops() {
     );
 }
 
+#[test]
+fn example2_no_loops_alternate() {
+    assert_eq!(
+        alternate_number_of_messages_matching_rule_0(&read_str_to_lines(EXAMPLE_2_NO_LOOPS)),
+        3
+    );
+}
+
 const EXAMPLE_2_WITH_LOOPS: &str = "42: 9 14 | 10 1
 9: 14 27 | 1 26
 10: 23 14 | 28 1
@@ -228,6 +286,14 @@ aabbbbbaabbbaaaaaabbbbbababaaaaabbaaabba";
 fn example2_with_loops() {
     assert_eq!(
         number_of_messages_matching_rule_0(&read_str_to_lines(EXAMPLE_2_WITH_LOOPS)),
+        12
+    );
+}
+
+#[test]
+fn example2_with_loops_alternate() {
+    assert_eq!(
+        alternate_number_of_messages_matching_rule_0(&read_str_to_lines(EXAMPLE_2_WITH_LOOPS)),
         12
     );
 }

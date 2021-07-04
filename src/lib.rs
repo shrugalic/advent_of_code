@@ -182,8 +182,11 @@ enum Rule {
 struct Rules {
     rules: HashMap<usize, Rule>,
 }
-impl From<&[String]> for Rules {
-    fn from(input: &[String]) -> Self {
+impl<T> From<&[T]> for Rules
+where
+    T: AsRef<str>,
+{
+    fn from(input: &[T]) -> Self {
         let mut rules = HashMap::new();
         let to_rule = |s: &str| -> Rule {
             let v: Vec<Rule> = s
@@ -203,7 +206,7 @@ impl From<&[String]> for Rules {
             }
         };
         for rule in input {
-            if let Some((left, right)) = rule.split_once(": ") {
+            if let Some((left, right)) = rule.as_ref().split_once(": ") {
                 let index: usize = left.parse().unwrap();
                 if right.starts_with('\"') && right.ends_with('\"') {
                     rules.insert(index, Rule::Char(right.chars().nth(1).unwrap()));
@@ -216,7 +219,7 @@ impl From<&[String]> for Rules {
                     rules.insert(index, to_rule(right));
                 }
             } else {
-                panic!("Invalid input rule '{}'", rule)
+                panic!("Invalid input rule '{}'", rule.as_ref())
             };
         }
         Rules { rules }
@@ -224,30 +227,85 @@ impl From<&[String]> for Rules {
 }
 
 impl Rules {
-    fn allow(&self, message: &String) -> bool {
+    fn allow<T>(&self, message: T) -> bool
+    where
+        T: AsRef<str>,
+    {
+        // println!("Rules = {:?}", self.rules);
+        let message: Vec<char> = message.as_ref().chars().collect();
         if let Some(rule) = self.rules.get(&0) {
-            rule.allows(message, self)
+            if let Some(remainder) = rule.allows(&message, self) {
+                remainder.is_empty()
+            } else {
+                false
+            }
         } else {
             false
         }
     }
+
+    fn get_rule(&self, index: &usize) -> Option<&Rule> {
+        self.rules.get(index)
+    }
+
+    // fn rule_at_index_allows<'a>(&self, index: &usize, message: &'a [char]) -> Option<&'a [char]> {
+    //     self.get_rule(index)
+    //         .and_then(|rule| rule.allows(message, self))
+    // }
 }
 
 impl Rule {
-    fn allows(&self, message: &String, rules: &Rules) -> bool {
-        // TODO start from rule 0 and see if the strings match
-        false
+    /// Returns Some(tail) of the message if the head was matched, or None
+    fn allows<'a>(&self, message: &'a [char], rules: &Rules) -> Option<&'a [char]> {
+        // println!("Rule = {:?}", self);
+        if message.is_empty() {
+            return None;
+        }
+        match self {
+            Rule::Char(c) => {
+                if *c == message[0] {
+                    Some(&message[1..])
+                } else {
+                    None
+                }
+            }
+            Rule::Index(index) => rules
+                .get_rule(index)
+                .and_then(|rule| rule.allows(message, rules)),
+            // Rule::Index(index) => rules.rule_at_index_allows(index, message),
+            Rule::Choice(left, right) => left
+                .allows(message, rules)
+                .or_else(|| right.allows(message, rules)),
+            Rule::Single(rule) => rule.allows(message, rules),
+            Rule::Pair(first, second) => first
+                .allows(message, rules)
+                .and_then(|rem| second.allows(rem, rules)),
+            Rule::Triple(first, second, third) => first
+                .allows(message, rules)
+                .and_then(|rem1| second.allows(rem1, rules))
+                .and_then(|rem2| third.allows(rem2, rules)),
+        }
     }
 }
 
-fn alternate_number_of_messages_matching_rule_0(input: &[String]) -> usize {
-    let mut split = input.split(|line| line.is_empty());
+fn alternate_number_of_messages_matching_rule_0<T>(input: &[T]) -> usize
+where
+    T: AsRef<str>,
+{
+    let mut split = input.split(|line| line.as_ref().is_empty());
     let (rules, messages) = (split.next().unwrap(), split.next().unwrap());
     // println!("Rules: {:?}", rules);
     // println!("Messages: {:?}", messages);
 
     let rules = Rules::from(rules);
-    println!("{:?}", rules);
+    // println!("{:?}", rules);
 
+    count_messages_matching_rules(messages, rules)
+}
+
+fn count_messages_matching_rules<T>(messages: &[T], rules: Rules) -> usize
+where
+    T: AsRef<str>,
+{
     messages.iter().filter(|m| rules.allow(m)).count()
 }
