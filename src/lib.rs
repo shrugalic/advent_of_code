@@ -152,13 +152,14 @@ impl Tile {
         self.borders[LEFT].0
     }
 
-    fn adapt_to_match(&mut self, target_value: usize, at_loc: usize) {
+    fn adapted_to_match(mut self, target_value: usize, at_loc: usize) -> Self {
         if !self.rotated_to_have_matching(target_value, at_loc) {
             self.flip_h();
             if !self.rotated_to_have_matching(target_value, at_loc) {
                 panic!("Could not adapt to have bottom match {}!", target_value)
             }
         }
+        self
     }
 
     fn rotated_to_have_matching(&mut self, target_value: usize, at_loc: usize) -> bool {
@@ -180,61 +181,27 @@ where
         .map(Tile::from)
         .collect();
 
-    let (tl, tr, bl, br) = arrange(tiles);
-    tl * tr * bl * br
+    let square = arrange(tiles);
+    square.top_left_corner().id
+        * square.top_right_corner().id
+        * square.bottom_left_corner().id
+        * square.bottom_right_corner().id
 }
 
-fn arrange(mut tiles: Vec<Tile>) -> (usize, usize, usize, usize) {
+fn arrange(mut tiles: Vec<Tile>) -> Square {
     let side_len = print_stats(&mut tiles);
-    let mut cols: VecDeque<Column> = VecDeque::new();
-
-    while cols.len() < side_len {
-        let seed = if cols.is_empty() {
-            // println!("First column root: {}", tiles[0]);
-            tiles.remove(0)
-        } else if let Some(id) =
-            index_of_tile_with_border_matching(&mut tiles, cols[0].top_tile().left_value())
-        {
-            let mut seed = tiles.remove(id);
-            seed.adapt_to_match(cols[0].top_tile().left_value(), RIGHT);
-            seed
-        } else if let Some(id) = index_of_tile_with_border_matching(
-            &mut tiles,
-            cols[cols.len() - 1].top_tile().right_value(),
-        ) {
-            let mut seed = tiles.remove(id);
-            seed.adapt_to_match(cols[cols.len() - 1].top_tile().right_value(), LEFT);
-            seed
-        } else {
-            panic!("Found no column matching either side!");
-        };
+    let mut square = Square::new();
+    while square.len() < side_len {
+        let seed = square.find_seed(&mut tiles);
         // println!("Rest: {:?}", tiles);
-        let mut col = Column::from(seed);
-        tiles = col.attach_tiles_to_top_and_bottom(tiles, side_len);
 
-        if cols.is_empty() {
-            cols.push_front(col);
-        } else {
-            // check left: as-is, flipped, rotated or rotated & flipped
-            if col.adapted_to_match_to_the_left_of(&cols[0]) {
-                // println!("Column matched to the left!");
-                cols.push_front(col);
-            } else if col.adapted_to_match_to_the_right_of(&cols[cols.len() - 1]) {
-                // println!("Column matched to the right!");
-                cols.push_back(col);
-            } else {
-                panic!("Column didn't match!");
-            }
-        }
+        let mut column = Column::from(seed);
+        column.attach_matching_tiles_to_top_and_bottom(&mut tiles);
+        // assert_eq!(column.len(), side_len);
+
+        square.attach(column);
     }
-
-    // Corners (top-left, top-right, bottom-left, bottom-right)
-    (
-        cols[0].top_tile().id,
-        cols[cols.len() - 1].top_tile().id,
-        cols[0].bottom_tile().id,
-        cols[cols.len() - 1].bottom_tile().id,
-    )
+    square
 }
 
 fn print_stats(tiles: &mut Vec<Tile>) -> usize {
@@ -248,13 +215,91 @@ fn print_stats(tiles: &mut Vec<Tile>) -> usize {
     side_len
 }
 
-struct Column {
-    col: VecDeque<Tile>,
+struct Square {
+    columns: VecDeque<Column>,
 }
+
+impl Square {
+    fn new() -> Self {
+        Self {
+            columns: VecDeque::new(),
+        }
+    }
+    fn len(&self) -> usize {
+        self.columns.len()
+    }
+    fn left_column(&self) -> &Column {
+        &self.columns[0]
+    }
+    fn right_column(&self) -> &Column {
+        &self.columns[self.columns.len() - 1]
+    }
+    fn attach(&mut self, mut column: Column) {
+        if self.is_empty() {
+            self.add_left(column);
+        } else {
+            // check left: as-is, flipped, rotated or rotated & flipped
+            if column.adapted_to_match_to_the_left_of(&self.left_column()) {
+                // println!("Column matched to the left!");
+                self.add_left(column);
+            } else if column.adapted_to_match_to_the_right_of(&self.right_column()) {
+                // println!("Column matched to the right!");
+                self.add_right(column);
+            } else {
+                panic!("Column didn't match!");
+            }
+        }
+    }
+    fn add_left(&mut self, column: Column) {
+        self.columns.push_front(column)
+    }
+    fn add_right(&mut self, column: Column) {
+        self.columns.push_back(column)
+    }
+    fn is_empty(&self) -> bool {
+        self.columns.is_empty()
+    }
+    fn top_left_corner(&self) -> &Tile {
+        self.left_column().top_tile()
+    }
+    fn top_right_corner(&self) -> &Tile {
+        self.right_column().top_tile()
+    }
+    fn bottom_left_corner(&self) -> &Tile {
+        self.left_column().bottom_tile()
+    }
+    fn bottom_right_corner(&self) -> &Tile {
+        self.right_column().bottom_tile()
+    }
+    fn find_seed(&self, mut tiles: &mut Vec<Tile>) -> Tile {
+        if self.is_empty() {
+            // println!("First column root: {}", tiles[0]);
+            tiles.remove(0)
+        } else if let Some(id) = index_of_tile_with_border_matching(
+            &mut tiles,
+            self.left_column().top_tile().left_value(),
+        ) {
+            tiles
+                .remove(id)
+                .adapted_to_match(self.left_column().top_tile().left_value(), RIGHT)
+        } else if let Some(id) = index_of_tile_with_border_matching(
+            &mut tiles,
+            self.right_column().top_tile().right_value(),
+        ) {
+            tiles
+                .remove(id)
+                .adapted_to_match(self.right_column().top_tile().right_value(), LEFT)
+        } else {
+            panic!("Found no column matching either side!");
+        }
+    }
+}
+
+struct Column(VecDeque<Tile>);
 
 impl Column {
     fn len(&self) -> usize {
-        self.col.len()
+        self.0.len()
     }
 
     fn adapted_to_match_to_the_left_of(&mut self, other: &Column) -> bool {
@@ -279,9 +324,9 @@ impl Column {
 
     fn matches_left(&self, other: &Column) -> bool {
         assert_eq!(self.len(), other.len());
-        self.col
+        self.0
             .iter()
-            .zip(other.col.iter())
+            .zip(other.0.iter())
             .all(|(slf, oth)| slf.right_value() == oth.left_value())
     }
 
@@ -307,64 +352,58 @@ impl Column {
 
     fn matches_right(&self, other: &Column) -> bool {
         assert_eq!(self.len(), other.len());
-        self.col
+        self.0
             .iter()
-            .zip(other.col.iter())
+            .zip(other.0.iter())
             .all(|(slf, oth)| slf.left_value() == oth.right_value())
     }
 
+    fn top_value(&self) -> usize {
+        self.top_tile().top_value()
+    }
+
     fn top_tile(&self) -> &Tile {
-        &self.col[0]
+        &self.0[0]
+    }
+
+    fn bottom_value(&self) -> usize {
+        self.bottom_tile().bottom_value()
     }
 
     fn bottom_tile(&self) -> &Tile {
-        &self.col[self.col.len() - 1]
+        &self.0[self.0.len() - 1]
     }
 
     fn flip_h(&mut self) {
-        self.col.iter_mut().for_each(|t| t.flip_h());
+        self.0.iter_mut().for_each(|t| t.flip_h());
     }
 
     fn rotate_180(&mut self) {
-        self.col.make_contiguous();
-        self.col.as_mut_slices().0.reverse();
-        self.col.iter_mut().for_each(|t| {
+        self.0.make_contiguous();
+        self.0.as_mut_slices().0.reverse();
+        self.0.iter_mut().for_each(|t| {
             t.rotate_cw();
             t.rotate_cw();
         });
     }
 
-    fn attach_tiles_to_top_and_bottom(
-        &mut self,
-        mut tiles: Vec<Tile>,
-        side_len: usize,
-    ) -> Vec<Tile> {
-        while let Some(idx) =
-            index_of_tile_with_border_matching(&mut tiles, self.top_tile().top_value())
-        {
-            let mut candidate = tiles.remove(idx);
-            candidate.adapt_to_match(self.top_tile().top_value(), BOTTOM);
-            // println!("Adding candidate above: {}", candidate);
-            self.col.push_front(candidate);
+    fn attach_matching_tiles_to_top_and_bottom(&mut self, tiles: &mut Vec<Tile>) {
+        while let Some(idx) = index_of_tile_with_border_matching(tiles, self.top_value()) {
+            let tile = tiles.remove(idx).adapted_to_match(self.top_value(), BOTTOM);
+            // println!("Adding candidate above: {}", tile);
+            self.0.push_front(tile);
         }
-        while let Some(idx) =
-            index_of_tile_with_border_matching(&mut tiles, self.bottom_tile().bottom_value())
-        {
-            let mut candidate = tiles.remove(idx);
-            candidate.adapt_to_match(self.bottom_tile().bottom_value(), TOP);
-            // println!("Adding candidate below: {}", candidate);
-            self.col.push_back(candidate);
+        while let Some(idx) = index_of_tile_with_border_matching(tiles, self.bottom_value()) {
+            let tile = tiles.remove(idx).adapted_to_match(self.bottom_value(), TOP);
+            // println!("Adding candidate below: {}", tile);
+            self.0.push_back(tile);
         }
-        assert_eq!(self.len(), side_len);
-        tiles
     }
 }
 
 impl From<Tile> for Column {
     fn from(tile: Tile) -> Self {
-        Column {
-            col: VecDeque::from(vec![tile]),
-        }
+        Column(VecDeque::from(vec![tile]))
     }
 }
 
