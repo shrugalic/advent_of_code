@@ -4,8 +4,6 @@ use std::mem::swap;
 
 mod tests;
 
-const MIN_CORNER_COUNT: usize = 4;
-
 #[derive(Debug, PartialEq, Clone)]
 struct Border {
     value: usize,
@@ -21,6 +19,9 @@ impl From<&str> for Border {
                 _ => panic!("Invalid char '{}'", c),
             })
             .collect::<String>();
+        if b.len() < 10 {
+            panic!("Too few chars in border!");
+        }
         Border {
             value: usize::from_str_radix(&b, 2).unwrap(),
         }
@@ -40,11 +41,6 @@ impl Display for Border {
 }
 
 impl Border {
-    fn complement(&mut self) -> usize {
-        self.value ^= 2usize.pow(10) - 1;
-        self.value
-    }
-
     fn reverse(&mut self) -> usize {
         self.value = Border::reverse_value(self.value);
         self.value
@@ -96,15 +92,12 @@ impl Borders {
         self.bottom.reverse();
     }
 
-    fn contains_value(&self, value: usize) -> bool {
+    fn is_any_matching(&self, value: usize) -> bool {
         self.top() == value
             || self.right() == value
             || self.bottom() == value
             || self.left() == value
-    }
-
-    fn could_contain_value(&self, value: usize) -> bool {
-        Border::reverse_value(self.top()) == value
+            || Border::reverse_value(self.top()) == value
             || Border::reverse_value(self.right()) == value
             || Border::reverse_value(self.bottom()) == value
             || Border::reverse_value(self.left()) == value
@@ -206,7 +199,7 @@ impl Tile {
         self.borders.flip_h();
     }
 
-    fn adapt_to_have_bottom_match(&mut self, target: usize) {
+    fn adapt_to_have_its_bottom_match_this(&mut self, target: usize) {
         if !self.rotated_to_have_bottom_match(target) {
             self.flip_h();
             if !self.rotated_to_have_bottom_match(target) {
@@ -224,7 +217,7 @@ impl Tile {
         self.bottom() == target
     }
 
-    fn adapt_to_have_top_match(&mut self, target: usize) {
+    fn adapt_to_have_its_top_match_this(&mut self, target: usize) {
         if !self.rotated_to_have_top_match(target) {
             self.flip_h();
             if !self.rotated_to_have_top_match(target) {
@@ -241,74 +234,86 @@ impl Tile {
         }
         self.top() == target
     }
+
+    fn adapt_to_have_its_right_match_this(&mut self, target: usize) {
+        if !self.rotated_to_have_right_match(target) {
+            self.flip_h();
+            if !self.rotated_to_have_right_match(target) {
+                panic!("Could not adapt to have right match {}!", target)
+            }
+        }
+    }
+
+    fn rotated_to_have_right_match(&mut self, target: usize) -> bool {
+        let mut i = 0;
+        while self.right() != target && i < 4 {
+            self.rotate_cw();
+            i += 1;
+        }
+        self.right() == target
+    }
+
+    fn adapt_to_have_its_left_match_this(&mut self, target: usize) {
+        if !self.rotated_to_have_left_match(target) {
+            self.flip_h();
+            if !self.rotated_to_have_left_match(target) {
+                panic!("Could not adapt to have left match {}!", target)
+            }
+        }
+    }
+
+    fn rotated_to_have_left_match(&mut self, target: usize) -> bool {
+        let mut i = 0;
+        while self.left() != target && i < 4 {
+            self.rotate_cw();
+            i += 1;
+        }
+        self.left() == target
+    }
+
+    fn has_border_matching(&self, value: usize) -> bool {
+        self.borders.is_any_matching(value)
+    }
 }
 
-fn product_of_corner_tile_ids<T>(input: &[T]) -> usize
+pub(crate) fn product_of_corner_tile_ids<T>(input: &[T]) -> usize
 where
     T: AsRef<str> + Debug,
 {
-    let mut tiles: Vec<Tile> = input
+    let tiles: Vec<Tile> = input
         .split(|line| line.as_ref().is_empty())
         .map(Tile::from)
         .collect();
 
-    // let mut counts_by_id = count_ids(&tiles);
-    // let mut counts: Vec<(usize, usize)> = counts_by_id.iter().map(|(v, c)| (*v, *c)).collect();
-    // counts.sort_by(|a, b| b.1.cmp(&a.1));
-    // println!("Counts:\n{:?}", counts);
-
-    // try to rotate and flip tiles to get the required number of matching tiles
-    // corners match 2, borders match 3, inside tiles match 4
-
-    // for (id, _count) in counts {
-    //     for tile in tiles.iter() {
-    //         if !tile.borders.contains_id(id) && tile.borders.could_contain_id(id) {
-    //             println!("Tile {} could be made to contain ID", tile)
-    //         }
-    //     }
-    // }
-
     let (tl, tr, bl, br) = arrange(tiles);
     tl * tr * bl * br
-
-    // println!("Permuting tiles:\n{:?}", tiles);
-    // if let Some(result) = permute(&mut tiles, 0) {
-    //     println!("\nFound result {:?}", result);
-    //     1
-    // } else {
-    //     0
-    // }
 }
 
 fn arrange(mut tiles: Vec<Tile>) -> (usize, usize, usize, usize) {
-    // Stats
-    let side_len = (tiles.len() as f64).sqrt() as usize;
-    let sides = 4 * (side_len - 2);
-    let insides = (side_len - 2) * (side_len - 2);
-    println!(
-        "Square of {} * {} tiles has {} corners, {} sides, {} insides",
-        side_len, side_len, MIN_CORNER_COUNT, sides, insides
-    );
-
+    let side_len = print_stats(&mut tiles);
     let mut cols: VecDeque<Column> = VecDeque::new();
+
     while cols.len() < side_len {
-        let root = if cols.is_empty() {
-            println!("Random column root: {}", tiles[0]);
+        let seed = if cols.is_empty() {
+            // println!("First column root: {}", tiles[0]);
             tiles.remove(0)
-        } else if let Some(id) = id_of_tile_with_matching_border(&mut tiles, cols[0].top().left()) {
-            println!("Left column root: {}", tiles[id]);
-            tiles.remove(id)
         } else if let Some(id) =
-            id_of_tile_with_matching_border(&mut tiles, cols[cols.len() - 1].top().right())
+            index_of_tile_with_border_matching(&mut tiles, cols[0].top().left())
         {
-            println!("Right column root: {}", tiles[id]);
-            tiles.remove(id)
+            let mut seed = tiles.remove(id);
+            seed.adapt_to_have_its_right_match_this(cols[0].top().left());
+            seed
+        } else if let Some(id) =
+            index_of_tile_with_border_matching(&mut tiles, cols[cols.len() - 1].top().right())
+        {
+            let mut seed = tiles.remove(id);
+            seed.adapt_to_have_its_left_match_this(cols[cols.len() - 1].top().right());
+            seed
         } else {
             panic!("Found no column matching either side!");
         };
         // println!("Rest: {:?}", tiles);
-        let mut col = Column::from(root);
-        // let mut col: VecDeque<Tile> = VecDeque::from(vec![root]);
+        let mut col = Column::from(seed);
         tiles = col.attach_tiles_to_top_and_bottom(tiles, side_len);
 
         if cols.is_empty() {
@@ -316,28 +321,35 @@ fn arrange(mut tiles: Vec<Tile>) -> (usize, usize, usize, usize) {
         } else {
             // check left: as-is, flipped, rotated or rotated & flipped
             if col.adapted_to_match_to_the_left_of(&cols[0]) {
-                println!("Column matched to the left!");
+                // println!("Column matched to the left!");
                 cols.push_front(col);
             } else if col.adapted_to_match_to_the_right_of(&cols[cols.len() - 1]) {
-                println!("Column matched to the right!");
+                // println!("Column matched to the right!");
                 cols.push_back(col);
             } else {
                 panic!("Column didn't match!");
             }
         }
-        println!("Col is complete");
-        if cols.len() > 0 {
-            break;
-        }
     }
 
-    // (top-left, top-right, bottom-left, bottom-right)
+    // Corners (top-left, top-right, bottom-left, bottom-right)
     (
         cols[0].top().id,
         cols[cols.len() - 1].top().id,
         cols[0].bottom().id,
         cols[cols.len() - 1].bottom().id,
     )
+}
+
+fn print_stats(tiles: &mut Vec<Tile>) -> usize {
+    let side_len = (tiles.len() as f64).sqrt() as usize;
+    let sides = 4 * (side_len - 2);
+    let insides = (side_len - 2) * (side_len - 2);
+    println!(
+        "Square of {} * {} tiles has 4 corners, {} sides, {} insides",
+        side_len, side_len, sides, insides
+    );
+    side_len
 }
 
 struct Column {
@@ -364,7 +376,7 @@ impl Column {
             self.flip_h();
             assert_eq!(self.top().right(), top_left)
         } else {
-            println!("No to-the-left match");
+            // println!("No to-the-left match");
         }
         self.matches_left(other)
     }
@@ -392,7 +404,7 @@ impl Column {
             self.flip_h();
             assert_eq!(self.top().left(), top_right)
         } else {
-            println!("No to-the-right match");
+            // println!("No to-the-right match");
         }
         self.matches_right(other)
     }
@@ -431,29 +443,21 @@ impl Column {
         mut tiles: Vec<Tile>,
         side_len: usize,
     ) -> Vec<Tile> {
-        while self.col.len() < side_len {
-            self.attach_tile_at_top(&mut tiles);
-            self.attach_tile_to_bottom(&mut tiles)
-        }
-        tiles
-    }
-
-    fn attach_tile_at_top(&mut self, mut tiles: &mut Vec<Tile>) {
-        if let Some(idx) = id_of_tile_with_matching_border(&mut tiles, self.top().top()) {
+        while let Some(idx) = index_of_tile_with_border_matching(&mut tiles, self.top().top()) {
             let mut candidate = tiles.remove(idx);
-            candidate.adapt_to_have_bottom_match(self.top().top());
-            println!("Adding candidate above: {}", candidate);
+            candidate.adapt_to_have_its_bottom_match_this(self.top().top());
+            // println!("Adding candidate above: {}", candidate);
             self.col.push_front(candidate);
         }
-    }
-
-    fn attach_tile_to_bottom(&mut self, mut tiles: &mut Vec<Tile>) {
-        if let Some(idx) = id_of_tile_with_matching_border(&mut tiles, self.bottom().bottom()) {
+        while let Some(idx) = index_of_tile_with_border_matching(&mut tiles, self.bottom().bottom())
+        {
             let mut candidate = tiles.remove(idx);
-            candidate.adapt_to_have_top_match(self.bottom().bottom());
-            println!("Adding candidate below: {}", candidate);
+            candidate.adapt_to_have_its_top_match_this(self.bottom().bottom());
+            // println!("Adding candidate below: {}", candidate);
             self.col.push_back(candidate);
         }
+        assert_eq!(self.len(), side_len);
+        tiles
     }
 }
 
@@ -465,113 +469,16 @@ impl From<Tile> for Column {
     }
 }
 
-fn id_of_tile_with_matching_border(tiles: &mut Vec<Tile>, wanted: usize) -> Option<usize> {
-    tiles
+fn index_of_tile_with_border_matching(tiles: &mut Vec<Tile>, wanted: usize) -> Option<usize> {
+    let indices: Vec<usize> = tiles
         .iter()
         .enumerate()
-        .filter(|(_i, t)| t.borders.contains_value(wanted) || t.borders.could_contain_value(wanted))
+        .filter(|(_i, t)| t.has_border_matching(wanted))
         .map(|(i, _t)| i)
-        .next()
-}
-
-fn permute(tiles: &mut [Tile], idx: usize) -> Option<Vec<Tile>> {
-    if idx == tiles.len() {
-        // println!("----");
-        // return None;
-        // println!("\nFinished 1 permutation:\n{:?}", tiles);
-        // panic!("done");
-        // Stats
-        let side_len = (tiles.len() as f64).sqrt() as usize;
-        let min_sides_count = 4 * (side_len - 2);
-        let min_insides_count = (side_len - 2) * (side_len - 2);
-        let counts_by_value = count_values(tiles);
-        if let Some((id, count)) = counts_by_value.iter().find(|(_, &c)| c > 4) {
-            println!("There's a config where ID {} appears {} times!", id, count);
-        }
-        let inside_candidates: Vec<(&usize, &usize)> =
-            counts_by_value.iter().filter(|(_, &c)| c == 4).collect();
-        let side_candidates: Vec<(&usize, &usize)> =
-            counts_by_value.iter().filter(|(_, &c)| c >= 3).collect();
-        let corner_candidates: Vec<(&usize, &usize)> =
-            counts_by_value.iter().filter(|(_, &c)| c >= 2).collect();
-        if inside_candidates.len() >= min_insides_count
-            && side_candidates.len() >= min_sides_count
-            && corner_candidates.len() >= MIN_CORNER_COUNT
-        {
-            println!(
-                "Found a solution with {} suitable corners, {} suitable sides, {} suitable insides",
-                corner_candidates.len(),
-                side_candidates.len(),
-                inside_candidates.len()
-            );
-            println!("Inside candidate border-values are:{:?}", inside_candidates);
-            let values: Vec<&usize> = inside_candidates.iter().map(|(v, _c)| *v).collect();
-            for value in values {
-                let tiles: Vec<&Tile> = tiles
-                    .iter()
-                    .filter(|t| {
-                        t.borders.contains_value(*value) || t.borders.could_contain_value(*value)
-                    })
-                    .collect();
-                println!(
-                    "{} tiles matching value {} are:\n{:?}",
-                    tiles.len(),
-                    value,
-                    tiles
-                );
-            }
-            Some(tiles.to_vec())
-        } else {
-            None
-        }
-    } else {
-        permute(tiles, idx + 1).or_else(|| {
-            tiles[idx].borders.rotate_cw();
-            if idx == 0 {
-                println!("{}", tiles[idx]);
-            }
-            permute(tiles, idx + 1).or_else(|| {
-                tiles[idx].borders.rotate_cw();
-                if idx == 0 {
-                    println!("{}", tiles[idx]);
-                }
-                permute(tiles, idx + 1).or_else(|| {
-                    tiles[idx].borders.rotate_cw();
-                    if idx == 0 {
-                        println!("{}", tiles[idx]);
-                    }
-                    permute(tiles, idx + 1).or_else(|| {
-                        // Do we need to explore more than 4 permutations?
-                        if false {
-                            // println!("Exploring more than 4!");
-                            tiles[idx].borders.flip_h();
-                            permute(tiles, idx + 1).or_else(|| {
-                                tiles[idx].borders.rotate_cw();
-                                permute(tiles, idx + 1).or_else(|| {
-                                    tiles[idx].borders.rotate_cw();
-                                    permute(tiles, idx + 1).or_else(|| {
-                                        tiles[idx].borders.rotate_cw();
-                                        permute(tiles, idx + 1)
-                                    })
-                                })
-                            })
-                        } else {
-                            None
-                        }
-                    })
-                })
-            })
-        })
+        .collect();
+    match indices.len() {
+        0 => None,
+        1 => Some(indices[0]),
+        n => panic!("Found {} matching tiles!", n),
     }
-}
-
-fn count_values(tiles: &[Tile]) -> HashMap<usize, usize> {
-    let mut counts_by_id: HashMap<usize, usize> = HashMap::new();
-    for tile in tiles.iter() {
-        *counts_by_id.entry(tile.borders.top.value).or_insert(0) += 1;
-        *counts_by_id.entry(tile.borders.right.value).or_insert(0) += 1;
-        *counts_by_id.entry(tile.borders.bottom.value).or_insert(0) += 1;
-        *counts_by_id.entry(tile.borders.left.value).or_insert(0) += 1;
-    }
-    counts_by_id
 }

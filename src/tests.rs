@@ -18,7 +18,7 @@ const TILE_2311: &str = "Tile 2311:
 fn part1() {
     assert_eq!(
         product_of_corner_tile_ids(&read_file_to_lines("input.txt")),
-        1
+        60145080587029
     );
 }
 
@@ -47,22 +47,6 @@ fn tile() {
             borders: Borders::new(210, 89, 231, 498)
         }
     );
-}
-
-#[test]
-fn complement_border() {
-    // ..##.#..#. = 0011010010 = 210
-    // __________ = 1100101101 = 813
-    assert_eq!(Border::from(210).complement(), 1023 - 210);
-    // ...#.##..# = 0001011001 = 89
-    // __________ = 1110100110 = 934
-    assert_eq!(Border::from(89).complement(), 1023 - 89);
-    // ..###..### = 0011100111 = 231
-    // __________ = 1100011000 = 792
-    assert_eq!(Border::from(231).complement(), 1023 - 231);
-    // .#####..#. = 0111110010 = 498
-    // __________ = 1000001101 = 525
-    assert_eq!(Border::from(498).complement(), 1023 - 498);
 }
 
 #[test]
@@ -109,7 +93,9 @@ fn borders_rotate_cw() {
         }
     );
 }
-#[test]
+
+// #[test]
+#[allow(dead_code)]
 fn all_8_configs() {
     let mut tile = Tile::from(read_str_to_lines(TILE_2311).as_slice());
     println!("{}", tile);
