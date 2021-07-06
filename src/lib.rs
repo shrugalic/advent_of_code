@@ -1,13 +1,10 @@
-use std::collections::{HashMap, VecDeque};
-use std::fmt::{Debug, Display, Formatter};
-use std::mem::swap;
+use std::collections::VecDeque;
+use std::fmt::{Debug, Formatter};
 
 mod tests;
 
-#[derive(Debug, PartialEq, Clone)]
-struct Border {
-    value: usize,
-}
+#[derive(PartialEq, Clone)]
+struct Border(usize);
 
 impl From<&str> for Border {
     fn from(s: &str) -> Self {
@@ -19,118 +16,43 @@ impl From<&str> for Border {
                 _ => panic!("Invalid char '{}'", c),
             })
             .collect::<String>();
-        if b.len() < 10 {
-            panic!("Too few chars in border!");
-        }
-        Border {
-            value: usize::from_str_radix(&b, 2).unwrap(),
-        }
+        Border(usize::from_str_radix(&b, 2).unwrap())
     }
 }
 
 impl From<usize> for Border {
     fn from(value: usize) -> Self {
-        Border { value }
+        Border(value)
     }
 }
 
-impl Display for Border {
+impl Debug for Border {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.value)
+        write!(f, "{}", self.0)
     }
 }
 
 impl Border {
-    fn reverse(&mut self) -> usize {
-        self.value = Border::reverse_value(self.value);
-        self.value
-        // println!("reverse({:010b}) = {:010b}", v, f);
+    fn reverse(&mut self) {
+        self.0 = Border::reversed(self.0);
     }
 
-    fn reverse_value(value: usize) -> usize {
+    fn reversed(value: usize) -> usize {
         let s = format!("{:010b}", value);
         let f: String = s.chars().rev().collect();
         usize::from_str_radix(&f, 2).unwrap()
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
-struct Borders {
-    top: Border,
-    right: Border,
-    bottom: Border,
-    left: Border,
-}
-
-impl Borders {
-    fn new(top: usize, right: usize, bottom: usize, left: usize) -> Self {
-        Borders {
-            top: Border::from(top),
-            right: Border::from(right),
-            bottom: Border::from(bottom),
-            left: Border::from(left),
-        }
-    }
-
-    fn flip_h(&mut self) {
-        self.top.reverse();
-        self.bottom.reverse();
-        swap(&mut self.left, &mut self.right);
-    }
-
-    fn rotate_cw(&mut self) {
-        // One clockwise rotation with left as tmp element:
-        // left -> top -> right -> bottom -> left
-        swap(&mut self.top, &mut self.left);
-        // top is old left && left is old top
-        swap(&mut self.right, &mut self.left);
-        // right is old top &&  left is old right
-        swap(&mut self.bottom, &mut self.left);
-        // bottom is old right && left is old bottom
-
-        self.top.reverse();
-        self.bottom.reverse();
-    }
-
-    fn is_any_matching(&self, value: usize) -> bool {
-        self.top() == value
-            || self.right() == value
-            || self.bottom() == value
-            || self.left() == value
-            || Border::reverse_value(self.top()) == value
-            || Border::reverse_value(self.right()) == value
-            || Border::reverse_value(self.bottom()) == value
-            || Border::reverse_value(self.left()) == value
-    }
-
-    fn top(&self) -> usize {
-        self.top.value
-    }
-    fn right(&self) -> usize {
-        self.right.value
-    }
-    fn bottom(&self) -> usize {
-        self.bottom.value
-    }
-    fn left(&self) -> usize {
-        self.left.value
-    }
-}
-
-impl Display for Borders {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "({}, {}, {}, {})",
-            self.top, self.right, self.bottom, self.left
-        )
-    }
-}
+const TOP: usize = 0;
+const RIGHT: usize = 1;
+const BOTTOM: usize = 2;
+const LEFT: usize = 3;
 
 #[derive(PartialEq, Clone)]
 struct Tile {
     id: usize,
-    borders: Borders,
+    borders: [Border; 4],
 }
 
 impl<T> From<&[T]> for Tile
@@ -153,126 +75,99 @@ where
             .iter()
             .map(|line| line.as_ref().chars().next().unwrap())
             .collect();
-        let top = Border::from(tail[0].as_ref());
-        let right = Border::from(right.as_str());
-        let bottom = Border::from(tail[tail.len() - 1].as_ref());
-        let left = Border::from(left.as_str());
-        let borders = Borders {
-            top,
-            right,
-            bottom,
-            left,
-        };
+        let borders = [
+            Border::from(tail[0].as_ref()),
+            Border::from(right.as_str()),
+            Border::from(tail[tail.len() - 1].as_ref()),
+            Border::from(left.as_str()),
+        ];
         Tile { id, borders }
     }
 }
 
 impl Debug for Tile {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "\n  Tile {}: {}", self.id, self.borders)
-    }
-}
-
-impl Display for Tile {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Tile {}: {}", self.id, self.borders)
+        write!(
+            f,
+            "Tile {}: ({:?}, {:?}, {:?}, {:?})",
+            self.id,
+            self.borders[TOP],
+            self.borders[RIGHT],
+            self.borders[BOTTOM],
+            self.borders[LEFT]
+        )
     }
 }
 
 impl Tile {
-    fn top(&self) -> usize {
-        self.borders.top()
+    fn new(id: usize, top: usize, right: usize, bottom: usize, left: usize) -> Tile {
+        Tile {
+            id,
+            borders: [Border(top), Border(right), Border(bottom), Border(left)],
+        }
     }
-    fn right(&self) -> usize {
-        self.borders.right()
-    }
-    fn bottom(&self) -> usize {
-        self.borders.bottom()
-    }
-    fn left(&self) -> usize {
-        self.borders.left()
-    }
-    fn rotate_cw(&mut self) {
-        self.borders.rotate_cw();
-    }
+
     fn flip_h(&mut self) {
-        self.borders.flip_h();
+        self.borders[TOP].reverse();
+        self.borders[BOTTOM].reverse();
+        self.borders.swap(LEFT, RIGHT);
     }
 
-    fn adapt_to_have_its_bottom_match_this(&mut self, target: usize) {
-        if !self.rotated_to_have_bottom_match(target) {
+    fn rotate_cw(&mut self) {
+        // One clockwise rotation with left as tmp element:
+        // left -> top -> right -> bottom -> left
+        self.borders.swap(TOP, LEFT);
+        // top is old left && left is old top
+        self.borders.swap(RIGHT, LEFT);
+        // right is old top &&  left is old right
+        self.borders.swap(BOTTOM, LEFT);
+        // bottom is old right && left is old bottom
+
+        self.borders[TOP].reverse();
+        self.borders[BOTTOM].reverse();
+    }
+
+    fn is_any_border_matching(&self, value: usize) -> bool {
+        self.top_value() == value
+            || self.right_value() == value
+            || self.bottom_value() == value
+            || self.left_value() == value
+            // Value might be reversed depending on rotation/flip of tile
+            || Border::reversed(self.top_value()) == value
+            || Border::reversed(self.right_value()) == value
+            || Border::reversed(self.bottom_value()) == value
+            || Border::reversed(self.left_value()) == value
+    }
+
+    fn top_value(&self) -> usize {
+        self.borders[TOP].0
+    }
+    fn right_value(&self) -> usize {
+        self.borders[RIGHT].0
+    }
+    fn bottom_value(&self) -> usize {
+        self.borders[BOTTOM].0
+    }
+    fn left_value(&self) -> usize {
+        self.borders[LEFT].0
+    }
+
+    fn adapt_to_match(&mut self, target_value: usize, at_loc: usize) {
+        if !self.rotated_to_have_matching(target_value, at_loc) {
             self.flip_h();
-            if !self.rotated_to_have_bottom_match(target) {
-                panic!("Could not adapt to have bottom match {}!", target)
+            if !self.rotated_to_have_matching(target_value, at_loc) {
+                panic!("Could not adapt to have bottom match {}!", target_value)
             }
         }
     }
 
-    fn rotated_to_have_bottom_match(&mut self, target: usize) -> bool {
+    fn rotated_to_have_matching(&mut self, target_value: usize, at_loc: usize) -> bool {
         let mut i = 0;
-        while self.bottom() != target && i < 4 {
+        while self.borders[at_loc].0 != target_value && i < 4 {
             self.rotate_cw();
             i += 1;
         }
-        self.bottom() == target
-    }
-
-    fn adapt_to_have_its_top_match_this(&mut self, target: usize) {
-        if !self.rotated_to_have_top_match(target) {
-            self.flip_h();
-            if !self.rotated_to_have_top_match(target) {
-                panic!("Could not adapt to have top match {}!", target)
-            }
-        }
-    }
-
-    fn rotated_to_have_top_match(&mut self, target: usize) -> bool {
-        let mut i = 0;
-        while self.top() != target && i < 4 {
-            self.rotate_cw();
-            i += 1;
-        }
-        self.top() == target
-    }
-
-    fn adapt_to_have_its_right_match_this(&mut self, target: usize) {
-        if !self.rotated_to_have_right_match(target) {
-            self.flip_h();
-            if !self.rotated_to_have_right_match(target) {
-                panic!("Could not adapt to have right match {}!", target)
-            }
-        }
-    }
-
-    fn rotated_to_have_right_match(&mut self, target: usize) -> bool {
-        let mut i = 0;
-        while self.right() != target && i < 4 {
-            self.rotate_cw();
-            i += 1;
-        }
-        self.right() == target
-    }
-
-    fn adapt_to_have_its_left_match_this(&mut self, target: usize) {
-        if !self.rotated_to_have_left_match(target) {
-            self.flip_h();
-            if !self.rotated_to_have_left_match(target) {
-                panic!("Could not adapt to have left match {}!", target)
-            }
-        }
-    }
-
-    fn rotated_to_have_left_match(&mut self, target: usize) -> bool {
-        let mut i = 0;
-        while self.left() != target && i < 4 {
-            self.rotate_cw();
-            i += 1;
-        }
-        self.left() == target
-    }
-
-    fn has_border_matching(&self, value: usize) -> bool {
-        self.borders.is_any_matching(value)
+        self.borders[at_loc].0 == target_value
     }
 }
 
@@ -298,16 +193,17 @@ fn arrange(mut tiles: Vec<Tile>) -> (usize, usize, usize, usize) {
             // println!("First column root: {}", tiles[0]);
             tiles.remove(0)
         } else if let Some(id) =
-            index_of_tile_with_border_matching(&mut tiles, cols[0].top().left())
+            index_of_tile_with_border_matching(&mut tiles, cols[0].top_tile().left_value())
         {
             let mut seed = tiles.remove(id);
-            seed.adapt_to_have_its_right_match_this(cols[0].top().left());
+            seed.adapt_to_match(cols[0].top_tile().left_value(), RIGHT);
             seed
-        } else if let Some(id) =
-            index_of_tile_with_border_matching(&mut tiles, cols[cols.len() - 1].top().right())
-        {
+        } else if let Some(id) = index_of_tile_with_border_matching(
+            &mut tiles,
+            cols[cols.len() - 1].top_tile().right_value(),
+        ) {
             let mut seed = tiles.remove(id);
-            seed.adapt_to_have_its_left_match_this(cols[cols.len() - 1].top().right());
+            seed.adapt_to_match(cols[cols.len() - 1].top_tile().right_value(), LEFT);
             seed
         } else {
             panic!("Found no column matching either side!");
@@ -334,10 +230,10 @@ fn arrange(mut tiles: Vec<Tile>) -> (usize, usize, usize, usize) {
 
     // Corners (top-left, top-right, bottom-left, bottom-right)
     (
-        cols[0].top().id,
-        cols[cols.len() - 1].top().id,
-        cols[0].bottom().id,
-        cols[cols.len() - 1].bottom().id,
+        cols[0].top_tile().id,
+        cols[cols.len() - 1].top_tile().id,
+        cols[0].bottom_tile().id,
+        cols[cols.len() - 1].bottom_tile().id,
     )
 }
 
@@ -362,19 +258,19 @@ impl Column {
     }
 
     fn adapted_to_match_to_the_left_of(&mut self, other: &Column) -> bool {
-        let top_left = other.top().left();
-        if self.top().right() == top_left {
+        let top_left = other.top_tile().left_value();
+        if self.top_tile().right_value() == top_left {
             // check rest of column
-        } else if self.top().left() == top_left {
+        } else if self.top_tile().left_value() == top_left {
             self.flip_h();
-            assert_eq!(self.top().right(), top_left)
-        } else if self.bottom().left() == Border::reverse_value(top_left) {
+            assert_eq!(self.top_tile().right_value(), top_left)
+        } else if self.bottom_tile().left_value() == Border::reversed(top_left) {
             self.rotate_180();
-            assert_eq!(self.top().right(), top_left)
-        } else if self.bottom().right() == Border::reverse_value(top_left) {
+            assert_eq!(self.top_tile().right_value(), top_left)
+        } else if self.bottom_tile().right_value() == Border::reversed(top_left) {
             self.rotate_180();
             self.flip_h();
-            assert_eq!(self.top().right(), top_left)
+            assert_eq!(self.top_tile().right_value(), top_left)
         } else {
             // println!("No to-the-left match");
         }
@@ -386,23 +282,23 @@ impl Column {
         self.col
             .iter()
             .zip(other.col.iter())
-            .all(|(slf, oth)| slf.right() == oth.left())
+            .all(|(slf, oth)| slf.right_value() == oth.left_value())
     }
 
     fn adapted_to_match_to_the_right_of(&mut self, other: &Column) -> bool {
-        let top_right = other.top().right();
-        if self.top().left() == top_right {
+        let top_right = other.top_tile().right_value();
+        if self.top_tile().left_value() == top_right {
             // check rest of column
-        } else if self.top().right() == top_right {
+        } else if self.top_tile().right_value() == top_right {
             self.flip_h();
-            assert_eq!(self.top().left(), top_right)
-        } else if self.bottom().right() == Border::reverse_value(top_right) {
+            assert_eq!(self.top_tile().left_value(), top_right)
+        } else if self.bottom_tile().right_value() == Border::reversed(top_right) {
             self.rotate_180();
-            assert_eq!(self.top().left(), top_right);
-        } else if self.bottom().left() == Border::reverse_value(top_right) {
+            assert_eq!(self.top_tile().left_value(), top_right);
+        } else if self.bottom_tile().left_value() == Border::reversed(top_right) {
             self.rotate_180();
             self.flip_h();
-            assert_eq!(self.top().left(), top_right)
+            assert_eq!(self.top_tile().left_value(), top_right)
         } else {
             // println!("No to-the-right match");
         }
@@ -414,14 +310,14 @@ impl Column {
         self.col
             .iter()
             .zip(other.col.iter())
-            .all(|(slf, oth)| slf.left() == oth.right())
+            .all(|(slf, oth)| slf.left_value() == oth.right_value())
     }
 
-    fn top(&self) -> &Tile {
+    fn top_tile(&self) -> &Tile {
         &self.col[0]
     }
 
-    fn bottom(&self) -> &Tile {
+    fn bottom_tile(&self) -> &Tile {
         &self.col[self.col.len() - 1]
     }
 
@@ -443,16 +339,19 @@ impl Column {
         mut tiles: Vec<Tile>,
         side_len: usize,
     ) -> Vec<Tile> {
-        while let Some(idx) = index_of_tile_with_border_matching(&mut tiles, self.top().top()) {
+        while let Some(idx) =
+            index_of_tile_with_border_matching(&mut tiles, self.top_tile().top_value())
+        {
             let mut candidate = tiles.remove(idx);
-            candidate.adapt_to_have_its_bottom_match_this(self.top().top());
+            candidate.adapt_to_match(self.top_tile().top_value(), BOTTOM);
             // println!("Adding candidate above: {}", candidate);
             self.col.push_front(candidate);
         }
-        while let Some(idx) = index_of_tile_with_border_matching(&mut tiles, self.bottom().bottom())
+        while let Some(idx) =
+            index_of_tile_with_border_matching(&mut tiles, self.bottom_tile().bottom_value())
         {
             let mut candidate = tiles.remove(idx);
-            candidate.adapt_to_have_its_top_match_this(self.bottom().bottom());
+            candidate.adapt_to_match(self.bottom_tile().bottom_value(), TOP);
             // println!("Adding candidate below: {}", candidate);
             self.col.push_back(candidate);
         }
@@ -473,7 +372,7 @@ fn index_of_tile_with_border_matching(tiles: &mut Vec<Tile>, wanted: usize) -> O
     let indices: Vec<usize> = tiles
         .iter()
         .enumerate()
-        .filter(|(_i, t)| t.has_border_matching(wanted))
+        .filter(|(_i, t)| t.is_any_border_matching(wanted))
         .map(|(i, _t)| i)
         .collect();
     match indices.len() {
