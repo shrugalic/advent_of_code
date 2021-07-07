@@ -61,6 +61,19 @@ const LEFT: usize = 3;
 struct Tile {
     id: usize,
     borders: [Border; 4],
+    contents: Square<char>,
+}
+
+impl Flipable for char {
+    fn flip_h(&mut self) {
+        // nop
+    }
+}
+
+impl Rotatable for char {
+    fn rotate_cw(&mut self) {
+        // nop
+    }
 }
 
 impl<T> From<&[T]> for Tile
@@ -89,7 +102,32 @@ where
             Border::from(tail[tail.len() - 1].as_ref()),
             Border::from(left.as_str()),
         ];
-        Tile { id, borders }
+        let content_lines: Vec<String> = tail
+            .iter()
+            .skip(1)
+            .take(tail.len() - 2)
+            .map(|line| {
+                let len = line.as_ref().len();
+                line.as_ref().chars().skip(1).take(len - 2).collect()
+            })
+            .collect();
+        let mut content_columns: VecDeque<Column<char>> =
+            VecDeque::from(vec![
+                Column(VecDeque::from(vec!['x'; content_lines.len()]));
+                content_lines.len()
+            ]);
+        for (row, line) in content_lines.iter().enumerate() {
+            for (col, ch) in line.chars().enumerate() {
+                content_columns[col].0[row] = ch;
+            }
+        }
+        Tile {
+            id,
+            borders,
+            contents: Square {
+                columns: content_columns,
+            },
+        }
     }
 }
 
@@ -112,6 +150,9 @@ impl Flipable for Tile {
         self.borders[TOP].reverse();
         self.borders[BOTTOM].reverse();
         self.borders.swap(LEFT, RIGHT);
+
+        self.contents.columns.make_contiguous();
+        self.contents.columns.as_mut_slices().0.reverse();
     }
 }
 
@@ -128,6 +169,8 @@ impl Rotatable for Tile {
 
         self.borders[TOP].reverse();
         self.borders[BOTTOM].reverse();
+
+        // TODO self.contents
     }
 }
 
@@ -136,6 +179,7 @@ impl Tile {
         Tile {
             id,
             borders: [Border(top), Border(right), Border(bottom), Border(left)],
+            contents: Square::new(),
         }
     }
 
@@ -181,6 +225,22 @@ impl Tile {
             i += 1;
         }
         self.borders[at_loc].0 == target_value
+    }
+
+    fn contents_to_string(&self) -> String {
+        let len = self.contents.len();
+        let mut lines: Vec<Vec<char>> = vec![vec!['_'; len]; len];
+        for (col, column) in self.contents.columns.iter().enumerate() {
+            for (row, ch) in column.0.iter().enumerate() {
+                lines[row][col] = *ch;
+            }
+        }
+        let lines: String = lines
+            .iter()
+            .map(|v| v.iter().collect::<String>())
+            .collect::<Vec<String>>()
+            .join("\n");
+        lines
     }
 }
 
@@ -242,6 +302,7 @@ fn print_stats(tiles: &mut Vec<Tile>) -> usize {
     side_len
 }
 
+#[derive(PartialEq, Clone)]
 struct Square<T> {
     columns: VecDeque<Column<T>>,
 }
@@ -329,6 +390,7 @@ impl Square<Tile> {
     }
 }
 
+#[derive(PartialEq, Clone)]
 struct Column<T>(VecDeque<T>);
 
 impl<T> Column<T>

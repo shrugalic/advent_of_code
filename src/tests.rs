@@ -41,8 +41,8 @@ fn example0() {
 #[test]
 fn tile() {
     assert_eq!(
-        Tile::from(read_str_to_lines(TILE_2311).as_slice()),
-        Tile::new(2311, 210, 89, 231, 498)
+        Tile::from(read_str_to_lines(TILE_2311).as_slice()).borders,
+        Tile::new(2311, 210, 89, 231, 498).borders
     );
 }
 
@@ -62,15 +62,30 @@ fn reverse_border() {
 fn borders_h_flip() {
     let mut actual = Tile::from(read_str_to_lines(TILE_2311).as_slice());
     actual.flip_h();
-    assert_eq!(actual, Tile::new(2311, 300, 498, 924, 89));
+    assert_eq!(actual.borders, Tile::new(2311, 300, 498, 924, 89).borders);
+}
+
+#[test]
+fn contents_h_flip() {
+    let mut actual = Tile::from(read_str_to_lines(TILE_2311).as_slice());
+    // println!("{}\n", actual.contents_to_string());
+    let flipped: String = actual
+        .contents_to_string()
+        .split("\n")
+        .map(|line| line.chars().rev().collect::<String>())
+        .collect::<Vec<String>>()
+        .join("\n");
+    actual.flip_h();
+    // println!("{}", actual.contents_to_string());
+    assert_eq!(actual.contents_to_string(), flipped);
 }
 
 #[test]
 fn borders_rotate_cw() {
     let mut actual = Tile::from(read_str_to_lines(TILE_2311).as_slice());
-    assert_eq!(actual, Tile::new(2311, 210, 89, 231, 498));
+    assert_eq!(actual.borders, Tile::new(2311, 210, 89, 231, 498).borders);
     actual.rotate_cw();
-    assert_eq!(actual, Tile::new(2311, 318, 210, 616, 231));
+    assert_eq!(actual.borders, Tile::new(2311, 318, 210, 616, 231).borders);
 }
 
 // #[test]
