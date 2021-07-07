@@ -3,6 +3,14 @@ use std::fmt::{Debug, Formatter};
 
 mod tests;
 
+trait Flipable {
+    fn flip_h(&mut self);
+}
+
+trait Rotatable {
+    fn rotate_cw(&mut self);
+}
+
 #[derive(PartialEq, Clone)]
 struct Border(usize);
 
@@ -99,20 +107,15 @@ impl Debug for Tile {
     }
 }
 
-impl Tile {
-    fn new(id: usize, top: usize, right: usize, bottom: usize, left: usize) -> Tile {
-        Tile {
-            id,
-            borders: [Border(top), Border(right), Border(bottom), Border(left)],
-        }
-    }
-
+impl Flipable for Tile {
     fn flip_h(&mut self) {
         self.borders[TOP].reverse();
         self.borders[BOTTOM].reverse();
         self.borders.swap(LEFT, RIGHT);
     }
+}
 
+impl Rotatable for Tile {
     fn rotate_cw(&mut self) {
         // One clockwise rotation with left as tmp element:
         // left -> top -> right -> bottom -> left
@@ -125,6 +128,15 @@ impl Tile {
 
         self.borders[TOP].reverse();
         self.borders[BOTTOM].reverse();
+    }
+}
+
+impl Tile {
+    fn new(id: usize, top: usize, right: usize, bottom: usize, left: usize) -> Tile {
+        Tile {
+            id,
+            borders: [Border(top), Border(right), Border(bottom), Border(left)],
+        }
     }
 
     fn is_any_border_matching(&self, value: usize) -> bool {
@@ -172,7 +184,27 @@ impl Tile {
     }
 }
 
-pub(crate) fn product_of_corner_tile_ids<T>(input: &[T]) -> usize
+fn product_of_corner_tile_ids<T>(input: &[T]) -> usize
+where
+    T: AsRef<str> + Debug,
+{
+    let square = form_square(input);
+    square.top_left_corner().id
+        * square.top_right_corner().id
+        * square.bottom_left_corner().id
+        * square.bottom_right_corner().id
+}
+
+fn count_hashes_not_part_of_sea_monsters<T>(input: &[T]) -> usize
+where
+    T: AsRef<str> + Debug,
+{
+    let square = form_square(input);
+
+    0
+}
+
+fn form_square<T>(input: &[T]) -> Square<Tile>
 where
     T: AsRef<str> + Debug,
 {
@@ -180,15 +212,10 @@ where
         .split(|line| line.as_ref().is_empty())
         .map(Tile::from)
         .collect();
-
-    let square = arrange(tiles);
-    square.top_left_corner().id
-        * square.top_right_corner().id
-        * square.bottom_left_corner().id
-        * square.bottom_right_corner().id
+    arrange_as_square(tiles)
 }
 
-fn arrange(mut tiles: Vec<Tile>) -> Square {
+fn arrange_as_square(mut tiles: Vec<Tile>) -> Square<Tile> {
     let side_len = print_stats(&mut tiles);
     let mut square = Square::new();
     while square.len() < side_len {
@@ -215,11 +242,14 @@ fn print_stats(tiles: &mut Vec<Tile>) -> usize {
     side_len
 }
 
-struct Square {
-    columns: VecDeque<Column>,
+struct Square<T> {
+    columns: VecDeque<Column<T>>,
 }
 
-impl Square {
+impl<T> Square<T>
+where
+    T: Flipable + Rotatable,
+{
     fn new() -> Self {
         Self {
             columns: VecDeque::new(),
@@ -228,13 +258,37 @@ impl Square {
     fn len(&self) -> usize {
         self.columns.len()
     }
-    fn left_column(&self) -> &Column {
+    fn left_column(&self) -> &Column<T> {
         &self.columns[0]
     }
-    fn right_column(&self) -> &Column {
+    fn right_column(&self) -> &Column<T> {
         &self.columns[self.columns.len() - 1]
     }
-    fn attach(&mut self, mut column: Column) {
+    fn add_left(&mut self, column: Column<T>) {
+        self.columns.push_front(column)
+    }
+    fn add_right(&mut self, column: Column<T>) {
+        self.columns.push_back(column)
+    }
+    fn is_empty(&self) -> bool {
+        self.columns.is_empty()
+    }
+    fn top_left_corner(&self) -> &T {
+        self.left_column().top_elem()
+    }
+    fn top_right_corner(&self) -> &T {
+        self.right_column().top_elem()
+    }
+    fn bottom_left_corner(&self) -> &T {
+        self.left_column().bottom_elem()
+    }
+    fn bottom_right_corner(&self) -> &T {
+        self.right_column().bottom_elem()
+    }
+}
+
+impl Square<Tile> {
+    fn attach(&mut self, mut column: Column<Tile>) {
         if self.is_empty() {
             self.add_left(column);
         } else {
@@ -250,131 +304,53 @@ impl Square {
             }
         }
     }
-    fn add_left(&mut self, column: Column) {
-        self.columns.push_front(column)
-    }
-    fn add_right(&mut self, column: Column) {
-        self.columns.push_back(column)
-    }
-    fn is_empty(&self) -> bool {
-        self.columns.is_empty()
-    }
-    fn top_left_corner(&self) -> &Tile {
-        self.left_column().top_tile()
-    }
-    fn top_right_corner(&self) -> &Tile {
-        self.right_column().top_tile()
-    }
-    fn bottom_left_corner(&self) -> &Tile {
-        self.left_column().bottom_tile()
-    }
-    fn bottom_right_corner(&self) -> &Tile {
-        self.right_column().bottom_tile()
-    }
+
     fn find_seed(&self, mut tiles: &mut Vec<Tile>) -> Tile {
         if self.is_empty() {
             // println!("First column root: {}", tiles[0]);
             tiles.remove(0)
         } else if let Some(id) = index_of_tile_with_border_matching(
             &mut tiles,
-            self.left_column().top_tile().left_value(),
+            self.left_column().top_elem().left_value(),
         ) {
             tiles
                 .remove(id)
-                .adapted_to_match(self.left_column().top_tile().left_value(), RIGHT)
+                .adapted_to_match(self.left_column().top_elem().left_value(), RIGHT)
         } else if let Some(id) = index_of_tile_with_border_matching(
             &mut tiles,
-            self.right_column().top_tile().right_value(),
+            self.right_column().top_elem().right_value(),
         ) {
             tiles
                 .remove(id)
-                .adapted_to_match(self.right_column().top_tile().right_value(), LEFT)
+                .adapted_to_match(self.right_column().top_elem().right_value(), LEFT)
         } else {
             panic!("Found no column matching either side!");
         }
     }
 }
 
-struct Column(VecDeque<Tile>);
+struct Column<T>(VecDeque<T>);
 
-impl Column {
+impl<T> Column<T>
+where
+    T: Flipable + Rotatable,
+{
     fn len(&self) -> usize {
         self.0.len()
     }
 
-    fn adapted_to_match_to_the_left_of(&mut self, other: &Column) -> bool {
-        let top_left = other.top_tile().left_value();
-        if self.top_tile().right_value() == top_left {
-            // check rest of column
-        } else if self.top_tile().left_value() == top_left {
-            self.flip_h();
-            assert_eq!(self.top_tile().right_value(), top_left)
-        } else if self.bottom_tile().left_value() == Border::reversed(top_left) {
-            self.rotate_180();
-            assert_eq!(self.top_tile().right_value(), top_left)
-        } else if self.bottom_tile().right_value() == Border::reversed(top_left) {
-            self.rotate_180();
-            self.flip_h();
-            assert_eq!(self.top_tile().right_value(), top_left)
-        } else {
-            // println!("No to-the-left match");
-        }
-        self.matches_left(other)
-    }
-
-    fn matches_left(&self, other: &Column) -> bool {
-        assert_eq!(self.len(), other.len());
-        self.0
-            .iter()
-            .zip(other.0.iter())
-            .all(|(slf, oth)| slf.right_value() == oth.left_value())
-    }
-
-    fn adapted_to_match_to_the_right_of(&mut self, other: &Column) -> bool {
-        let top_right = other.top_tile().right_value();
-        if self.top_tile().left_value() == top_right {
-            // check rest of column
-        } else if self.top_tile().right_value() == top_right {
-            self.flip_h();
-            assert_eq!(self.top_tile().left_value(), top_right)
-        } else if self.bottom_tile().right_value() == Border::reversed(top_right) {
-            self.rotate_180();
-            assert_eq!(self.top_tile().left_value(), top_right);
-        } else if self.bottom_tile().left_value() == Border::reversed(top_right) {
-            self.rotate_180();
-            self.flip_h();
-            assert_eq!(self.top_tile().left_value(), top_right)
-        } else {
-            // println!("No to-the-right match");
-        }
-        self.matches_right(other)
-    }
-
-    fn matches_right(&self, other: &Column) -> bool {
-        assert_eq!(self.len(), other.len());
-        self.0
-            .iter()
-            .zip(other.0.iter())
-            .all(|(slf, oth)| slf.left_value() == oth.right_value())
-    }
-
-    fn top_value(&self) -> usize {
-        self.top_tile().top_value()
-    }
-
-    fn top_tile(&self) -> &Tile {
+    fn top_elem(&self) -> &T {
         &self.0[0]
     }
 
-    fn bottom_value(&self) -> usize {
-        self.bottom_tile().bottom_value()
-    }
-
-    fn bottom_tile(&self) -> &Tile {
+    fn bottom_elem(&self) -> &T {
         &self.0[self.0.len() - 1]
     }
 
-    fn flip_h(&mut self) {
+    fn flip_h(&mut self)
+    where
+        T: Flipable,
+    {
         self.0.iter_mut().for_each(|t| t.flip_h());
     }
 
@@ -385,6 +361,72 @@ impl Column {
             t.rotate_cw();
             t.rotate_cw();
         });
+    }
+}
+
+impl Column<Tile> {
+    fn adapted_to_match_to_the_left_of(&mut self, other: &Column<Tile>) -> bool {
+        let top_left = other.top_elem().left_value();
+        if self.top_elem().right_value() == top_left {
+            // check rest of column
+        } else if self.top_elem().left_value() == top_left {
+            self.flip_h();
+            assert_eq!(self.top_elem().right_value(), top_left)
+        } else if self.bottom_elem().left_value() == Border::reversed(top_left) {
+            self.rotate_180();
+            assert_eq!(self.top_elem().right_value(), top_left)
+        } else if self.bottom_elem().right_value() == Border::reversed(top_left) {
+            self.rotate_180();
+            self.flip_h();
+            assert_eq!(self.top_elem().right_value(), top_left)
+        } else {
+            // println!("No to-the-left match");
+        }
+        self.matches_left(other)
+    }
+
+    fn matches_left(&self, other: &Column<Tile>) -> bool {
+        assert_eq!(self.len(), other.len());
+        self.0
+            .iter()
+            .zip(other.0.iter())
+            .all(|(slf, oth)| slf.right_value() == oth.left_value())
+    }
+
+    fn adapted_to_match_to_the_right_of(&mut self, other: &Column<Tile>) -> bool {
+        let top_right = other.top_elem().right_value();
+        if self.top_elem().left_value() == top_right {
+            // check rest of column
+        } else if self.top_elem().right_value() == top_right {
+            self.flip_h();
+            assert_eq!(self.top_elem().left_value(), top_right)
+        } else if self.bottom_elem().right_value() == Border::reversed(top_right) {
+            self.rotate_180();
+            assert_eq!(self.top_elem().left_value(), top_right);
+        } else if self.bottom_elem().left_value() == Border::reversed(top_right) {
+            self.rotate_180();
+            self.flip_h();
+            assert_eq!(self.top_elem().left_value(), top_right)
+        } else {
+            // println!("No to-the-right match");
+        }
+        self.matches_right(other)
+    }
+
+    fn matches_right(&self, other: &Column<Tile>) -> bool {
+        assert_eq!(self.len(), other.len());
+        self.0
+            .iter()
+            .zip(other.0.iter())
+            .all(|(slf, oth)| slf.left_value() == oth.right_value())
+    }
+
+    fn top_value(&self) -> usize {
+        self.top_elem().top_value()
+    }
+
+    fn bottom_value(&self) -> usize {
+        self.bottom_elem().bottom_value()
     }
 
     fn attach_matching_tiles_to_top_and_bottom(&mut self, tiles: &mut Vec<Tile>) {
@@ -401,7 +443,7 @@ impl Column {
     }
 }
 
-impl From<Tile> for Column {
+impl From<Tile> for Column<Tile> {
     fn from(tile: Tile) -> Self {
         Column(VecDeque::from(vec![tile]))
     }

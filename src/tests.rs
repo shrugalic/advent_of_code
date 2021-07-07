@@ -99,3 +99,11 @@ fn all_8_configs() {
     tile.rotate_cw();
     println!("{:?}", tile);
 }
+
+#[test]
+fn part2_example1() {
+    assert_eq!(
+        count_hashes_not_part_of_sea_monsters(&read_file_to_lines("example1.txt")),
+        273
+    );
+}
