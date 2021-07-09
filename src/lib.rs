@@ -1,9 +1,9 @@
 use std::collections::VecDeque;
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 mod tests;
 
-trait Flipable {
+trait Flippable {
     fn flip_h(&mut self);
 }
 
@@ -64,7 +64,7 @@ struct Tile {
     contents: Square<char>,
 }
 
-impl Flipable for char {
+impl Flippable for char {
     fn flip_h(&mut self) {
         // nop
     }
@@ -73,6 +73,44 @@ impl Flipable for char {
 impl Rotatable for char {
     fn rotate_cw(&mut self) {
         // nop
+    }
+}
+
+impl Flippable for String {
+    fn flip_h(&mut self) {
+        // nop
+    }
+}
+
+impl Rotatable for String {
+    fn rotate_cw(&mut self) {
+        // nop
+    }
+}
+
+impl<T> Flippable for Square<T>
+where
+    T: Flippable,
+{
+    fn flip_h(&mut self) {
+        self.columns.make_contiguous();
+        self.columns.as_mut_slices().0.reverse();
+    }
+}
+impl<T> Rotatable for Square<T>
+where
+    T: Rotatable + Clone + Copy,
+{
+    fn rotate_cw(&mut self) {
+        let previous = self.columns.clone();
+        let side_len = self.columns.len();
+        for col in 0..side_len {
+            for row in 0..side_len {
+                let new_col = side_len - 1 - row;
+                let new_row = col;
+                self.columns[new_col].0[new_row] = previous[col].0[row];
+            }
+        }
     }
 }
 
@@ -145,14 +183,13 @@ impl Debug for Tile {
     }
 }
 
-impl Flipable for Tile {
+impl Flippable for Tile {
     fn flip_h(&mut self) {
         self.borders[TOP].reverse();
         self.borders[BOTTOM].reverse();
         self.borders.swap(LEFT, RIGHT);
 
-        self.contents.columns.make_contiguous();
-        self.contents.columns.as_mut_slices().0.reverse();
+        self.contents.flip_h();
     }
 }
 
@@ -170,7 +207,7 @@ impl Rotatable for Tile {
         self.borders[TOP].reverse();
         self.borders[BOTTOM].reverse();
 
-        // TODO self.contents
+        self.contents.rotate_cw();
     }
 }
 
@@ -226,22 +263,6 @@ impl Tile {
         }
         self.borders[at_loc].0 == target_value
     }
-
-    fn contents_to_string(&self) -> String {
-        let len = self.contents.len();
-        let mut lines: Vec<Vec<char>> = vec![vec!['_'; len]; len];
-        for (col, column) in self.contents.columns.iter().enumerate() {
-            for (row, ch) in column.0.iter().enumerate() {
-                lines[row][col] = *ch;
-            }
-        }
-        let lines: String = lines
-            .iter()
-            .map(|v| v.iter().collect::<String>())
-            .collect::<Vec<String>>()
-            .join("\n");
-        lines
-    }
 }
 
 fn product_of_corner_tile_ids<T>(input: &[T]) -> usize
@@ -255,15 +276,113 @@ where
         * square.bottom_right_corner().id
 }
 
+const SEA_MONSTER: [(usize, usize); 15] = [
+    (18, 0),
+    (0, 1),
+    (5, 1),
+    (6, 1),
+    (11, 1),
+    (12, 1),
+    (17, 1),
+    (18, 1),
+    (19, 1),
+    (1, 2),
+    (4, 2),
+    (7, 2),
+    (10, 2),
+    (13, 2),
+    (16, 2),
+];
+
 fn count_hashes_not_part_of_sea_monsters<T>(input: &[T]) -> usize
 where
-    T: AsRef<str> + Debug,
+    T: AsRef<str> + Debug + Flippable + Rotatable,
 {
-    let square = form_square(input);
+    let tile_square: Square<Tile> = form_square(input);
+    let mut char_square = convert_to_big_square(&tile_square);
 
-    0
+    char_square.rotate_and_flip_until_sea_monsters_are_found();
+
+    let total_hashes = char_square
+        .columns
+        .iter()
+        .map(|col| col.0.iter().filter(|c| c == &&'#').count())
+        .sum();
+    total_hashes
 }
 
+fn convert_to_big_square(tile_square: &Square<Tile>) -> Square<char> {
+    let tile_count = tile_square.len();
+    let chars_per_tile = tile_square.columns[0].0[0].contents.len();
+    let square_len = tile_count * chars_per_tile;
+    let mut char_square: Square<char> = Square {
+        columns: VecDeque::from(vec![
+            Column(VecDeque::from(vec![' '; square_len]));
+            square_len
+        ]),
+    };
+    println!(
+        "tile_count * chars_per_tile = {} * {} = {} square_len",
+        tile_count, chars_per_tile, square_len
+    );
+    for t_row in 0..tile_count {
+        for t_col in 0..tile_count {
+            let tile = &tile_square.columns[t_col].0[t_row];
+            for row in 0..chars_per_tile {
+                for col in 0..chars_per_tile {
+                    char_square.columns[t_col * chars_per_tile + col].0
+                        [t_row * chars_per_tile + row] = tile.contents.columns[col].0[row];
+                }
+            }
+        }
+    }
+    char_square
+}
+
+impl Square<char> {
+    fn rotate_and_flip_until_sea_monsters_are_found(&mut self) {
+        let mut counter = 0;
+        while !self.marked_sea_monsters() && counter < 8 {
+            // println!("{}\n", self.as_string());
+            counter += 1;
+            if counter % 4 == 0 {
+                println!("flipped");
+                self.flip_h();
+            } else {
+                println!("rotated");
+                self.rotate_cw();
+            }
+        }
+        println!("{}\n", self.as_string());
+    }
+
+    fn marked_sea_monsters(&mut self) -> bool {
+        let square_len = self.columns.len();
+        let monster_max_col = SEA_MONSTER.iter().map(|(col, _)| col).max().unwrap();
+        let monster_max_row = SEA_MONSTER.iter().map(|(_, row)| row).max().unwrap();
+        // println!(
+        //     "Sea monster max-col * max-row = {} * {}",
+        //     monster_max_col, monster_max_row
+        // );
+        let mut found_one = false;
+        for col in 0..(square_len - monster_max_col) {
+            for row in 0..(square_len - monster_max_row) {
+                if SEA_MONSTER.iter().all(|(c, r)| {
+                    let ch = self.columns[col + c].0[row + r];
+                    ch == '#' || ch == 'O'
+                }) {
+                    found_one = true;
+                    // println!("Found one!");
+                    SEA_MONSTER
+                        .iter()
+                        .for_each(|(c, r)| self.columns[col + c].0[row + r] = 'O');
+                    // println!("{}", self.as_string());
+                }
+            }
+        }
+        found_one
+    }
+}
 fn form_square<T>(input: &[T]) -> Square<Tile>
 where
     T: AsRef<str> + Debug,
@@ -309,7 +428,7 @@ struct Square<T> {
 
 impl<T> Square<T>
 where
-    T: Flipable + Rotatable,
+    T: Flippable + Rotatable,
 {
     fn new() -> Self {
         Self {
@@ -395,7 +514,7 @@ struct Column<T>(VecDeque<T>);
 
 impl<T> Column<T>
 where
-    T: Flipable + Rotatable,
+    T: Flippable + Rotatable,
 {
     fn len(&self) -> usize {
         self.0.len()
@@ -411,7 +530,7 @@ where
 
     fn flip_h(&mut self)
     where
-        T: Flipable,
+        T: Flippable,
     {
         self.0.iter_mut().for_each(|t| t.flip_h());
     }
@@ -522,5 +641,44 @@ fn index_of_tile_with_border_matching(tiles: &mut Vec<Tile>, wanted: usize) -> O
         0 => None,
         1 => Some(indices[0]),
         n => panic!("Found {} matching tiles!", n),
+    }
+}
+
+impl<T> Square<T>
+where
+    T: ToString,
+{
+    fn as_string(&self) -> String {
+        let len = self.columns.len();
+        let mut lines: Vec<Vec<char>> = vec![vec!['_'; len]; len];
+        for (col, column) in self.columns.iter().enumerate() {
+            for (row, ch) in column.0.iter().enumerate() {
+                lines[row][col] = ch.to_string().parse().unwrap();
+            }
+        }
+        let lines: String = lines
+            .iter()
+            .map(|v| v.iter().collect::<String>())
+            .collect::<Vec<String>>()
+            .join("\n");
+        lines
+    }
+}
+
+impl<T> Display for Square<T>
+where
+    T: ToString,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_string())
+    }
+}
+
+impl<T> Debug for Square<T>
+where
+    T: ToString,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_string())
     }
 }

@@ -68,16 +68,17 @@ fn borders_h_flip() {
 #[test]
 fn contents_h_flip() {
     let mut actual = Tile::from(read_str_to_lines(TILE_2311).as_slice());
-    // println!("{}\n", actual.contents_to_string());
+    // println!("{}\n", actual.contents.as_string());
     let flipped: String = actual
-        .contents_to_string()
+        .contents
+        .to_string()
         .split("\n")
         .map(|line| line.chars().rev().collect::<String>())
         .collect::<Vec<String>>()
         .join("\n");
     actual.flip_h();
-    // println!("{}", actual.contents_to_string());
-    assert_eq!(actual.contents_to_string(), flipped);
+    // println!("{}", actual.contents.as_string());
+    assert_eq!(actual.contents.to_string(), flipped);
 }
 
 #[test]
@@ -86,6 +87,36 @@ fn borders_rotate_cw() {
     assert_eq!(actual.borders, Tile::new(2311, 210, 89, 231, 498).borders);
     actual.rotate_cw();
     assert_eq!(actual.borders, Tile::new(2311, 318, 210, 616, 231).borders);
+}
+
+#[test]
+fn contents_rotate_cw() {
+    let original = Tile::from(read_str_to_lines(TILE_2311).as_slice());
+    let mut actual = original.clone();
+    // println!("{}\n", actual.contents.as_string());
+    actual.rotate_cw();
+    // println!("{}\n", actual.contents.as_string());
+    actual.rotate_cw();
+    // println!("{}\n", actual.contents.as_string());
+
+    let rotated_180 = original
+        .contents
+        .to_string()
+        .split('\n')
+        .collect::<Vec<&str>>()
+        .iter()
+        .rev()
+        .map(|line| line.chars().rev().collect::<String>())
+        .collect::<Vec<String>>()
+        .join("\n");
+    // println!("{}\n", rotated);
+    assert_eq!(actual.contents.as_string(), rotated_180);
+
+    actual.rotate_cw();
+    // println!("{}\n", actual.contents.as_string());
+    actual.rotate_cw();
+    // println!("{}\n", actual.contents.as_string());
+    assert_eq!(actual.contents, original.contents);
 }
 
 // #[test]
@@ -120,5 +151,13 @@ fn part2_example1() {
     assert_eq!(
         count_hashes_not_part_of_sea_monsters(&read_file_to_lines("example1.txt")),
         273
+    );
+}
+
+#[test]
+fn part2() {
+    assert_eq!(
+        count_hashes_not_part_of_sea_monsters(&read_file_to_lines("input.txt")),
+        1901
     );
 }
