@@ -1,5 +1,6 @@
 use crate::*;
 use line_reader::*;
+use std::collections::HashMap;
 
 const TILE_2311: &str = "Tile 2311:
 ..##.#..#.
@@ -160,4 +161,11 @@ fn part2() {
         count_hashes_not_part_of_sea_monsters(&read_file_to_lines("input.txt")),
         1901
     );
+}
+
+#[test]
+fn direct_access_to_map() {
+    let mut m: HashMap<usize, usize> = HashMap::new();
+    m.insert(1, 2);
+    assert_eq!(m[&1], 2);
 }

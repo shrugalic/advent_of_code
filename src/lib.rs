@@ -12,24 +12,16 @@ trait Rotatable {
 }
 
 #[derive(PartialEq, Clone)]
-struct Border(usize);
+struct Border(u16);
 
 impl From<&str> for Border {
     fn from(s: &str) -> Self {
-        let b = s
-            .chars()
-            .map(|c| match c {
-                '#' => '1',
-                '.' => '0',
-                _ => panic!("Invalid char '{}'", c),
-            })
-            .collect::<String>();
-        Border(usize::from_str_radix(&b, 2).unwrap())
+        Border(s.chars().fold(0_u16, |e, c| e << 1 | (c == '#') as u16))
     }
 }
 
-impl From<usize> for Border {
-    fn from(value: usize) -> Self {
+impl From<u16> for Border {
+    fn from(value: u16) -> Self {
         Border(value)
     }
 }
@@ -45,10 +37,9 @@ impl Border {
         self.0 = Border::reversed(self.0);
     }
 
-    fn reversed(value: usize) -> usize {
-        let s = format!("{:010b}", value);
-        let f: String = s.chars().rev().collect();
-        usize::from_str_radix(&f, 2).unwrap()
+    fn reversed(value: u16) -> u16 {
+        let bits_per_border = 10;
+        value.reverse_bits() >> (16 - bits_per_border)
     }
 }
 
@@ -212,7 +203,7 @@ impl Rotatable for Tile {
 }
 
 impl Tile {
-    fn new(id: usize, top: usize, right: usize, bottom: usize, left: usize) -> Tile {
+    fn new(id: usize, top: u16, right: u16, bottom: u16, left: u16) -> Tile {
         Tile {
             id,
             borders: [Border(top), Border(right), Border(bottom), Border(left)],
@@ -220,7 +211,7 @@ impl Tile {
         }
     }
 
-    fn is_any_border_matching(&self, value: usize) -> bool {
+    fn is_any_border_matching(&self, value: u16) -> bool {
         self.top_value() == value
             || self.right_value() == value
             || self.bottom_value() == value
@@ -232,20 +223,20 @@ impl Tile {
             || Border::reversed(self.left_value()) == value
     }
 
-    fn top_value(&self) -> usize {
+    fn top_value(&self) -> u16 {
         self.borders[TOP].0
     }
-    fn right_value(&self) -> usize {
+    fn right_value(&self) -> u16 {
         self.borders[RIGHT].0
     }
-    fn bottom_value(&self) -> usize {
+    fn bottom_value(&self) -> u16 {
         self.borders[BOTTOM].0
     }
-    fn left_value(&self) -> usize {
+    fn left_value(&self) -> u16 {
         self.borders[LEFT].0
     }
 
-    fn adapted_to_match(mut self, target_value: usize, at_loc: usize) -> Self {
+    fn adapted_to_match(mut self, target_value: u16, at_loc: usize) -> Self {
         if !self.rotated_to_have_matching(target_value, at_loc) {
             self.flip_h();
             if !self.rotated_to_have_matching(target_value, at_loc) {
@@ -255,7 +246,7 @@ impl Tile {
         self
     }
 
-    fn rotated_to_have_matching(&mut self, target_value: usize, at_loc: usize) -> bool {
+    fn rotated_to_have_matching(&mut self, target_value: u16, at_loc: usize) -> bool {
         let mut i = 0;
         while self.borders[at_loc].0 != target_value && i < 4 {
             self.rotate_cw();
@@ -602,11 +593,11 @@ impl Column<Tile> {
             .all(|(slf, oth)| slf.left_value() == oth.right_value())
     }
 
-    fn top_value(&self) -> usize {
+    fn top_value(&self) -> u16 {
         self.top_elem().top_value()
     }
 
-    fn bottom_value(&self) -> usize {
+    fn bottom_value(&self) -> u16 {
         self.bottom_elem().bottom_value()
     }
 
@@ -630,7 +621,7 @@ impl From<Tile> for Column<Tile> {
     }
 }
 
-fn index_of_tile_with_border_matching(tiles: &mut Vec<Tile>, wanted: usize) -> Option<usize> {
+fn index_of_tile_with_border_matching(tiles: &mut Vec<Tile>, wanted: u16) -> Option<usize> {
     let indices: Vec<usize> = tiles
         .iter()
         .enumerate()
