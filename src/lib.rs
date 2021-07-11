@@ -72,107 +72,28 @@ fn find_allergen_free_ingredients(mut foods: Vec<Food>) -> (HashSet<String>, Vec
         sorted.sort_by_key(|s| s.0);
         println!("{:?}", sorted);
     }
-    let foods_count = foods.len();
     // println!("{} foods {:?}", foods_count, foods);
     while allergen_free_ingredients.len() != allergen_free_ingredient_count
         && ingredient_by_allergen.len() != allergen_count
     {
-        for _i in 0..foods_count {
+        for _ in 0..foods.len() {
             let mut food = foods.remove(0);
-            for _i in 0..foods_count - 1 {
-                let mut other = foods.remove(0);
-
-                let mut resolved_ingredients: HashSet<String> =
-                    ingredient_by_allergen.values().cloned().collect();
-                resolved_ingredients.iter().for_each(|ingredient| {
+            for mut other in foods.iter_mut() {
+                // Remove resolved ingredients from foods
+                ingredient_by_allergen.values().for_each(|ingredient| {
                     food.ingredients.remove(ingredient);
                     other.ingredients.remove(ingredient);
                 });
-
-                // let resolved_allergens: HashSet<&String> =
-                //     ingredient_by_allergen.keys().cloned().collect();
-                let common_ingredients: HashSet<String> = food
-                    .ingredients
-                    .intersection(&other.ingredients)
-                    .cloned()
-                    .collect();
-                // remove resolved ingredients
-                let common_ingredients: HashSet<String> = common_ingredients
-                    .difference(&resolved_ingredients)
-                    .cloned()
-                    .collect();
-
-                if common_ingredients.len() == food.allergens.len() {
-                    if common_ingredients.len() == 1 {
-                        let ingredient = common_ingredients.iter().next().unwrap();
-                        let allergen = food.allergens.iter().next().unwrap();
-                        if other.allergens.contains(allergen) {
-                            println!("{} contains {}", ingredient, allergen);
-                            ingredient_by_allergen
-                                .insert(allergen.to_string(), ingredient.to_string());
-                            // Remove the only allergen, and its ingredient
-                            food.allergens = HashSet::new();
-                            food.ingredients.remove(ingredient);
-                            resolved_ingredients.insert(ingredient.to_string());
-                            // println!(
-                            //     "Remaining ingredients without allergens {:?}",
-                            //     food.ingredients
-                            // );
-                        }
-                    } else {
-                        // TODO
-                    }
-                } else if common_ingredients.len() == other.allergens.len() {
-                    if common_ingredients.len() == 1 {
-                        let ingredient = common_ingredients.iter().next().unwrap();
-                        let allergen = other.allergens.iter().next().unwrap();
-                        if food.allergens.contains(allergen) {
-                            println!("{} contains {}", ingredient, allergen);
-                            ingredient_by_allergen
-                                .insert(allergen.to_string(), ingredient.to_string());
-                            // Remove the only allergen, and its ingredient
-                            other.allergens = HashSet::new();
-                            other.ingredients.remove(ingredient);
-                            resolved_ingredients.insert(ingredient.to_string());
-                            // println!(
-                            //     "Remaining ingredients without allergens {:?}",
-                            //     other.ingredients
-                            // );
-                        }
-                    } else {
-                        // TODO
-                    }
-                }
-                // resolve single-item food
-                if food.ingredients.len() == 1 && food.allergens.len() == 1 {
-                    println!("food 1! {:?}", food);
-                    let ingredient = food.ingredients.iter().next().unwrap();
-                    let allergen = food.allergens.iter().next().unwrap();
-                    println!("{} contains {}", ingredient, allergen);
-                    ingredient_by_allergen.insert(allergen.to_string(), ingredient.to_string());
-                    resolved_ingredients.insert(ingredient.to_string());
-                    food.allergens = HashSet::new();
-                    food.ingredients = HashSet::new();
-                }
-                // resolve single-item other
-                if other.ingredients.len() == 1 && other.allergens.len() == 1 {
-                    println!("food 1! {:?}", other);
-                    let ingredient = other.ingredients.iter().next().unwrap();
-                    let allergen = other.allergens.iter().next().unwrap();
-                    println!("{} contains {}", ingredient, allergen);
-                    ingredient_by_allergen.insert(allergen.to_string(), ingredient.to_string());
-                    resolved_ingredients.insert(ingredient.to_string());
-                    other.allergens = HashSet::new();
-                    other.ingredients = HashSet::new();
-                }
-                foods.push(other);
+                resolve_shared_ingredients(&mut food, &mut other, &mut ingredient_by_allergen);
+                resolve_single_ingredients(&mut ingredient_by_allergen, &mut food);
+                resolve_single_ingredients(&mut ingredient_by_allergen, &mut other);
             } // inner for
             foods.push(food);
         } // outer for
 
-        // if true {
-        //     break;
-        // }
+        if true {
+            break;
+        }
     }
 
     if allergen_free_ingredients.len() < allergen_free_ingredient_count {
@@ -181,6 +102,80 @@ fn find_allergen_free_ingredients(mut foods: Vec<Food>) -> (HashSet<String>, Vec
         });
     }
     (allergen_free_ingredients, foods)
+}
+
+fn intersect(set1: &HashSet<String>, set2: &HashSet<String>) -> HashSet<String> {
+    set1.intersection(&set2).cloned().collect()
+}
+
+fn resolve_shared_ingredients(
+    food1: &mut Food,
+    food2: &mut Food,
+    ingredient_by_allergen: &mut HashMap<String, String>,
+) {
+    let shared_ingredients = intersect(&food1.ingredients, &food2.ingredients);
+    if shared_ingredients.is_empty() {
+        return;
+    }
+    let shared_allergens = intersect(&food1.allergens, &food2.allergens);
+    if shared_allergens.is_empty() {
+        return;
+    } else {
+        println!(
+            "Two foods share {} ingredients and {} allergens: {:?}",
+            shared_ingredients.len(),
+            shared_allergens.len(),
+            shared_allergens
+        );
+    }
+
+    if shared_ingredients.len() == food1.allergens.len()
+        || shared_ingredients.len() == food2.allergens.len()
+    {
+        let (food, other) = if shared_ingredients.len() == food1.allergens.len() {
+            (food1, food2)
+        } else {
+            (food2, food1)
+        };
+
+        if shared_ingredients.len() == 1 {
+            let allergen = food.allergens.iter().next().unwrap();
+            if other.allergens.contains(allergen) {
+                let ingredient = shared_ingredients.iter().next().unwrap();
+                println!(
+                    "Resolved by shared ingredient: {} contains {}",
+                    ingredient, allergen
+                );
+                ingredient_by_allergen.insert(allergen.to_string(), ingredient.to_string());
+                // Remove the only allergen, and its ingredient
+                food.allergens = HashSet::new();
+                food.ingredients.remove(ingredient);
+            }
+        } else {
+            // TODO
+            println!(
+                "Food 1: {:?}\nFood 2: {:?}\nShared ingredients {:?}",
+                food, other, shared_ingredients
+            );
+        }
+    }
+}
+
+fn resolve_single_ingredients(
+    ingredient_by_allergen: &mut HashMap<String, String>,
+    food: &mut Food,
+) {
+    if food.ingredients.len() == 1 && food.allergens.len() == 1 {
+        let ingredient = food.ingredients.iter().next().unwrap();
+        let allergen = food.allergens.iter().next().unwrap();
+        println!(
+            "Resolved by single ingredient: {} contains {}",
+            ingredient, allergen
+        );
+        ingredient_by_allergen.insert(allergen.to_string(), ingredient.to_string());
+        food.allergens = HashSet::new();
+        food.ingredients = HashSet::new();
+    }
 }
 
 fn ingredient_appearance_count(foods: &[Food], ingredients: HashSet<String>) -> usize {
