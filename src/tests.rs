@@ -1,5 +1,6 @@
 use crate::*;
 use line_reader::*;
+#[cfg(test)]
 use std::collections::HashMap;
 
 const TILE_2311: &str = "Tile 2311:
@@ -73,7 +74,7 @@ fn contents_h_flip() {
     let flipped: String = actual
         .contents
         .to_string()
-        .split("\n")
+        .split('\n')
         .map(|line| line.chars().rev().collect::<String>())
         .collect::<Vec<String>>()
         .join("\n");

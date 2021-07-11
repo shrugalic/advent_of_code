@@ -55,34 +55,7 @@ struct Tile {
     contents: Square<char>,
 }
 
-impl Flippable for char {
-    fn flip_h(&mut self) {
-        // nop
-    }
-}
-
-impl Rotatable for char {
-    fn rotate_cw(&mut self) {
-        // nop
-    }
-}
-
-impl Flippable for String {
-    fn flip_h(&mut self) {
-        // nop
-    }
-}
-
-impl Rotatable for String {
-    fn rotate_cw(&mut self) {
-        // nop
-    }
-}
-
-impl<T> Flippable for Square<T>
-where
-    T: Flippable,
-{
+impl<T> Flippable for Square<T> {
     fn flip_h(&mut self) {
         self.columns.make_contiguous();
         self.columns.as_mut_slices().0.reverse();
@@ -90,16 +63,16 @@ where
 }
 impl<T> Rotatable for Square<T>
 where
-    T: Rotatable + Clone + Copy,
+    T: Clone + Copy,
 {
     fn rotate_cw(&mut self) {
         let previous = self.columns.clone();
         let side_len = self.columns.len();
-        for col in 0..side_len {
-            for row in 0..side_len {
-                let new_col = side_len - 1 - row;
-                let new_row = col;
-                self.columns[new_col].0[new_row] = previous[col].0[row];
+        for (col_idx, prev_col) in previous.iter().enumerate() {
+            for (row_idx, prev_val) in prev_col.0.iter().enumerate() {
+                let new_col = side_len - 1 - row_idx;
+                let new_row = col_idx;
+                self.columns[new_col].0[new_row] = *prev_val;
             }
         }
     }
@@ -203,6 +176,7 @@ impl Rotatable for Tile {
 }
 
 impl Tile {
+    #[cfg(test)]
     fn new(id: usize, top: u16, right: u16, bottom: u16, left: u16) -> Tile {
         Tile {
             id,
@@ -256,7 +230,7 @@ impl Tile {
     }
 }
 
-fn product_of_corner_tile_ids<T>(input: &[T]) -> usize
+pub fn product_of_corner_tile_ids<T>(input: &[T]) -> usize
 where
     T: AsRef<str> + Debug,
 {
@@ -285,9 +259,9 @@ const SEA_MONSTER: [(usize, usize); 15] = [
     (16, 2),
 ];
 
-fn count_hashes_not_part_of_sea_monsters<T>(input: &[T]) -> usize
+pub fn count_hashes_not_part_of_sea_monsters<T>(input: &[T]) -> usize
 where
-    T: AsRef<str> + Debug + Flippable + Rotatable,
+    T: AsRef<str> + Debug,
 {
     let tile_square: Square<Tile> = form_square(input);
     let mut char_square = convert_to_big_square(&tile_square);
@@ -417,43 +391,44 @@ struct Square<T> {
     columns: VecDeque<Column<T>>,
 }
 
-impl<T> Square<T>
-where
-    T: Flippable + Rotatable,
-{
+impl<T> Square<T> {
     fn new() -> Self {
         Self {
             columns: VecDeque::new(),
         }
     }
+
     fn len(&self) -> usize {
         self.columns.len()
     }
-    fn left_column(&self) -> &Column<T> {
+}
+
+impl Square<Tile> {
+    fn left_column(&self) -> &Column<Tile> {
         &self.columns[0]
     }
-    fn right_column(&self) -> &Column<T> {
+    fn right_column(&self) -> &Column<Tile> {
         &self.columns[self.columns.len() - 1]
     }
-    fn add_left(&mut self, column: Column<T>) {
+    fn add_left(&mut self, column: Column<Tile>) {
         self.columns.push_front(column)
     }
-    fn add_right(&mut self, column: Column<T>) {
+    fn add_right(&mut self, column: Column<Tile>) {
         self.columns.push_back(column)
     }
     fn is_empty(&self) -> bool {
         self.columns.is_empty()
     }
-    fn top_left_corner(&self) -> &T {
+    fn top_left_corner(&self) -> &Tile {
         self.left_column().top_elem()
     }
-    fn top_right_corner(&self) -> &T {
+    fn top_right_corner(&self) -> &Tile {
         self.right_column().top_elem()
     }
-    fn bottom_left_corner(&self) -> &T {
+    fn bottom_left_corner(&self) -> &Tile {
         self.left_column().bottom_elem()
     }
-    fn bottom_right_corner(&self) -> &T {
+    fn bottom_right_corner(&self) -> &Tile {
         self.right_column().bottom_elem()
     }
 }
