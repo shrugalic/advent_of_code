@@ -26,9 +26,40 @@ impl<T: AsRef<str>> From<T> for Food {
 }
 
 pub fn allergen_free_ingredient_appearance_count(input: &[String]) -> usize {
-    let foods: Vec<Food> = input.iter().map(Food::from).collect();
-    let (allergen_free_ingredients, foods) = find_allergen_free_ingredients(foods);
+    let mut foods: Vec<Food> = input.iter().map(Food::from).collect();
+    let allergen_ingredient_pairs = find_allergen_ingredient_pairs(&mut foods);
+    let allergen_free_ingredients = allergen_free_ingredients(allergen_ingredient_pairs, &foods);
     ingredient_appearance_count(&foods, allergen_free_ingredients)
+}
+
+pub fn canonical_dangerous_ingredient_list(input: &[String]) -> String {
+    let mut foods: Vec<Food> = input.iter().map(Food::from).collect();
+    let allergen_ingredient_pairs = find_allergen_ingredient_pairs(&mut foods);
+    let mut sorted_allergen_ingredient_pairs: Vec<&(String, String)> =
+        allergen_ingredient_pairs.iter().collect();
+    sorted_allergen_ingredient_pairs.sort_by_key(|(allergen, _)| allergen);
+    sorted_allergen_ingredient_pairs
+        .iter()
+        .map(|(_, ingredient)| ingredient.to_string())
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+fn allergen_free_ingredients(
+    allergen_ingredient_pairs: HashSet<(String, String)>,
+    foods: &[Food],
+) -> HashSet<String> {
+    let mut allergen_free_ingredients: HashSet<String> = foods
+        .iter()
+        .flat_map(|f| f.ingredients.iter())
+        .cloned()
+        .collect();
+    allergen_ingredient_pairs
+        .iter()
+        .for_each(|(_, ingredient)| {
+            allergen_free_ingredients.remove(ingredient);
+        });
+    allergen_free_ingredients
 }
 
 /// - Each allergen is found in exactly one ingredient.
@@ -38,7 +69,7 @@ pub fn allergen_free_ingredient_appearance_count(input: &[String]) -> usize {
 ///   However, even if an allergen isn't listed, the ingredient that contains that
 ///   allergen could still be present: maybe they forgot to label it,
 ///   or maybe it was labeled in a language you don't know.
-fn find_allergen_free_ingredients(mut foods: Vec<Food>) -> (HashSet<String>, Vec<Food>) {
+fn find_allergen_ingredient_pairs(foods: &mut Vec<Food>) -> HashSet<(String, String)> {
     let allergens: HashSet<&String> = foods.iter().flat_map(|f| f.allergens.iter()).collect();
     let allergen_count = allergens.len();
     let ingredients: HashSet<&String> = foods.iter().flat_map(|f| f.ingredients.iter()).collect();
@@ -50,40 +81,33 @@ fn find_allergen_free_ingredients(mut foods: Vec<Food>) -> (HashSet<String>, Vec
         allergens,
     );
 
-    let mut ingredient_by_allergen: HashMap<String, String> = HashMap::new();
+    let mut allergen_ingredient_pairs: HashSet<(String, String)> = HashSet::new();
     let mut ingredients_by_allergen: HashMap<String, HashSet<String>> = HashMap::new();
-
-    while ingredient_by_allergen.len() != allergen_count {
+    while allergen_ingredient_pairs.len() != allergen_count {
         for _ in 0..foods.len() {
             // Remove food so the borrow checker won't complain about borrowing other food mutably
             let mut food = foods.remove(0);
             for mut other in foods.iter_mut() {
                 // Remove resolved ingredients from foods
-                ingredient_by_allergen.values().for_each(|ingredient| {
-                    food.ingredients.remove(ingredient);
-                    other.ingredients.remove(ingredient);
-                });
+                allergen_ingredient_pairs
+                    .iter()
+                    .for_each(|(_, ingredient)| {
+                        food.ingredients.remove(ingredient);
+                        other.ingredients.remove(ingredient);
+                    });
                 resolve_shared_ingredients_and_allergens(
                     &mut food,
                     &mut other,
-                    &mut ingredient_by_allergen,
+                    &mut allergen_ingredient_pairs,
                     &mut ingredients_by_allergen,
                 );
-                resolve_single_ingredients(&mut ingredient_by_allergen, &mut food);
-                resolve_single_ingredients(&mut ingredient_by_allergen, &mut other);
+                resolve_single_ingredients(&mut allergen_ingredient_pairs, &mut food);
+                resolve_single_ingredients(&mut allergen_ingredient_pairs, &mut other);
             }
             foods.push(food);
         }
     }
-    let mut allergen_free_ingredients: HashSet<String> = foods
-        .iter()
-        .flat_map(|f| f.ingredients.iter())
-        .cloned()
-        .collect();
-    ingredient_by_allergen.values().for_each(|i| {
-        allergen_free_ingredients.remove(i);
-    });
-    (allergen_free_ingredients, foods)
+    allergen_ingredient_pairs
 }
 
 fn intersect(set1: &HashSet<String>, set2: &HashSet<String>) -> HashSet<String> {
@@ -93,7 +117,7 @@ fn intersect(set1: &HashSet<String>, set2: &HashSet<String>) -> HashSet<String> 
 fn resolve_shared_ingredients_and_allergens(
     food1: &mut Food,
     food2: &mut Food,
-    ingredient_by_allergen: &mut HashMap<String, String>,
+    allergen_ingredient_pairs: &mut HashSet<(String, String)>,
     ingredients_by_allergen: &mut HashMap<String, HashSet<String>>,
 ) {
     let shared_allergens = intersect(&food1.allergens, &food2.allergens);
@@ -110,12 +134,17 @@ fn resolve_shared_ingredients_and_allergens(
             shared_allergens,
             &shared_ingredients,
         ) {
-            ingredient_by_allergen.insert(the_allergen, the_ingredient);
+            allergen_ingredient_pairs.insert((the_allergen, the_ingredient));
         }
     }
 
     if shared_ingredients.len() == 1 && (food1.allergens.len() == 1 || food2.allergens.len() == 1) {
-        resolve_single_shared_ingredient(food1, food2, ingredient_by_allergen, shared_ingredients);
+        resolve_single_shared_ingredient(
+            food1,
+            food2,
+            allergen_ingredient_pairs,
+            shared_ingredients,
+        );
     }
 }
 
@@ -142,7 +171,7 @@ fn narrow_down_possible_ingredients(
 fn resolve_single_shared_ingredient(
     food1: &mut Food,
     food2: &mut Food,
-    ingredient_by_allergen: &mut HashMap<String, String>,
+    allergen_ingredient_pairs: &mut HashSet<(String, String)>,
     shared_ingredients: HashSet<String>,
 ) {
     // Make `food` the one with the single matching allergen
@@ -159,7 +188,7 @@ fn resolve_single_shared_ingredient(
             "Resolved by shared ingredient: {} contains {}",
             the_ingredient, the_allergen
         );
-        ingredient_by_allergen.insert(the_allergen.to_string(), the_ingredient.to_string());
+        allergen_ingredient_pairs.insert((the_allergen.to_string(), the_ingredient.to_string()));
         // Remove the only allergen, and its ingredient
         matching_food.allergens = HashSet::new();
         matching_food.ingredients.remove(the_ingredient);
@@ -167,7 +196,7 @@ fn resolve_single_shared_ingredient(
 }
 
 fn resolve_single_ingredients(
-    ingredient_by_allergen: &mut HashMap<String, String>,
+    allergen_ingredient_pairs: &mut HashSet<(String, String)>,
     food: &mut Food,
 ) {
     if food.ingredients.len() == 1 && food.allergens.len() == 1 {
@@ -177,7 +206,7 @@ fn resolve_single_ingredients(
             "Resolved by single ingredient: {} contains {}",
             ingredient, allergen
         );
-        ingredient_by_allergen.insert(allergen.to_string(), ingredient.to_string());
+        allergen_ingredient_pairs.insert((allergen.to_string(), ingredient.to_string()));
         food.allergens = HashSet::new();
         food.ingredients = HashSet::new();
     }

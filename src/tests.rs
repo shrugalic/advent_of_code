@@ -1,4 +1,7 @@
-use crate::{allergen_free_ingredient_appearance_count, ingredient_appearance_count, Food};
+use crate::{
+    allergen_free_ingredient_appearance_count, canonical_dangerous_ingredient_list,
+    ingredient_appearance_count, Food,
+};
 use line_reader::*;
 const EXAMPLE_1: &str = "mxmxvkd kfcds sqjhc nhms (contains dairy, fish)
 trh fvjkl sbzzf mxmxvkd (contains dairy)
@@ -17,7 +20,7 @@ fn food_from_str() {
 }
 
 #[test]
-fn example_1() {
+fn part_1_example_1() {
     assert_eq!(
         allergen_free_ingredient_appearance_count(&read_str_to_lines(EXAMPLE_1)),
         5
@@ -43,10 +46,26 @@ fn example_1_ingredient_appearance_count() {
 }
 
 #[test]
-fn part1() {
+fn part_1() {
     assert_eq!(
         allergen_free_ingredient_appearance_count(&read_file_to_lines("input.txt")),
         2517 // 200 ingredients - 8 allergens (is too low of course)
              // 2804 is to high
+    );
+}
+
+#[test]
+fn part_2_example_1() {
+    assert_eq!(
+        canonical_dangerous_ingredient_list(&read_str_to_lines(EXAMPLE_1)),
+        "mxmxvkd,sqjhc,fvjkl".to_string()
+    );
+}
+
+#[test]
+fn part_2() {
+    assert_eq!(
+        canonical_dangerous_ingredient_list(&read_file_to_lines("input.txt")),
+        "rhvbn,mmcpg,kjf,fvk,lbmt,jgtb,hcbdb,zrb".to_string()
     );
 }
