@@ -46,7 +46,7 @@ fn example_1_ingredient_appearance_count() {
 fn part1() {
     assert_eq!(
         allergen_free_ingredient_appearance_count(&read_file_to_lines("input.txt")),
-        192 // 200 ingredients - 8 allergens (is too low of course)
-            // 2804 is to high
+        2517 // 200 ingredients - 8 allergens (is too low of course)
+             // 2804 is to high
     );
 }
