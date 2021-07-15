@@ -107,32 +107,6 @@ impl From<Path> for Coordinate {
     }
 }
 
-struct Tile {
-    position: Coordinate,
-    color: Color,
-}
-impl From<Coordinate> for Tile {
-    fn from(position: Coordinate) -> Self {
-        Tile {
-            position,
-            color: Color::default(),
-        }
-    }
-}
-impl From<Path> for Tile {
-    fn from(path: Path) -> Self {
-        Tile {
-            position: Coordinate::from(path),
-            color: Color::default(),
-        }
-    }
-}
-impl Tile {
-    fn flip(&mut self) {
-        self.color.flip();
-    }
-}
-
 impl<T: AsRef<str> + Display> From<T> for Direction {
     fn from(s: T) -> Self {
         match s.as_ref() {
@@ -148,18 +122,18 @@ impl<T: AsRef<str> + Display> From<T> for Direction {
 }
 
 pub fn black_tile_count(input: &[String]) -> usize {
-    let mut floor: HashMap<Coordinate, Tile> = HashMap::new();
+    let mut floor: HashMap<Coordinate, Color> = HashMap::new();
     input
         .iter()
         .map(Path::from)
         .map(Coordinate::from)
         .for_each(|coord| {
-            let tile = floor.entry(coord).or_insert(Tile::from(coord));
+            let tile = floor.entry(coord).or_insert_with(Color::default);
             tile.flip();
         });
 
-    let (black, white): (Vec<&Tile>, Vec<&Tile>) =
-        floor.values().partition(|tile| tile.color == Color::Black);
+    let (black, white): (Vec<&Color>, Vec<&Color>) =
+        floor.values().partition(|&color| color == &Color::Black);
     println!("{} black and {} white", black.len(), white.len());
     black.len()
 }
