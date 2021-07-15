@@ -37,6 +37,17 @@ impl Direction {
             Direction::NorthEast => Coordinate { x: 1, y: 0, z: -1 },
         }
     }
+
+    fn all_direction_coordinates() -> [Coordinate; 6] {
+        [
+            Direction::East.to_coord(),
+            Direction::SouthEast.to_coord(),
+            Direction::SouthWest.to_coord(),
+            Direction::West.to_coord(),
+            Direction::NorthWest.to_coord(),
+            Direction::NorthEast.to_coord(),
+        ]
+    }
 }
 
 struct Path {
@@ -58,7 +69,7 @@ impl Debug for Path {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 enum Color {
     Black,
     White,
@@ -74,6 +85,9 @@ impl Color {
             Color::Black => Color::White,
             Color::White => Color::Black,
         };
+    }
+    fn is_black(&self) -> bool {
+        self == &Color::Black
     }
 }
 #[derive(PartialEq, Debug, Eq, Hash, Copy, Clone)]
@@ -106,6 +120,14 @@ impl From<Path> for Coordinate {
             .fold(Coordinate::default(), |pos, coord| pos + coord)
     }
 }
+impl Coordinate {
+    fn neighbors(&self) -> Vec<Coordinate> {
+        Direction::all_direction_coordinates()
+            .iter()
+            .map(|dir| *self + *dir)
+            .collect()
+    }
+}
 
 impl<T: AsRef<str> + Display> From<T> for Direction {
     fn from(s: T) -> Self {
@@ -122,7 +144,76 @@ impl<T: AsRef<str> + Display> From<T> for Direction {
 }
 
 pub fn black_tile_count(input: &[String]) -> usize {
-    let mut floor: HashMap<Coordinate, Color> = HashMap::new();
+    let floor = floor_from_input(input);
+    count_black_tiles(&floor)
+}
+
+type Floor = HashMap<Coordinate, Color>;
+fn count_black_tiles(floor: &Floor) -> usize {
+    floor
+        .values()
+        .filter(|&color| color == &Color::Black)
+        .count()
+}
+
+pub fn iterate_for_given_number_of_days(input: &[String], days: usize) -> usize {
+    let mut floor = floor_from_input(input);
+
+    for _ in 0..days {
+        floor = iterate(floor);
+    }
+    count_black_tiles(&floor)
+}
+
+fn iterate(floor: Floor) -> Floor {
+    let floor = extend_with_missing_neighbors(&floor);
+    apply_iteration_rules(&floor)
+}
+
+fn extend_with_missing_neighbors(prev: &Floor) -> Floor {
+    let mut new = prev.clone();
+    prev.iter().for_each(|(pos, _)| {
+        pos.neighbors().into_iter().for_each(|neighbor| {
+            new.entry(neighbor).or_insert_with(Color::default);
+        })
+    });
+    // println!(
+    //     "Extended: {}/{}, prev: {}/{}",
+    //     count_black_tiles(&new),
+    //     new.len(),
+    //     count_black_tiles(&prev),
+    //     prev.len()
+    // );
+    new
+}
+
+fn apply_iteration_rules(prev: &Floor) -> Floor {
+    let mut new = prev.clone();
+    prev.iter().for_each(|(pos, my_color)| {
+        let black_count = pos
+            .neighbors()
+            .iter()
+            .filter_map(|neighbor| prev.get(neighbor))
+            .filter(|c| c.is_black())
+            .count();
+        match (my_color, black_count) {
+            (Color::Black, 0 | 3..=6) => new.get_mut(pos).unwrap().flip(),
+            (Color::White, 2) => new.get_mut(pos).unwrap().flip(),
+            (_, _) => {}
+        }
+    });
+    // println!(
+    //     "Applied: {}/{}, prev: {}/{}",
+    //     count_black_tiles(&new),
+    //     new.len(),
+    //     count_black_tiles(&prev),
+    //     prev.len()
+    // );
+    new
+}
+
+fn floor_from_input(input: &[String]) -> Floor {
+    let mut floor: Floor = HashMap::new();
     input
         .iter()
         .map(Path::from)
@@ -131,9 +222,5 @@ pub fn black_tile_count(input: &[String]) -> usize {
             let tile = floor.entry(coord).or_insert_with(Color::default);
             tile.flip();
         });
-
-    let (black, white): (Vec<&Color>, Vec<&Color>) =
-        floor.values().partition(|&color| color == &Color::Black);
-    println!("{} black and {} white", black.len(), white.len());
-    black.len()
+    floor
 }
