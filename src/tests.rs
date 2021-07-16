@@ -30,3 +30,28 @@ fn part_1() {
         7936
     );
 }
+
+const EXAMPLE2: &str = "abcde
+fghij
+klmno
+pqrst
+fguij
+axcye
+wvxyz
+";
+
+#[test]
+fn example_2() {
+    assert_eq!(
+        differing_letters_of_correct_boxes(&read_str_to_lines(EXAMPLE2)),
+        "fgij"
+    );
+}
+
+#[test]
+fn part_2() {
+    assert_eq!(
+        differing_letters_of_correct_boxes(&read_file_to_lines("input.txt")),
+        "lnfqdscwjyteorambzuchrgpx"
+    );
+}

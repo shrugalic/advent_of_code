@@ -25,3 +25,25 @@ fn count_2_and_3_identical_letters(line: &String) -> (usize, usize) {
     };
     (min(1, count_of(2)), min(1, count_of(3)))
 }
+
+fn differing_letters_of_correct_boxes(input: &[String]) -> String {
+    let mut strings = input.to_vec();
+    strings.sort();
+    strings
+        .windows(2)
+        .filter(|s| {
+            s[0].chars()
+                .zip(s[1].chars())
+                .filter(|(a, b)| a != b)
+                .count()
+                == 1
+        })
+        .map(|s| {
+            s[0].chars()
+                .zip(s[1].chars())
+                .filter_map(|(a, b)| if a == b { Some(a) } else { None })
+                .collect::<String>()
+        })
+        .next()
+        .unwrap()
+}
