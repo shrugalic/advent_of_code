@@ -28,3 +28,13 @@ fn part_1_example_1() {
 fn part_1() {
     assert_eq!(65489, strategy_one(&read_file_to_lines("input.txt")));
 }
+
+#[test]
+fn part_2_example_1() {
+    assert_eq!(4455, strategy_two(&read_str_to_lines(EXAMPLE1)));
+}
+
+#[test]
+fn part_2() {
+    assert_eq!(3852, strategy_two(&read_file_to_lines("input.txt")));
+}

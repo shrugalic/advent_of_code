@@ -12,17 +12,48 @@ pub fn strategy_one(input: &[String]) -> usize {
     let sleep_phases_by_guard_id = sleep_phases_by_guard_id(shifts);
     let guard = find_longest_sleeping_guard(&sleep_phases_by_guard_id);
     println!("Longest sleeping guard = {:?}", guard);
+
+    let (minute, _count) = most_slept_minute_and_count(guard.1);
+    *guard.0 * minute
+}
+
+pub fn strategy_two(input: &[String]) -> usize {
+    let shifts = split_into_guard_shifts(input);
+    let sleep_phases_by_guard_id = sleep_phases_by_guard_id(shifts);
+    let guard = find_most_often_sleeping_guard(&sleep_phases_by_guard_id);
+    let (minute, _) = most_slept_minute_and_count(guard.1);
+    *guard.0 * minute
+}
+
+fn find_most_often_sleeping_guard(
+    sleep_phases_by_guard_id: &HashMap<usize, SleepPhases>,
+) -> (&usize, &SleepPhases) {
+    sleep_phases_by_guard_id
+        .iter()
+        .inspect(|(i, p)| {
+            if p.is_empty() {
+                println!("{} has no sleep_phases", i);
+            }
+        })
+        .max_by_key(|guard| {
+            let (_minute, count) = most_slept_minute_and_count(guard.1);
+            count
+        })
+        .unwrap()
+}
+
+fn most_slept_minute_and_count(sleep_phases: &[SleepPhase]) -> (usize, usize) {
     let mut count_by_sleep_minute = HashMap::new();
-    guard.1.iter().for_each(|r| {
+    sleep_phases.iter().for_each(|r| {
         r.clone()
             .for_each(|minute| *count_by_sleep_minute.entry(minute).or_insert(0) += 1)
     });
-    let (minute, _count) = count_by_sleep_minute
+    let (minute, count) = count_by_sleep_minute
         .iter()
         .max_by_key(|entry| entry.1)
-        .unwrap();
-
-    *guard.0 * minute
+        // Default to (0, 0) for guards without sleep phases, such as #1087, #1787 and #2657
+        .unwrap_or((&0, &0));
+    (*minute, *count)
 }
 
 fn sleep_phases_by_guard_id(shifts: Vec<Vec<String>>) -> HashMap<usize, SleepPhases> {
