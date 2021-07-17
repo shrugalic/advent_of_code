@@ -46,11 +46,26 @@ impl<T: AsRef<str>> From<T> for Claim {
 
 pub fn overlapping_claim_count(input: &[String]) -> usize {
     let claims: Vec<_> = input.iter().map(Claim::from).collect();
-    let count_by_coordinate = get_counts_by_coordinate(claims);
+    let count_by_coordinate = get_counts_by_coordinate(&claims);
     count_by_coordinate.values().filter(|v| v > &&1).count()
 }
 
-fn get_counts_by_coordinate(claims: Vec<Claim>) -> HashMap<Coordinate, usize> {
+pub fn id_of_non_overlapping_claim(input: &[String]) -> usize {
+    let claims: Vec<_> = input.iter().map(Claim::from).collect();
+    let count_by_coordinate = get_counts_by_coordinate(&claims);
+    claims
+        .iter()
+        .find(|claim| {
+            claim
+                .to_coordinates()
+                .iter()
+                .all(|coord| count_by_coordinate.get(coord).unwrap() == &1)
+        })
+        .unwrap()
+        .id
+}
+
+fn get_counts_by_coordinate(claims: &Vec<Claim>) -> HashMap<Coordinate, usize> {
     let mut count_by_coordinate: HashMap<Coordinate, usize> = HashMap::new();
     claims
         .iter()

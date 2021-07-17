@@ -31,3 +31,16 @@ fn part_1() {
         113576
     );
 }
+
+#[test]
+fn example_1_part_2() {
+    assert_eq!(id_of_non_overlapping_claim(&read_str_to_lines(EXAMPLE1)), 3);
+}
+
+#[test]
+fn part_2() {
+    assert_eq!(
+        id_of_non_overlapping_claim(&read_file_to_lines("input.txt")),
+        825
+    );
+}
