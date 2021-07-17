@@ -25,3 +25,19 @@ fn part1() {
         remaining_units_after_reaction(&read_file_to_lines("input.txt")[0])
     );
 }
+
+#[test]
+fn example1_part2() {
+    assert_eq!(
+        4,
+        length_of_shortest_possible_polymer(&read_str_to_lines(EXAMPLE1)[0])
+    );
+}
+
+#[test]
+fn part2() {
+    assert_eq!(
+        4952,
+        length_of_shortest_possible_polymer(&read_file_to_lines("input.txt")[0])
+    );
+}
