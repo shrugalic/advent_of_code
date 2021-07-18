@@ -147,3 +147,34 @@ fn index_of_closest_coord(distances: &[(Distance, Index)]) -> Option<Index> {
         Some(closest.1)
     }
 }
+
+pub fn size_of_area_with_max_total_distance_to_all_coords(
+    input: Vec<String>,
+    total: Distance,
+) -> usize {
+    let coords: Vec<_> = input.iter().map(Loc::from).collect();
+    let (min, max) = (Loc::min(&coords), Loc::max(&coords));
+    count_locations_with_sum_of_distances_to_all_cords_within_total(&coords, &min, &max, total)
+}
+
+fn count_locations_with_sum_of_distances_to_all_cords_within_total(
+    coords: &[Loc],
+    min: &Loc,
+    max: &Loc,
+    total: Distance,
+) -> usize {
+    (min.y..=max.y)
+        .map(|y| {
+            (min.x..=max.x)
+                .filter(|x| sum_of_distances_to_coords(*x, y, &coords) < total)
+                .count()
+        })
+        .sum()
+}
+
+fn sum_of_distances_to_coords(x: X, y: Y, coords: &[Loc]) -> Distance {
+    Loc::distances_from_loc_to_coords(x, y, &coords)
+        .iter()
+        .map(|(dist, _idx)| dist)
+        .sum::<Distance>()
+}
