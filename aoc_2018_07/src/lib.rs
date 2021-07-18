@@ -59,7 +59,7 @@ pub fn order_of_steps(input: &[String]) -> String {
     println!("{} unique steps", unique_steps.len());
 
     // Requirements for a given step, where the index of the vec
-    // corresponds to the step that requires the follow-ups listed at this index
+    // corresponds to the step that requires the steps (indices) listed at this index
     let mut requirements: Vec<Option<RequiredIndices>> = vec![Some(vec![]); unique_steps.len()];
     instructions.iter().for_each(|(req, follow_up)| {
         if let Some(required_steps) = requirements.get_mut(follow_up.to_index() as usize).unwrap() {
