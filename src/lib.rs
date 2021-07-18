@@ -164,12 +164,9 @@ fn count_locations_with_sum_of_distances_to_all_cords_within_total(
     total: Distance,
 ) -> usize {
     (min.y..=max.y)
-        .map(|y| {
-            (min.x..=max.x)
-                .filter(|x| sum_of_distances_to_coords(*x, y, &coords) < total)
-                .count()
-        })
-        .sum()
+        .flat_map(|y| (min.x..=max.x).map(move |x| (x, y)))
+        .filter(|(x, y)| sum_of_distances_to_coords(*x, *y, &coords) < total)
+        .count()
 }
 
 fn sum_of_distances_to_coords(x: X, y: Y, coords: &[Loc]) -> Distance {
