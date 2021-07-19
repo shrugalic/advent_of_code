@@ -23,10 +23,21 @@ Step F must be finished before step E can begin.";
 fn example_1() {
     assert_eq!("CABDFE", order_of_steps(&read_str_to_lines(EXAMPLE1)));
 }
+
 #[test]
 fn part_1() {
     assert_eq!(
         "JNOIKSYABEQRUVWXGTZFDMHLPC",
         order_of_steps(&read_file_to_lines("input.txt"))
     );
+}
+
+#[test]
+fn part_2_example_1() {
+    assert_eq!(15, count_seconds(&read_str_to_lines(EXAMPLE1), 2, 0));
+}
+
+#[test]
+fn part_2() {
+    assert_eq!(1099, count_seconds(&read_file_to_lines("input.txt"), 5, 60));
 }
