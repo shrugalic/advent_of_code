@@ -2,8 +2,9 @@ type Entry = usize;
 type NodeCount = Entry;
 type DataCount = Entry;
 type Metadata = Entry;
+type ChildValue = Entry;
 
-pub fn input_metadata_sum(input: &str) -> Metadata {
+pub(crate) fn input_metadata_sum(input: &str) -> Metadata {
     let entries: Vec<Entry> = to_vec(input);
     entries_metadata_sum(&entries, 1)
 }
@@ -36,6 +37,42 @@ fn tree_metadata_sum(entries: &[Entry], sibling_count: NodeCount) -> (Metadata, 
 fn node_metadata_sum(data_len: DataCount, tail: &[Entry]) -> (Metadata, &[Entry]) {
     let (metadata, tail) = tail.split_at(data_len);
     (metadata.iter().sum(), tail)
+}
+
+pub(crate) fn input_value(input: &str) -> Metadata {
+    let entries: Vec<Entry> = to_vec(input);
+    entries_value(&entries, 1)
+}
+
+fn entries_value(entries: &[Entry], sibling_count: NodeCount) -> Metadata {
+    let (child_values, tail) = tree_value(&entries, sibling_count);
+    assert!(tail.is_empty());
+    assert_eq!(child_values.len(), 1);
+    child_values[0]
+}
+
+fn tree_value(entries: &[Entry], sibling_count: NodeCount) -> (Vec<ChildValue>, &[Entry]) {
+    // sibling_count describes the remaining number of nodes on this level of the tree
+    if sibling_count == 0 {
+        return (vec![], &entries);
+    }
+    let (header, tail) = entries.split_at(2);
+    let (child_count, data_len): (NodeCount, DataCount) = (header[0], header[1]);
+
+    let (children_values, tail) = tree_value(tail, child_count);
+    let (metadata, tail) = tail.split_at(data_len);
+    let own_value = if child_count == 0 {
+        metadata.iter().sum()
+    } else {
+        metadata
+            .iter()
+            .filter_map(|md_idx| children_values.get(md_idx - 1))
+            .sum()
+    };
+    let (mut sibling_values, tail) = tree_value(&tail, sibling_count - 1);
+    sibling_values.insert(0, own_value);
+
+    (sibling_values, &tail)
 }
 
 #[cfg(test)]
@@ -93,6 +130,19 @@ mod tests {
         assert_eq!(
             42146,
             input_metadata_sum(&read_file_to_lines("input/day08.txt")[0])
+        );
+    }
+
+    #[test]
+    fn example_1_part_2() {
+        assert_eq!(66, input_value(EXAMPLE_1));
+    }
+
+    #[test]
+    fn part_2() {
+        assert_eq!(
+            26753,
+            input_value(&read_file_to_lines("input/day08.txt")[0])
         );
     }
 }
