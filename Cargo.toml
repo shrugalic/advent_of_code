@@ -8,3 +8,4 @@ edition = "2018"
 [dependencies]
 line_reader = { path = "../2020/line_reader" }
 reformation = "0.5.3"
+rayon = "1.5.1"

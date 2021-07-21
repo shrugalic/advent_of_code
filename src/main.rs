@@ -1,7 +1,7 @@
 use crate::day08::{input_metadata_sum, input_value};
 use crate::day09::high_score;
 use crate::day10::message;
-use crate::day11::largest_total_power_3x3_square;
+use crate::day11::{largest_total_power_3x3_square, largest_total_power_variable_size_square};
 use line_reader::read_file_to_lines;
 
 mod day08;
@@ -39,4 +39,9 @@ fn day10() {
 
 fn day11() {
     assert_eq!((28, 235, 87), largest_total_power_3x3_square(8199));
+    // part 2 test commented out, because it uses 100% CPU for 5+ minutes
+    // assert_eq!(
+    //     (119, 234, 272, 18),
+    //     largest_total_power_variable_size_square(8199)
+    // );
 }
