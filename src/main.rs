@@ -39,9 +39,8 @@ fn day10() {
 
 fn day11() {
     assert_eq!((28, 235, 87), largest_total_power_3x3_square(8199));
-    // part 2 test commented out, because it uses 100% CPU for 5+ minutes
-    // assert_eq!(
-    //     (119, 234, 272, 18),
-    //     largest_total_power_variable_size_square(8199)
-    // );
+    assert_eq!(
+        (119, 234, 272, 18),
+        largest_total_power_variable_size_square(8199)
+    );
 }
