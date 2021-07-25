@@ -2,7 +2,7 @@ use crate::day08::{input_metadata_sum, input_value};
 use crate::day09::high_score;
 use crate::day10::message;
 use crate::day11::{largest_total_power_3x3_square, largest_total_power_variable_size_square};
-use crate::day12::number_of_plants_after_20_gens;
+use crate::day12::{number_of_plants_after_20_gens, number_of_plants_after_generations};
 use line_reader::read_file_to_lines;
 
 mod day08;
@@ -52,5 +52,9 @@ fn day12() {
     assert_eq!(
         325,
         number_of_plants_after_20_gens(&read_file_to_lines("input/day12.txt"))
+    );
+    assert_eq!(
+        1_600_000_000_328,
+        number_of_plants_after_generations(&read_file_to_lines("input/day12.txt"), 50_000_000_000)
     );
 }

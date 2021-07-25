@@ -1,7 +1,7 @@
 use crate::day12::Pot::HasPlant;
 use std::collections::VecDeque;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 enum Pot {
     HasPlant,
     IsEmpty,
@@ -35,58 +35,79 @@ impl ToString for Pot {
 
 struct Pots {
     pots: VecDeque<Pot>,
-    negative_pot_count: usize,
+    // Index of lest-most pot
+    offset: isize,
 }
 impl Pots {
-    pub fn iterate(mut self, rules: &Rules) -> Pots {
+    /// Optionally returns a `steady_state_sum_diff`, the difference
+    /// between two iterations' pot number sums after reaching a state state,
+    /// where each iteration does **not** change the pot configuration _structurally_
+    /// any more, but only moves the configuration to the left or right.
+    pub fn iterate(&mut self, rules: &Rules) -> Option<isize> {
+        let mut steady_state_sum_diff = None;
         self.pots.make_contiguous();
-        self.pots = self
+        let mut pots = self
             .pots
             .as_slices()
             .0 // Everything is in here because of the make_contiguous() call above
             .windows(5)
             .map(|c| rules.result_for_combination(c))
             .collect();
-        // The new left-most position is the center of a 5-wide window, and
-        // thus two positions to the right of the previous left-most position:
+        let prefix_count = Pots::ensure_4_empty_pots_at_both_ends(&mut pots);
+
+        // +2 because the new left-most position is the center of a 5-wide window,
+        // and thus two positions to the right of the previous left-most position:
         // previous: [-4 -3 -2 -1 0 … ]
         // new:            [-2 -1 0 … ]
-        self.negative_pot_count -= 2;
-        self.ensure_4_empty_pots_at_both_ends()
+        let offset = self.offset - prefix_count + 2;
+
+        if pots == self.pots {
+            steady_state_sum_diff =
+                Some(Pots::calc_sum_of_pot_numbers(&pots, offset) - self.sum_of_pot_numbers());
+        }
+
+        self.pots = pots;
+        self.offset = offset;
+        steady_state_sum_diff
     }
 
-    fn ensure_4_empty_pots_at_both_ends(mut self) -> Pots {
-        while self.pots.iter().take(4).any(Pot::has_plant) {
-            self.pots.push_front(Pot::IsEmpty);
-            self.negative_pot_count += 1;
+    fn ensure_4_empty_pots_at_both_ends(pots: &mut VecDeque<Pot>) -> isize {
+        let mut prefix_count = 0;
+        while pots.iter().take(4).any(Pot::has_plant) {
+            pots.push_front(Pot::IsEmpty);
+            prefix_count += 1;
         }
-        while self.pots.iter().rev().take(4).any(Pot::has_plant) {
-            self.pots.push_back(Pot::IsEmpty);
+        while pots.iter().rev().take(4).any(Pot::has_plant) {
+            pots.push_back(Pot::IsEmpty);
         }
-        self
+        prefix_count
     }
-    pub fn sum_of_pot_numbers(&self) -> isize {
-        self.pots
-            .iter()
+    fn sum_of_pot_numbers(&self) -> isize {
+        Pots::calc_sum_of_pot_numbers(&self.pots, self.offset)
+    }
+    fn calc_sum_of_pot_numbers(pots: &VecDeque<Pot>, offset: isize) -> isize {
+        pots.iter()
             .enumerate()
             .filter(|(_, pot)| pot.has_plant())
-            .map(|(idx, _)| idx as isize - self.negative_pot_count as isize)
+            .map(|(idx, _)| offset + idx as isize)
             .sum()
     }
 }
 impl From<&str> for Pots {
     fn from(initial_state: &str) -> Self {
         let pots: VecDeque<Pot> = initial_state.chars().map(Pot::from).collect();
-        let pots = Pots {
-            pots,
-            negative_pot_count: 0,
-        };
-        pots.ensure_4_empty_pots_at_both_ends()
+        let mut pots = Pots { pots, offset: 0 };
+        pots.offset -= Pots::ensure_4_empty_pots_at_both_ends(&mut pots.pots);
+        pots
     }
 }
 impl ToString for Pots {
     fn to_string(&self) -> String {
-        self.pots.iter().map(Pot::to_string).collect::<String>()
+        format!(
+            "({:2}) {}",
+            self.offset,
+            self.pots.iter().map(Pot::to_string).collect::<String>()
+        )
     }
 }
 
@@ -142,13 +163,21 @@ impl From<&[String]> for Rules {
 }
 
 pub(crate) fn number_of_plants_after_20_gens(input: &[String]) -> isize {
+    number_of_plants_after_generations(input, 20)
+}
+
+pub(crate) fn number_of_plants_after_generations(input: &[String], total_gens: usize) -> isize {
     let mut pots = Pots::from(input[0].strip_prefix("initial state: ").unwrap());
     let notes = &input[2..];
     let rules = Rules::from(notes);
     println!("{:2}: {}", 0, pots.to_string());
-    for _gen in 1..=20 {
-        pots = pots.iterate(&rules);
-        println!("{:2}: {}", _gen, pots.to_string());
+    for gen in 1..=total_gens {
+        if let Some(pot_sum_diff_per_gen) = pots.iterate(&rules) {
+            let remaining_gens: isize = (total_gens - gen) as isize;
+            return pots.sum_of_pot_numbers() + remaining_gens * pot_sum_diff_per_gen;
+        } else {
+            println!("{:2}: {}", gen, pots.to_string());
+        }
     }
 
     pots.sum_of_pot_numbers()
@@ -203,6 +232,17 @@ mod tests {
         assert_eq!(
             2063,
             number_of_plants_after_20_gens(&read_file_to_lines("input/day12.txt"))
+        );
+    }
+
+    #[test]
+    fn part2() {
+        assert_eq!(
+            1_600_000_000_328,
+            number_of_plants_after_generations(
+                &read_file_to_lines("input/day12.txt"),
+                50_000_000_000
+            )
         );
     }
 }
