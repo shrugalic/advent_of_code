@@ -3,6 +3,7 @@ use crate::day09::high_score;
 use crate::day10::message;
 use crate::day11::{largest_total_power_3x3_square, largest_total_power_variable_size_square};
 use crate::day12::{number_of_plants_after_20_gens, number_of_plants_after_generations};
+use crate::day13::location_of_first_crash;
 use line_reader::read_file_to_lines;
 
 mod day08;
@@ -10,6 +11,7 @@ mod day09;
 mod day10;
 mod day11;
 mod day12;
+mod day13;
 
 fn main() {
     day08();
@@ -17,6 +19,7 @@ fn main() {
     day10();
     day11();
     day12();
+    day13();
 }
 
 fn day08() {
@@ -56,5 +59,12 @@ fn day12() {
     assert_eq!(
         1_600_000_000_328,
         number_of_plants_after_generations(&read_file_to_lines("input/day12.txt"), 50_000_000_000)
+    );
+}
+
+fn day13() {
+    assert_eq!(
+        (102, 114),
+        location_of_first_crash(&read_file_to_lines("input/day13.txt"))
     );
 }
