@@ -13,6 +13,7 @@ use crate::day10::message;
 use crate::day11::{largest_total_power_3x3_square, largest_total_power_variable_size_square};
 use crate::day12::{number_of_plants_after_20_gens, number_of_plants_after_generations};
 use crate::day13::{location_of_first_crash, location_of_last_cart};
+use crate::day14::repeat_recipe_process;
 use line_reader::read_file_to_lines;
 
 mod day01;
@@ -28,6 +29,7 @@ mod day10;
 mod day11;
 mod day12;
 mod day13;
+mod day14;
 
 fn main() {
     day01();
@@ -43,6 +45,7 @@ fn main() {
     day11();
     day12();
     day13();
+    day14();
 }
 
 fn day01() {
@@ -168,4 +171,8 @@ fn day13() {
         (146, 87),
         location_of_last_cart(&read_file_to_lines("input/day13.txt"))
     );
+}
+
+fn day14() {
+    assert_eq!("1411383621", repeat_recipe_process(760_221));
 }
