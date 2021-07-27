@@ -1,8 +1,5 @@
 use std::collections::HashMap;
 
-#[cfg(test)]
-mod tests;
-
 type Coordinate = (usize, usize);
 
 #[derive(PartialEq, Debug)]
@@ -44,13 +41,13 @@ impl<T: AsRef<str>> From<T> for Claim {
     }
 }
 
-pub fn overlapping_claim_count(input: &[String]) -> usize {
+pub(crate) fn overlapping_claim_count(input: &[String]) -> usize {
     let claims: Vec<_> = input.iter().map(Claim::from).collect();
     let count_by_coordinate = get_counts_by_coordinate(&claims);
     count_by_coordinate.values().filter(|v| v > &&1).count()
 }
 
-pub fn id_of_non_overlapping_claim(input: &[String]) -> usize {
+pub(crate) fn id_of_non_overlapping_claim(input: &[String]) -> usize {
     let claims: Vec<_> = input.iter().map(Claim::from).collect();
     let count_by_coordinate = get_counts_by_coordinate(&claims);
     claims
@@ -74,4 +71,54 @@ fn get_counts_by_coordinate(claims: &Vec<Claim>) -> HashMap<Coordinate, usize> {
             *count_by_coordinate.entry(coord).or_insert(0) += 1;
         });
     count_by_coordinate
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use line_reader::{read_file_to_lines, read_str_to_lines};
+
+    const EXAMPLE1: &str = "#1 @ 1,3: 4x4
+#2 @ 3,1: 4x4
+#3 @ 5,5: 2x2";
+
+    #[test]
+    fn claim_from_string() {
+        assert_eq!(
+            Claim::from("#123 @ 3,2: 5x4"),
+            Claim {
+                id: 123,
+                from_left: 3,
+                from_top: 2,
+                width: 5,
+                height: 4,
+            }
+        );
+    }
+
+    #[test]
+    fn example_1() {
+        assert_eq!(overlapping_claim_count(&read_str_to_lines(EXAMPLE1)), 4);
+    }
+
+    #[test]
+    fn part_1() {
+        assert_eq!(
+            overlapping_claim_count(&read_file_to_lines("input/day03.txt")),
+            113576
+        );
+    }
+
+    #[test]
+    fn example_1_part_2() {
+        assert_eq!(id_of_non_overlapping_claim(&read_str_to_lines(EXAMPLE1)), 3);
+    }
+
+    #[test]
+    fn part_2() {
+        assert_eq!(
+            id_of_non_overlapping_claim(&read_file_to_lines("input/day03.txt")),
+            825
+        );
+    }
 }

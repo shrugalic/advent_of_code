@@ -1,3 +1,12 @@
+use crate::day01::{cumulate_frequency_adjustments, find_first_repeated_frequency};
+use crate::day02::{differing_letters_of_correct_boxes, product_of_2_and_3_counts};
+use crate::day03::{id_of_non_overlapping_claim, overlapping_claim_count};
+use crate::day04::{strategy_one, strategy_two};
+use crate::day05::{length_of_shortest_possible_polymer, remaining_units_after_reaction};
+use crate::day06::{
+    size_of_area_with_max_total_distance_to_all_coords, size_of_largest_finite_area,
+};
+use crate::day07::{count_seconds, order_of_steps};
 use crate::day08::{input_metadata_sum, input_value};
 use crate::day09::high_score;
 use crate::day10::message;
@@ -6,6 +15,13 @@ use crate::day12::{number_of_plants_after_20_gens, number_of_plants_after_genera
 use crate::day13::{location_of_first_crash, location_of_last_cart};
 use line_reader::read_file_to_lines;
 
+mod day01;
+mod day02;
+mod day03;
+mod day04;
+mod day05;
+mod day06;
+mod day07;
 mod day08;
 mod day09;
 mod day10;
@@ -14,12 +30,93 @@ mod day12;
 mod day13;
 
 fn main() {
+    day01();
+    day02();
+    day03();
+    day04();
+    day05();
+    day06();
+    day07();
     day08();
     day09();
     day10();
     day11();
     day12();
     day13();
+}
+
+fn day01() {
+    assert_eq!(
+        cumulate_frequency_adjustments(&read_file_to_lines("input/day01.txt")),
+        454
+    );
+    assert_eq!(
+        find_first_repeated_frequency(&read_file_to_lines("input/day01.txt")),
+        566
+    );
+}
+
+fn day02() {
+    assert_eq!(
+        product_of_2_and_3_counts(&read_file_to_lines("input/day02.txt")),
+        7936
+    );
+    assert_eq!(
+        differing_letters_of_correct_boxes(&read_file_to_lines("input/day02.txt")),
+        "lnfqdscwjyteorambzuchrgpx"
+    );
+}
+
+fn day03() {
+    assert_eq!(
+        overlapping_claim_count(&read_file_to_lines("input/day03.txt")),
+        113576
+    );
+    assert_eq!(
+        id_of_non_overlapping_claim(&read_file_to_lines("input/day03.txt")),
+        825
+    );
+}
+
+fn day04() {
+    assert_eq!(65489, strategy_one(&read_file_to_lines("input/day04.txt")));
+    assert_eq!(3852, strategy_two(&read_file_to_lines("input/day04.txt")));
+}
+
+fn day05() {
+    assert_eq!(
+        9462,
+        remaining_units_after_reaction(&read_file_to_lines("input/day05.txt")[0])
+    );
+    assert_eq!(
+        4952,
+        length_of_shortest_possible_polymer(&read_file_to_lines("input/day05.txt")[0])
+    );
+}
+
+fn day06() {
+    assert_eq!(
+        4589,
+        size_of_largest_finite_area(read_file_to_lines("input/day06.txt"))
+    );
+    assert_eq!(
+        40252,
+        size_of_area_with_max_total_distance_to_all_coords(
+            read_file_to_lines("input/day06.txt"),
+            10_000
+        )
+    );
+}
+
+fn day07() {
+    assert_eq!(
+        "JNOIKSYABEQRUVWXGTZFDMHLPC",
+        order_of_steps(&read_file_to_lines("input/day07.txt"))
+    );
+    assert_eq!(
+        1099,
+        count_seconds(&read_file_to_lines("input/day07.txt"), 5, 60)
+    );
 }
 
 fn day08() {
