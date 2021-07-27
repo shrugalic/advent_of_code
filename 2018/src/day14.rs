@@ -25,6 +25,56 @@ pub(crate) fn score_of_10_recipes_after(count: usize) -> String {
         .join("")
 }
 
+pub(crate) fn recipe_count_until_this_score_appears<T: AsRef<str>>(score: T) -> usize {
+    let digits = score
+        .as_ref()
+        .chars()
+        .filter(|c| c.is_numeric())
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect::<Vec<usize>>();
+    let mut list = vec![3, 7];
+    let mut first = 0;
+    let mut second = 1;
+
+    let mut matched_digits = 0;
+    loop {
+        let sum = list[first] + list[second];
+        if sum < 10 {
+            list.push(sum);
+        } else {
+            list.push(sum / 10);
+            if sum / 10 == digits[matched_digits] {
+                matched_digits += 1;
+                // Stop if we reached the goal with only the first of 2 new digits
+                if matched_digits == digits.len() {
+                    break;
+                }
+            } else if matched_digits > 0 {
+                matched_digits = 0;
+            }
+            list.push(sum % 10);
+        }
+        // This also works for the sum < 10 part
+        if sum % 10 == digits[matched_digits] {
+            matched_digits += 1;
+        } else if matched_digits > 0 {
+            matched_digits = 0;
+            // The following is when only the second of 2 new digits matches
+            if sum % 10 == digits[matched_digits] {
+                matched_digits += 1;
+            } else {
+                matched_digits = 0;
+            }
+        }
+        if matched_digits == digits.len() {
+            break;
+        }
+        first = (first + 1 + list[first]) % list.len();
+        second = (second + 1 + list[second]) % list.len();
+    }
+    list.len() - digits.len()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -52,5 +102,30 @@ mod tests {
     #[test]
     fn part1() {
         assert_eq!("1411383621", score_of_10_recipes_after(760_221));
+    }
+
+    #[test]
+    fn part2_example_9_recipes() {
+        assert_eq!(9, recipe_count_until_this_score_appears("51589"));
+    }
+
+    #[test]
+    fn part2_example_5_recipes() {
+        assert_eq!(5, recipe_count_until_this_score_appears("01245"));
+    }
+
+    #[test]
+    fn part2_example_18_recipes() {
+        assert_eq!(18, recipe_count_until_this_score_appears("92510"));
+    }
+
+    #[test]
+    fn part2_example_2018_recipes() {
+        assert_eq!(2018, recipe_count_until_this_score_appears("59414"));
+    }
+
+    #[test]
+    fn part2() {
+        assert_eq!(20177474, recipe_count_until_this_score_appears("760_221"));
     }
 }
