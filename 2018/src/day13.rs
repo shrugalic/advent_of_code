@@ -126,6 +126,14 @@ impl Choice {
 }
 
 pub(crate) fn location_of_first_crash(lines: &[String]) -> Location {
+    location_of_cart(lines, true)
+}
+
+pub(crate) fn location_of_last_cart(lines: &[String]) -> Location {
+    location_of_cart(lines, false)
+}
+
+pub(crate) fn location_of_cart(lines: &[String], return_on_first_collision: bool) -> Location {
     let mut carts = initial_cart_locations(lines);
     loop {
         let mut handled_carts: Vec<Cart> = Vec::new();
@@ -137,21 +145,31 @@ pub(crate) fn location_of_first_crash(lines: &[String]) -> Location {
             // Move to new location
             cart.move_1();
 
-            // check for collisions
-            if carts.iter().any(|other| other.loc == cart.loc)
-                || handled_carts.iter().any(|other| other.loc == cart.loc)
-            {
-                println!("{:?}", cart);
-                return cart.loc;
-            }
-
             // Turn into new direction as needed
             let track = Track::from_location(&cart.loc, &lines);
             cart.turn(&track);
 
-            handled_carts.push(cart);
+            // check for collisions
+            if carts.iter().any(|other| other.loc == cart.loc)
+                || handled_carts.iter().any(|other| other.loc == cart.loc)
+            {
+                if return_on_first_collision {
+                    return cart.loc;
+                } else if let Some(pos) = carts.iter().position(|other| other.loc == cart.loc) {
+                    carts.remove(pos);
+                } else if let Some(pos) =
+                    handled_carts.iter().position(|other| other.loc == cart.loc)
+                {
+                    handled_carts.remove(pos);
+                }
+            } else {
+                handled_carts.push(cart);
+            }
         }
         carts = handled_carts;
+        if carts.len() == 1 {
+            return carts[0].loc;
+        }
     }
 }
 
@@ -180,7 +198,7 @@ mod tests {
 
     // The double backslashes are escaped single backslashes,
     // and the \n\ prevents IntelliJ from trimming the end of the line
-    const EXAMPLE: &str = "\
+    const EXAMPLE_1: &str = "\
 /->-\\        \n\
 |   |  /----\\
 | /-+--+-\\  |
@@ -191,7 +209,7 @@ mod tests {
     #[test]
     fn example_joined_lines_from_file_match_const_str() {
         let lines = read_file_to_lines("input/day13example.txt").join("\n");
-        assert_eq!(EXAMPLE, lines);
+        assert_eq!(EXAMPLE_1, lines);
     }
 
     #[test]
@@ -219,7 +237,10 @@ v
 
     #[test]
     fn example() {
-        assert_eq!((7, 3), location_of_first_crash(&read_str_to_lines(EXAMPLE)));
+        assert_eq!(
+            (7, 3),
+            location_of_first_crash(&read_str_to_lines(EXAMPLE_1))
+        );
     }
 
     #[test]
@@ -227,6 +248,30 @@ v
         assert_eq!(
             (102, 114),
             location_of_first_crash(&read_file_to_lines("input/day13.txt"))
+        );
+    }
+
+    // The double backslashes are escaped single backslashes,
+    // and the \n\ prevents IntelliJ from trimming the end of the line
+    const EXAMPLE_2: &str = "\
+/>-<\\  \n\
+|   |  
+| /<+-\\
+| | | v
+\\>+</ |
+  |   ^
+  \\<->/";
+
+    #[test]
+    fn part2_example() {
+        assert_eq!((6, 4), location_of_last_cart(&read_str_to_lines(EXAMPLE_2)));
+    }
+
+    #[test]
+    fn part2() {
+        assert_eq!(
+            (146, 87),
+            location_of_last_cart(&read_file_to_lines("input/day13.txt"))
         );
     }
 }
