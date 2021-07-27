@@ -50,7 +50,7 @@ fn day11() {
 
 fn day12() {
     assert_eq!(
-        325,
+        2063,
         number_of_plants_after_20_gens(&read_file_to_lines("input/day12.txt"))
     );
     assert_eq!(
