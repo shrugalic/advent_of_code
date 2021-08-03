@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 pub fn remaining_units_after_reaction(input: &str) -> usize {
     let polymer: Vec<_> = input.chars().map(Some).collect();
     remaining_units_after_fully_reacting(polymer)
@@ -7,8 +5,8 @@ pub fn remaining_units_after_reaction(input: &str) -> usize {
 
 pub fn length_of_shortest_possible_polymer(input: &str) -> usize {
     let polymer: Vec<_> = input.chars().map(Some).collect();
-    let unique_chars: HashSet<char> = polymer.iter().map(|c| c.unwrap()).collect();
-    println!("{} unique chars {:?}", unique_chars.len(), unique_chars);
+    // let unique_chars: HashSet<char> = polymer.iter().map(|c| c.unwrap()).collect();
+    // println!("{} unique chars {:?}", unique_chars.len(), unique_chars);
     let mut min = usize::MAX;
     for i in 65..=90 {
         let cleaned = polymer
