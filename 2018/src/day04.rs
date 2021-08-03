@@ -8,7 +8,7 @@ pub(crate) fn strategy_one(input: &[String]) -> usize {
     let shifts = split_into_guard_shifts(input);
     let sleep_phases_by_guard_id = sleep_phases_by_guard_id(shifts);
     let guard = find_longest_sleeping_guard(&sleep_phases_by_guard_id);
-    println!("Longest sleeping guard = {:?}", guard);
+    // println!("Longest sleeping guard = {:?}", guard);
 
     let (minute, _count) = most_slept_minute_and_count(guard.1);
     *guard.0 * minute
@@ -27,11 +27,11 @@ fn find_most_often_sleeping_guard(
 ) -> (&usize, &SleepPhases) {
     sleep_phases_by_guard_id
         .iter()
-        .inspect(|(i, p)| {
-            if p.is_empty() {
-                println!("{} has no sleep_phases", i);
-            }
-        })
+        // .inspect(|(i, p)| {
+        //     if p.is_empty() {
+        //         println!("{} has no sleep_phases", i);
+        //     }
+        // })
         .max_by_key(|guard| {
             let (_minute, count) = most_slept_minute_and_count(guard.1);
             count

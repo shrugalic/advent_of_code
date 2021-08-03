@@ -170,13 +170,13 @@ pub(crate) fn number_of_plants_after_generations(input: &[String], total_gens: u
     let mut pots = Pots::from(input[0].strip_prefix("initial state: ").unwrap());
     let notes = &input[2..];
     let rules = Rules::from(notes);
-    println!("{:2}: {}", 0, pots.to_string());
+    // println!("{:2}: {}", 0, pots.to_string());
     for gen in 1..=total_gens {
         if let Some(pot_sum_diff_per_gen) = pots.iterate(&rules) {
             let remaining_gens: isize = (total_gens - gen) as isize;
             return pots.sum_of_pot_numbers() + remaining_gens * pot_sum_diff_per_gen;
         } else {
-            println!("{:2}: {}", gen, pots.to_string());
+            // println!("{:2}: {}", gen, pots.to_string());
         }
     }
 
