@@ -14,6 +14,8 @@ use crate::day11::{largest_total_power_3x3_square, largest_total_power_variable_
 use crate::day12::{number_of_plants_after_20_gens, number_of_plants_after_generations};
 use crate::day13::{location_of_first_crash, location_of_last_cart};
 use crate::day14::{recipe_count_until_this_score_appears, score_of_10_recipes_after};
+use crate::day15::Grid;
+
 use line_reader::read_file_to_lines;
 
 mod day01;
@@ -30,6 +32,7 @@ mod day11;
 mod day12;
 mod day13;
 mod day14;
+mod day15;
 
 fn main() {
     day01();
@@ -46,6 +49,7 @@ fn main() {
     day12();
     day13();
     day14();
+    day15();
 }
 
 fn day01() {
@@ -176,4 +180,11 @@ fn day13() {
 fn day14() {
     assert_eq!("1411383621", score_of_10_recipes_after(760_221));
     assert_eq!(20177474, recipe_count_until_this_score_appears("760_221"));
+}
+
+fn day15() {
+    assert_eq!(
+        207_059,
+        Grid::from(&read_file_to_lines("input/day15.txt")).play_until_no_enemies_remain()
+    );
 }
