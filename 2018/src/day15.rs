@@ -46,7 +46,7 @@ impl Grid {
             // 2. Attack if there's an enemy in range
             if unit.is_in_range_of_any(&enemies) {
                 let enemy = self.lowest_hp_adjacent_enemy_of(&mut unit);
-                let enemy_killed = self.attack(&enemy);
+                let enemy_killed = self.attack(&enemy, ATTACK_POWER);
                 if enemy_killed {
                     // Remove the killed unit from the units to be handled if it's still there
                     if let Some(pos) = units.iter().position(|loc| loc == &enemy) {
@@ -57,6 +57,76 @@ impl Grid {
         }
         self.rounds += 1;
         None
+    }
+    pub(crate) fn play_with_increasing_elf_attack_power_until_elves_win_without_a_single_loss(
+        &mut self,
+    ) -> usize {
+        let rows_backup = self.rows.clone();
+        let mut elf_attack_power: HitPoints = 3;
+        loop {
+            elf_attack_power += 1;
+            if let Some(sum_of_remaining_hit_points) =
+                self.play_until_all_an_elf_dies_or_all_goblins_are_dead(elf_attack_power)
+            {
+                println!(
+                    "{} elves won after {} rounds with {} attack power",
+                    self.elves().len(),
+                    self.rounds,
+                    elf_attack_power,
+                );
+                return sum_of_remaining_hit_points;
+            }
+            // reset
+            self.rows = rows_backup.clone();
+            self.rounds = 0;
+        }
+    }
+    fn play_until_all_an_elf_dies_or_all_goblins_are_dead(
+        &mut self,
+        elf_attack_power: HitPoints,
+    ) -> Option<SumOfRemainingHitPoints> {
+        loop {
+            let mut units = self.unit_locations();
+            while !units.is_empty() {
+                let mut unit = units.remove(0);
+                let enemies = self.enemies_of(&unit);
+                if enemies.is_empty() {
+                    // If no more enemies remain, combat ends
+                    return Some(self.rounds * self.sum_of_remaining_hit_points());
+                }
+                // 1. Optionally move 1 step toward the closest enemy
+                if !unit.is_in_range_of_any(&enemies) {
+                    let did_move = self.try_to_move(&mut unit, &enemies);
+                    if !did_move {
+                        // If the unit cannot reach (find an open path to) any of the squares
+                        // that are in range, it ends its turn.
+                        continue;
+                    }
+                }
+                // 2. Attack if there's an enemy in range
+                if unit.is_in_range_of_any(&enemies) {
+                    let enemy = self.lowest_hp_adjacent_enemy_of(&mut unit);
+                    let enemy_is_elf = self.is_elf_at(&enemy);
+                    let attack_power = if enemy_is_elf {
+                        ATTACK_POWER
+                    } else {
+                        elf_attack_power
+                    };
+                    let enemy_killed = self.attack(&enemy, attack_power);
+                    if enemy_killed {
+                        if enemy_is_elf {
+                            // If an elf died, start over
+                            return None;
+                        }
+                        // Remove the killed unit from the units to be handled if it's still there
+                        if let Some(pos) = units.iter().position(|loc| loc == &enemy) {
+                            units.remove(pos);
+                        }
+                    }
+                }
+            }
+            self.rounds += 1;
+        }
     }
     fn unit_locations(&self) -> Vec<Loc> {
         self.locations_of(&Tile::is_unit)
@@ -98,10 +168,10 @@ impl Grid {
         adjacent_enemies.sort_by_key(|loc| self.hp_of_unit_at(loc));
         adjacent_enemies.remove(0) // Lowest HP first
     }
-    fn attack(&mut self, enemy: &Loc) -> bool {
+    fn attack(&mut self, enemy: &Loc, attack_power: HitPoints) -> bool {
         if let Tile::Elf(hp) | Tile::Goblin(hp) = &mut self.rows[enemy.y][enemy.x] {
-            if *hp > ATTACK_POWER {
-                *hp -= ATTACK_POWER;
+            if *hp > attack_power {
+                *hp -= attack_power;
             } else {
                 self.rows[enemy.y][enemy.x] = Tile::Open;
                 return true; // Enemy unit was killed
@@ -789,6 +859,107 @@ mod tests {
         assert_eq!(
             207_059,
             Grid::from(&read_file_to_lines("input/day15.txt")).play_until_no_enemies_remain()
+        );
+    }
+
+    #[test]
+    fn part2_summarized_combat_example1() {
+        assert_eq!(
+            4_988,
+            Grid::from(&read_str_to_lines(
+                "\
+#######
+#.G...#
+#...EG#
+#.#.#G#
+#..G#E#
+#.....#
+#######"
+            ))
+            .play_with_increasing_elf_attack_power_until_elves_win_without_a_single_loss()
+        );
+    }
+
+    #[test]
+    fn part2_summarized_combat_example2() {
+        assert_eq!(
+            31_284,
+            Grid::from(&read_str_to_lines(
+                "\
+#######
+#E..EG#
+#.#G.E#
+#E.##E#
+#G..#.#
+#..E#.#
+#######"
+            ))
+            .play_with_increasing_elf_attack_power_until_elves_win_without_a_single_loss()
+        );
+    }
+
+    #[test]
+    fn part2_summarized_combat_example3() {
+        assert_eq!(
+            3_478,
+            Grid::from(&read_str_to_lines(
+                "\
+#######
+#E.G#.#
+#.#G..#
+#G.#.G#
+#G..#.#
+#...E.#
+#######"
+            ))
+            .play_with_increasing_elf_attack_power_until_elves_win_without_a_single_loss()
+        );
+    }
+
+    #[test]
+    fn part2_summarized_combat_example4() {
+        assert_eq!(
+            6_474,
+            Grid::from(&read_str_to_lines(
+                "\
+#######
+#.E...#
+#.#..G#
+#.###.#
+#E#G#G#
+#...#G#
+#######"
+            ))
+            .play_with_increasing_elf_attack_power_until_elves_win_without_a_single_loss()
+        );
+    }
+
+    #[test]
+    fn part2_summarized_combat_example5() {
+        assert_eq!(
+            1_140,
+            Grid::from(&read_str_to_lines(
+                "\
+#########
+#G......#
+#.E.#...#
+#..##..G#
+#...##..#
+#...#...#
+#.G...G.#
+#.....G.#
+#########"
+            ))
+            .play_with_increasing_elf_attack_power_until_elves_win_without_a_single_loss()
+        );
+    }
+
+    #[test] // pretty slow at 2min 44s
+    fn part2() {
+        assert_eq!(
+            49_120,
+            Grid::from(&read_file_to_lines("input/day15.txt"))
+                .play_with_increasing_elf_attack_power_until_elves_win_without_a_single_loss()
         );
     }
 }
