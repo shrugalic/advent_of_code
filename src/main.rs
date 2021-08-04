@@ -187,4 +187,9 @@ fn day15() {
         207_059,
         Grid::from(&read_file_to_lines("input/day15.txt")).play_until_no_enemies_remain()
     );
+    assert_eq!(
+        49_120,
+        Grid::from(&read_file_to_lines("input/day15.txt"))
+            .play_with_increasing_elf_attack_power_until_elves_win_without_a_single_loss()
+    );
 }
