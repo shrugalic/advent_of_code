@@ -68,14 +68,17 @@ const ALL_OPS: [Op; 16] = [
     Op::EqualRegisterRegister,
 ];
 
-fn number_of_samples_matching_3_or_more_opcodes(sample: &[String]) -> usize {
-    let samples = vec![sample];
-
-    // TODO properly split input into samples
+pub(crate) fn number_of_samples_matching_3_or_more_opcodes(samples: &[String]) -> usize {
+    let samples: Vec<&[String]> = samples
+        // samples are divided by one empty line from each other
+        .split(|line| line.is_empty())
+        // after the samples there are 3 empty lines, so this slice will be empty
+        .take_while(|slice| !slice.is_empty())
+        .collect();
 
     samples
         .iter()
-        .filter(|sample| number_of_op_codes_matching_sample(sample) > 3)
+        .filter(|sample| number_of_op_codes_matching_sample(sample) >= 3)
         .count()
 }
 
@@ -199,7 +202,7 @@ After:  [3, 2, 2, 1]";
     #[test]
     fn part1() {
         assert_eq!(
-            0,
+            605,
             number_of_samples_matching_3_or_more_opcodes(&read_file_to_lines("input/day16.txt"))
         );
     }
