@@ -16,6 +16,7 @@ use crate::day13::{location_of_first_crash, location_of_last_cart};
 use crate::day14::{recipe_count_until_this_score_appears, score_of_10_recipes_after};
 use crate::day15::Grid;
 
+use crate::day16::number_of_samples_matching_3_or_more_opcodes;
 use line_reader::read_file_to_lines;
 
 mod day01;
@@ -51,6 +52,7 @@ fn main() {
     day13();
     day14();
     day15();
+    day16();
 }
 
 fn day01() {
@@ -192,5 +194,12 @@ fn day15() {
         49_120,
         Grid::from(&read_file_to_lines("input/day15.txt"))
             .play_with_increasing_elf_attack_power_until_elves_win_without_a_single_loss()
+    );
+}
+
+fn day16() {
+    assert_eq!(
+        605,
+        number_of_samples_matching_3_or_more_opcodes(&read_file_to_lines("input/day16.txt"))
     );
 }
