@@ -215,6 +215,10 @@ fn day16() {
 
 fn day17() {
     let mut ground = Ground::from(read_file_to_lines("input/day17.txt").as_slice());
-    let tiles_reachable_by_water = ground.let_water_flow_until_stable();
+    let tiles_reachable_by_water = ground.tiles_reachable_by_water();
     assert_eq!(31949, tiles_reachable_by_water);
+
+    let mut ground = Ground::from(read_file_to_lines("input/day17.txt").as_slice());
+    let retained_water_count = ground.water_retained_when_spring_runs_dry();
+    assert_eq!(26384, retained_water_count);
 }
