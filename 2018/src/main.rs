@@ -15,6 +15,7 @@ use crate::day12::{number_of_plants_after_20_gens, number_of_plants_after_genera
 use crate::day13::{location_of_first_crash, location_of_last_cart};
 use crate::day14::{recipe_count_until_this_score_appears, score_of_10_recipes_after};
 use crate::day15::Grid;
+use crate::day17::Ground;
 
 use crate::day16::{
     figure_out_op_code_numbers_and_run_program, number_of_samples_matching_3_or_more_opcodes,
@@ -56,6 +57,7 @@ fn main() {
     day14();
     day15();
     day16();
+    day17();
 }
 
 fn day01() {
@@ -209,4 +211,10 @@ fn day16() {
         653,
         figure_out_op_code_numbers_and_run_program(&read_file_to_lines("input/day16.txt"))
     );
+}
+
+fn day17() {
+    let mut ground = Ground::from(read_file_to_lines("input/day17.txt").as_slice());
+    let tiles_reachable_by_water = ground.let_water_flow_until_stable();
+    assert_eq!(31949, tiles_reachable_by_water);
 }
