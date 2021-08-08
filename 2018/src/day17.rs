@@ -176,16 +176,20 @@ impl Ground {
         }
     }
 
-    pub(crate) fn let_water_flow_until_stable(&mut self) -> usize {
-        self.let_water_flow(usize::MAX)
+    pub(crate) fn tiles_reachable_by_water(&mut self) -> usize {
+        let (flow, water) = self.let_water_flow_until_stable(usize::MAX);
+        flow + water
     }
 
-    fn let_water_flow(&mut self, max: usize) -> usize {
+    pub(crate) fn water_retained_when_spring_runs_dry(&mut self) -> usize {
+        let (_flow, water) = self.let_water_flow_until_stable(usize::MAX);
+        water
+    }
+
+    fn let_water_flow_until_stable(&mut self, max: usize) -> (usize, usize) {
         let mut flows = vec![SPRING];
-        // let (flow_count, water_count) = (self.flow_count, self.water_count);
         while !flows.is_empty() {
             let flow = flows.remove(0);
-            // println!("Popped {:?} from {:?}", flow, flows);
             match self.get_tile(&flow.below()) {
                 Some(Tile::Sand) => {
                     // flow down
@@ -201,23 +205,23 @@ impl Ground {
                 }
                 Some(Tile::Flow) => {}
                 Some(Tile::Spring) => unreachable!(),
-                None => {
-                    // this stream can't flow
-                }
+                None => {} // this stream can't flow
             }
-            // println!("did flow {}", self.did_flow(flow_count, water_count));
-            // println!("After {} rounds:\n{}\n", self.rounds, self.to_string());
             if self.rounds == max {
-                // || !self.did_flow(flow_count, water_count) {
                 break;
             }
         }
 
-        // println!("{} rounds:\n{}", self.rounds, self.to_string());
-        self.all_tiles_matching(&|tile| tile == &Tile::Water || tile == &Tile::Flow)
-            .iter()
-            .filter(|loc| loc.y >= self.y_min)
-            .count()
+        (
+            self.all_tiles_matching(&|tile| tile == &Tile::Flow)
+                .iter()
+                .filter(|loc| loc.y >= self.y_min)
+                .count(),
+            self.all_tiles_matching(&|tile| tile == &Tile::Water)
+                .iter()
+                .filter(|loc| loc.y >= self.y_min)
+                .count(),
+        )
     }
 
     fn flow_sideways(&mut self, loc: Loc) -> Vec<Loc> {
@@ -227,7 +231,6 @@ impl Ground {
         let left_next = self.flow_to_one_side(loc, &left, &right);
         if let Some(first) = left_next.get(0) {
             if first.y < loc.y {
-                // println!("Completed water left, returning immediately");
                 return left_next;
             }
         }
@@ -235,7 +238,6 @@ impl Ground {
         let right_next = self.flow_to_one_side(loc, &right, &left);
         if let Some(first) = right_next.get(0) {
             if first.y < loc.y {
-                // println!("Completed water right, returning immediately");
                 return right_next;
             }
         }
@@ -256,14 +258,11 @@ impl Ground {
                 // Flow into this sand, and remember this location to flow from next turn
                 self.set_tile(&next, Tile::Flow);
                 next_flows.push(next);
-                // println!("Flowed to {:?} from {:?}", next, loc);
             }
             Some(Tile::Clay) => {
                 // There's a wall on this side. If there's a wall on the other side, convert the
                 // whole puddle into water, and return the above in-flows as the next flows
-                // println!("Wall at {:?}", next);
                 if let Some(wall) = self.find_wall(loc, other_dir) {
-                    // println!("wall on other side");
                     self.convert_to_water(loc, wall, other_dir);
                     next_flows.extend(self.get_inflows(loc, wall, other_dir));
                 }
@@ -271,7 +270,7 @@ impl Ground {
             Some(Tile::Flow) => {
                 // This flow could be from another stream, both growing inward.
                 // #|||->  <-|||#
-                // In this case neither side would checked for walls any more, so let's do it here
+                // In this case neither side would check for walls any more, so let's do it here
                 if let Some(this_wall) = self.find_wall(loc, flow_dir) {
                     if let Some(other_wall) = self.find_wall(loc, other_dir) {
                         self.convert_to_water(other_dir(this_wall), other_wall, other_dir);
@@ -289,10 +288,6 @@ impl Ground {
         let mut edge: Loc = next(loc);
         while let Some(&Tile::Flow) = self.get_tile(&edge) {
             edge = next(edge);
-            if let Some(&Tile::Sand) = self.get_tile(&edge.below()) {
-                // Abort, water can flow down
-                return None;
-            }
         }
         if let Some(&Tile::Clay) = self.get_tile(&edge) {
             Some(edge)
@@ -388,7 +383,7 @@ y=13, x=498..504";
     #[test]
     fn water_flowed_once() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        ground.let_water_flow(1);
+        ground.let_water_flow_until_stable(1);
 
         assert_eq!(
             ground.to_string(),
@@ -416,7 +411,7 @@ y=13, x=498..504";
     #[test]
     fn water_flowed_6_times() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        ground.let_water_flow(6);
+        ground.let_water_flow_until_stable(6);
 
         assert_eq!(
             ground.to_string(),
@@ -444,7 +439,7 @@ y=13, x=498..504";
     #[test]
     fn water_flowed_8_times() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        ground.let_water_flow(8);
+        ground.let_water_flow_until_stable(8);
 
         assert_eq!(
             ground.to_string(),
@@ -472,7 +467,7 @@ y=13, x=498..504";
     #[test]
     fn water_flowed_9_times() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        ground.let_water_flow(9);
+        ground.let_water_flow_until_stable(9);
 
         assert_eq!(
             ground.to_string(),
@@ -500,7 +495,7 @@ y=13, x=498..504";
     #[test]
     fn water_flowed_10_times() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        ground.let_water_flow(10);
+        ground.let_water_flow_until_stable(10);
 
         assert_eq!(
             ground.to_string(),
@@ -527,7 +522,7 @@ y=13, x=498..504";
     #[test]
     fn water_flowed_11_times() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        ground.let_water_flow(11);
+        ground.let_water_flow_until_stable(11);
 
         assert_eq!(
             ground.to_string(),
@@ -555,7 +550,7 @@ y=13, x=498..504";
     #[test]
     fn water_flowed_15_times() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        ground.let_water_flow(15);
+        ground.let_water_flow_until_stable(15);
 
         assert_eq!(
             ground.to_string(),
@@ -583,7 +578,7 @@ y=13, x=498..504";
     #[test]
     fn water_flowed_16_times() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        ground.let_water_flow(16);
+        ground.let_water_flow_until_stable(16);
 
         assert_eq!(
             ground.to_string(),
@@ -611,7 +606,7 @@ y=13, x=498..504";
     #[test]
     fn water_flowed_17_times() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        ground.let_water_flow(17);
+        ground.let_water_flow_until_stable(17);
 
         assert_eq!(
             ground.to_string(),
@@ -639,7 +634,7 @@ y=13, x=498..504";
     #[test]
     fn water_flowed_18_times() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        ground.let_water_flow(18);
+        ground.let_water_flow_until_stable(18);
 
         assert_eq!(
             ground.to_string(),
@@ -667,7 +662,7 @@ y=13, x=498..504";
     #[test]
     fn water_flowed_19_times() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        ground.let_water_flow(19);
+        ground.let_water_flow_until_stable(19);
 
         assert_eq!(
             ground.to_string(),
@@ -695,7 +690,7 @@ y=13, x=498..504";
     #[test]
     fn water_flowed_20_times() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        ground.let_water_flow(20);
+        ground.let_water_flow_until_stable(20);
 
         assert_eq!(
             ground.to_string(),
@@ -723,7 +718,7 @@ y=13, x=498..504";
     #[test]
     fn water_flowed_29_times() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        ground.let_water_flow(29);
+        ground.let_water_flow_until_stable(29);
 
         assert_eq!(
             ground.to_string(),
@@ -751,7 +746,7 @@ y=13, x=498..504";
     #[test]
     fn water_flowed_33_times() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        ground.let_water_flow(33);
+        ground.let_water_flow_until_stable(33);
 
         assert_eq!(
             ground.to_string(),
@@ -779,7 +774,7 @@ y=13, x=498..504";
     #[test]
     fn water_flowed_41_times() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        ground.let_water_flow(41);
+        ground.let_water_flow_until_stable(41);
 
         assert_eq!(
             ground.to_string(),
@@ -807,7 +802,7 @@ y=13, x=498..504";
     #[test]
     fn water_flowed_56_times() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        ground.let_water_flow(56);
+        ground.let_water_flow_until_stable(56);
 
         assert_eq!(
             ground.to_string(),
@@ -835,7 +830,7 @@ y=13, x=498..504";
     #[test]
     fn water_flowed_61_times() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        ground.let_water_flow(61);
+        ground.let_water_flow_until_stable(61);
 
         assert_eq!(
             ground.to_string(),
@@ -863,14 +858,21 @@ y=13, x=498..504";
     #[test]
     fn example_flow_until_stable() {
         let mut ground = Ground::from(read_str_to_lines(EXAMPLE_IN).as_slice());
-        let tiles_reachable_by_water = ground.let_water_flow_until_stable();
+        let tiles_reachable_by_water = ground.tiles_reachable_by_water();
         assert_eq!(57, tiles_reachable_by_water);
     }
 
     #[test]
     fn part1() {
         let mut ground = Ground::from(read_file_to_lines("input/day17.txt").as_slice());
-        let tiles_reachable_by_water = ground.let_water_flow_until_stable();
+        let tiles_reachable_by_water = ground.tiles_reachable_by_water();
         assert_eq!(31949, tiles_reachable_by_water);
+    }
+
+    #[test]
+    fn part2() {
+        let mut ground = Ground::from(read_file_to_lines("input/day17.txt").as_slice());
+        let retained_water_count = ground.water_retained_when_spring_runs_dry();
+        assert_eq!(26384, retained_water_count);
     }
 }
