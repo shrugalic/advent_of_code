@@ -243,4 +243,8 @@ fn day18() {
 fn day19() {
     let program = read_file_to_lines("input/day19.txt");
     assert_eq!(1872, Device::default().run_program(&program));
+    assert_eq!(
+        18_992_592, // 1 + 2 + 5 + 10 + 1_055_143 + 2_110_286 + 5_275_715 + 10_551_430,
+        Device::sum_of_divisors(10_551_430)
+    );
 }
