@@ -231,4 +231,9 @@ fn day18() {
     grid.run(10);
     let (trees, lumberyards) = grid.tree_and_lumberyard_count();
     assert_eq!(605_154, trees * lumberyards);
+
+    let mut grid = LumberCollectionArea::from(read_file_to_lines("input/day18.txt").as_slice());
+    grid.run(1_000_000_000);
+    let (trees, lumberyards) = grid.tree_and_lumberyard_count();
+    assert_eq!(200_364, trees * lumberyards);
 }
