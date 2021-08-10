@@ -1,15 +1,15 @@
 00: goto 17
 01: r4 = 1
     do {
-02: r3 = 1
-03: r1 = r3 * r4
-4-5: if r1 == r2 { goto 7 } else { goto 8 }
-07: r0 += r4
-08: r3 += 1
-09: if r3 > r2 { goto 12 } else { goto 3 }
-12: r4 += 1
-    }
-13-14: while r4 <= r2
+        r3 = 1
+        do {
+            r1 = r3 * r4
+            if r1 == r2 { r0 += r4 }
+                r3 += 1
+            }
+        } while r3 <= r2
+        r4 += 1
+    } while r4 <= r2
 16: halt
 17: r2 += 2
 18-20: r2 *= r2 * 19 * 11
