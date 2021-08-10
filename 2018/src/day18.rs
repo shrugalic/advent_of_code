@@ -1,4 +1,9 @@
-type Minutes = usize;
+use std::collections::hash_map::Entry::Vacant;
+use std::collections::hash_map::{DefaultHasher, Entry};
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+
+type RuntimeMinutes = usize;
 type Coord = usize;
 type X = Coord;
 type Y = Coord;
@@ -32,7 +37,7 @@ impl Loc {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Hash)]
 pub(crate) enum Acre {
     OpenGround,
     Trees,
@@ -60,7 +65,8 @@ impl From<&Acre> for char {
     }
 }
 
-pub(crate) struct LumberCollectionArea<T> {
+#[derive(Hash)]
+pub(crate) struct LumberCollectionArea<T: Hash> {
     grid: Vec<Vec<T>>, // rows of T, indexed by [y][x]
 }
 
@@ -85,8 +91,32 @@ impl ToString for LumberCollectionArea<Acre> {
 }
 
 impl LumberCollectionArea<Acre> {
-    pub(crate) fn run(&mut self, minutes: Minutes) {
-        (0..minutes).for_each(|_| self.run_1_minute());
+    pub(crate) fn run(&mut self, total: RuntimeMinutes) {
+        let mut elapsed_by_hash = HashMap::new();
+        let mut elapsed = 0;
+        while elapsed < total {
+            self.run_1_minute();
+            elapsed += 1;
+
+            // Calculate a hash to detect cyclical pattern repetitions
+            let mut hasher = DefaultHasher::new();
+            self.hash(&mut hasher);
+            let hash = hasher.finish();
+
+            match elapsed_by_hash.entry(hash) {
+                Vacant(entry) => {
+                    entry.insert(elapsed);
+                }
+                Entry::Occupied(entry) => {
+                    // After a while, the pattern starts repeating itself
+                    let previous = entry.get();
+                    let period = elapsed - previous;
+                    let cycles = (total - elapsed) / period;
+                    // Skip as many full cycles as possible
+                    elapsed += period * cycles;
+                }
+            }
+        }
     }
     fn run_1_minute(&mut self) {
         let mut grid = self.grid.clone();
@@ -160,6 +190,14 @@ mod tests {
         grid.run(10);
         let (trees, lumberyards) = grid.tree_and_lumberyard_count();
         assert_eq!(605_154, trees * lumberyards);
+    }
+
+    #[test]
+    fn part2() {
+        let mut grid = LumberCollectionArea::from(read_file_to_lines("input/day18.txt").as_slice());
+        grid.run(1_000_000_000);
+        let (trees, lumberyards) = grid.tree_and_lumberyard_count();
+        assert_eq!(200_364, trees * lumberyards);
     }
 
     const EXAMPLE: [&str; 11] = [
