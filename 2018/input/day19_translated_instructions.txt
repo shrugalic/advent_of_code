@@ -2,32 +2,22 @@
 01: r4 = 1
 02: r3 = 1
 03: r1 = r3 * r4
-4-5: if r1 == r2 { goto 7 } else { goto 6 }
-06: goto 8
+4-5: if r1 == r2 { goto 7 } else { goto 8 }
 07: r0 += r4
 08: r3 += 1
-09: if r3 > r2 { goto 12 } else { goto 11 }
-11: goto 3
+09: if r3 > r2 { goto 12 } else { goto 3 }
 12: r4 += 1
-13-14: if r4 > r2 { goto 16 } else { goto 15 }
-15: goto 2
-16: r5 *= r5 -> 16 * 16 = 256 = halt
+13-14: if r4 > r2 { goto 16 } else { goto 2 }
+16: halt
 17: r2 += 2
-18: r2 *= r2
-19: r2 *= 19
-20: r2 *= 11
+18-20: r2 *= r2 * 19 * 11
 21: r1 += 8
 22: r1 *= 22
 23: r1 += 18
 24: r2 += r1
 25: goto r0 + 26
 26: goto 1
-27: r1 = r5
-28: r1 *= 28
-29: r1 += 29
-30: r1 *= 30
-31: r1 *= 14
-32: r1 *= 32
+27-32: r1 = ((27 * 28) + 29) * 30 * 14 * 32
 33: r2 += r1
 34: r0 = 0
 35: goto 1
