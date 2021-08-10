@@ -15,12 +15,12 @@ use crate::day12::{number_of_plants_after_20_gens, number_of_plants_after_genera
 use crate::day13::{location_of_first_crash, location_of_last_cart};
 use crate::day14::{recipe_count_until_this_score_appears, score_of_10_recipes_after};
 use crate::day15::Grid;
-use crate::day17::Ground;
-
 use crate::day16::{
     figure_out_op_code_numbers_and_run_program, number_of_samples_matching_3_or_more_opcodes,
 };
+use crate::day17::Ground;
 use crate::day18::LumberCollectionArea;
+use crate::day19::Device;
 use line_reader::read_file_to_lines;
 
 mod day01;
@@ -41,6 +41,7 @@ mod day15;
 mod day16;
 mod day17;
 mod day18;
+mod day19;
 
 fn main() {
     day01();
@@ -61,6 +62,7 @@ fn main() {
     day16();
     day17();
     day18();
+    day19();
 }
 
 fn day01() {
@@ -236,4 +238,9 @@ fn day18() {
     grid.run(1_000_000_000);
     let (trees, lumberyards) = grid.tree_and_lumberyard_count();
     assert_eq!(200_364, trees * lumberyards);
+}
+
+fn day19() {
+    let program = read_file_to_lines("input/day19.txt");
+    assert_eq!(1872, Device::default().run_program(&program));
 }
