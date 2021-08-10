@@ -20,6 +20,7 @@ use crate::day17::Ground;
 use crate::day16::{
     figure_out_op_code_numbers_and_run_program, number_of_samples_matching_3_or_more_opcodes,
 };
+use crate::day18::LumberCollectionArea;
 use line_reader::read_file_to_lines;
 
 mod day01;
@@ -39,6 +40,7 @@ mod day14;
 mod day15;
 mod day16;
 mod day17;
+mod day18;
 
 fn main() {
     day01();
@@ -58,6 +60,7 @@ fn main() {
     day15();
     day16();
     day17();
+    day18();
 }
 
 fn day01() {
@@ -221,4 +224,11 @@ fn day17() {
     let mut ground = Ground::from(read_file_to_lines("input/day17.txt").as_slice());
     let retained_water_count = ground.water_retained_when_spring_runs_dry();
     assert_eq!(26384, retained_water_count);
+}
+
+fn day18() {
+    let mut grid = LumberCollectionArea::from(read_file_to_lines("input/day18.txt").as_slice());
+    grid.run(10);
+    let (trees, lumberyards) = grid.tree_and_lumberyard_count();
+    assert_eq!(605_154, trees * lumberyards);
 }
