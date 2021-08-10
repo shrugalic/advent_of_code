@@ -136,6 +136,29 @@ impl Device {
         registers[0]
     }
 
+    pub(crate) fn run_program2(&mut self) -> Number {
+        let number = 10_551_430; // 2 * 5 * 1055143
+        let mut sum = 0;
+        let mut divisor = 1;
+        loop {
+            let mut factor = 1;
+            loop {
+                if factor * divisor == number {
+                    sum += divisor;
+                }
+                factor += 1;
+                if factor > number {
+                    break;
+                }
+            }
+            divisor += 1;
+            if divisor > number {
+                break;
+            }
+        }
+        sum
+    }
+
     fn parse_program(program: &[String]) -> Vec<Instruction> {
         program
             .iter()
