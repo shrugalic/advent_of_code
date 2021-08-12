@@ -21,6 +21,7 @@ use crate::day16::{
 use crate::day17::Ground;
 use crate::day18::LumberCollectionArea;
 use crate::day19::Device;
+use crate::day20::Base;
 use line_reader::read_file_to_lines;
 
 mod day01;
@@ -42,6 +43,7 @@ mod day16;
 mod day17;
 mod day18;
 mod day19;
+mod day20;
 
 fn main() {
     day01();
@@ -63,6 +65,7 @@ fn main() {
     day17();
     day18();
     day19();
+    day20();
 }
 
 fn day01() {
@@ -247,4 +250,12 @@ fn day19() {
         18_992_592, // 1 + 2 + 5 + 10 + 1_055_143 + 2_110_286 + 5_275_715 + 10_551_430,
         Device::sum_of_divisors(10_551_430)
     );
+}
+
+fn day20() {
+    let base = Base::from(read_file_to_lines("input/day20.txt")[0].as_str());
+    assert_eq!(4360, base.furthest_room_from_start());
+
+    let base = Base::from(read_file_to_lines("input/day20.txt")[0].as_str());
+    assert_eq!(8509, base.number_of_rooms_at_least_1000_doors_away());
 }
