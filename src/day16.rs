@@ -1,77 +1,32 @@
+use crate::opcode::{Number, Op, Register, Values, ALL_OPS};
 use std::collections::{HashMap, HashSet};
 
-type Number = usize;
-type Input = Number;
-type Output = Number;
-type Register = [Number; 4];
-type Values = (Input, Input, Output);
 type OpCode = Number;
 type Instruction = (OpCode, Values);
 type Sample = (Register, Instruction, Register);
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum Op {
-    AddRegister,  // stores into register C the result of adding register A and register B.
-    AddImmediate, // stores into register C the result of adding register A and value B.
-    MultiplyRegister, // stores into register C the result of multiplying register A and register B.
-    MultiplyImmediate, // stores into register C the result of multiplying register A and value B.
-    BitwiseAndRegister, // stores into register C the result of the bitwise AND of register A and register B.
-    BitwiseAndImmediate, // stores into register C the result of the bitwise AND of register A and value B.
-    BitwiseOrRegister, // stores into register C the result of the bitwise OR of register A and register B.
-    BitwiseOrImmediate, // stores into register C the result of the bitwise OR of register A and value B.
-    SetRegister,        // copies the contents of register A into register C. (Input B is ignored.)
-    SetImmediate,       // stores value A into register C. (Input B is ignored.)
-    GreaterThanImmediateRegister, // sets register C to 1 if value A is greater than register B. Otherwise, register C is set to 0.
-    GreaterThanRegisterImmediate, // sets register C to 1 if register A is greater than value B. Otherwise, register C is set to 0
-    GreaterThanRegisterRegister, // sets register C to 1 if register A is greater than register B. Otherwise, register C is set to 0.
-    EqualImmediateRegister, // sets register C to 1 if value A is equal to register B. Otherwise, register C is set to 0.
-    EqualRegisterImmediate, // sets register C to 1 if register A is equal to value B. Otherwise, register C is set to 0.
-    EqualRegisterRegister, // sets register C to 1 if register A is equal to register B. Otherwise, register C is set to 0.
-}
-
-const ALL_OPS: [Op; 16] = [
-    Op::AddRegister,
-    Op::AddImmediate,
-    Op::MultiplyRegister,
-    Op::MultiplyImmediate,
-    Op::BitwiseAndRegister,
-    Op::BitwiseAndImmediate,
-    Op::BitwiseOrRegister,
-    Op::BitwiseOrImmediate,
-    Op::SetRegister,
-    Op::SetImmediate,
-    Op::GreaterThanImmediateRegister,
-    Op::GreaterThanRegisterImmediate,
-    Op::GreaterThanRegisterRegister,
-    Op::EqualImmediateRegister,
-    Op::EqualRegisterImmediate,
-    Op::EqualRegisterRegister,
-];
 
 pub(crate) fn number_of_samples_matching_3_or_more_opcodes(input: &[String]) -> usize {
     let (samples, _program) = parse_input(input);
 
     samples
         .into_iter()
-        .filter(|&sample| op_codes_matching_sample(sample).1.len() >= 3)
+        .filter(|sample| op_codes_matching_sample(sample.clone()).1.len() >= 3)
         .count()
 }
 
 pub(crate) fn figure_out_op_code_numbers_and_run_program(input: &[String]) -> usize {
     let (samples, program) = parse_input(input);
 
-    let hints: Vec<(OpCode, HashSet<Op>)> = samples
-        .iter()
-        .map(|&sample| op_codes_matching_sample(sample))
-        .collect();
+    let hints: Vec<(OpCode, HashSet<Op>)> =
+        samples.into_iter().map(op_codes_matching_sample).collect();
 
     let op_by_code: HashMap<OpCode, Op> = work_out_op_code_to_op_mapping(hints);
 
     // Run program
-    let mut regs: Register = [0, 0, 0, 0];
+    let mut regs: Register = vec![0; 4];
     program.iter().for_each(|(op_code, values)| {
         let op = op_by_code.get(op_code).unwrap();
-        regs = execute(regs, op, *values)
+        op.execute(&mut regs, values)
     });
 
     regs[0]
@@ -130,7 +85,7 @@ fn parse_sample(sample: &[String]) -> (Register, Instruction, Register) {
         .filter_map(|s| s.parse().ok())
         .collect::<Vec<Number>>();
 
-    (vec_to_reg(before), instr, vec_to_reg(after))
+    (before, instr, after)
 }
 
 fn parse_program(instructions: &[String]) -> Vec<Instruction> {
@@ -148,82 +103,22 @@ fn parse_instruction(instr: &str) -> Instruction {
     (instr[0], (instr[1], instr[2], instr[3]))
 }
 
-fn vec_to_reg(v: Vec<Number>) -> Register {
-    [v[0], v[1], v[2], v[3]]
-}
-
 /// Returns the sample's OpCode together with a set of Ops that match the given sample's before
 /// and after registers. One of the Ops must be represented by the OpCode
 fn op_codes_matching_sample(sample: Sample) -> (OpCode, HashSet<Op>) {
-    let (regs_before, instr, regs_after) = sample;
-
+    let (input, instr, output) = sample;
     (
         instr.0, // the opcode number
         ALL_OPS
             .iter()
-            .filter(|&op| execute(regs_before, op, instr.1) == regs_after)
+            .filter(|&op| {
+                let mut result: Register = input.clone();
+                op.execute(&mut result, &instr.1);
+                result == output
+            })
             .cloned()
             .collect(),
     )
-}
-
-fn execute(input_regs: Register, op: &Op, (a, b, c): Values) -> Register {
-    let mut output_regs = input_regs;
-    output_regs[c] = match op {
-        Op::AddRegister => input_regs[a] + input_regs[b],
-        Op::AddImmediate => input_regs[a] + b,
-        Op::MultiplyRegister => input_regs[a] * input_regs[b],
-        Op::MultiplyImmediate => input_regs[a] * b,
-        Op::BitwiseAndRegister => input_regs[a] & input_regs[b],
-        Op::BitwiseAndImmediate => input_regs[a] & b,
-        Op::BitwiseOrRegister => input_regs[a] | input_regs[b],
-        Op::BitwiseOrImmediate => input_regs[a] | b,
-        Op::SetRegister => input_regs[a],
-        Op::SetImmediate => a,
-        Op::GreaterThanImmediateRegister => {
-            if a > input_regs[b] {
-                1
-            } else {
-                0
-            }
-        }
-        Op::GreaterThanRegisterImmediate => {
-            if input_regs[a] > b {
-                1
-            } else {
-                0
-            }
-        }
-        Op::GreaterThanRegisterRegister => {
-            if input_regs[a] > input_regs[b] {
-                1
-            } else {
-                0
-            }
-        }
-        Op::EqualImmediateRegister => {
-            if a == input_regs[b] {
-                1
-            } else {
-                0
-            }
-        }
-        Op::EqualRegisterImmediate => {
-            if input_regs[a] == b {
-                1
-            } else {
-                0
-            }
-        }
-        Op::EqualRegisterRegister => {
-            if input_regs[a] == input_regs[b] {
-                1
-            } else {
-                0
-            }
-        }
-    };
-    output_regs
 }
 
 #[cfg(test)]
