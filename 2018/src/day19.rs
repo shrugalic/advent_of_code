@@ -1,115 +1,8 @@
-type Number = usize;
-type Input = Number;
-type Output = Number;
-type Register = [Number; 6];
-type Values = (Input, Input, Output);
+use crate::opcode::{Number, Op, Register, Values};
+
 type Instruction = (Op, Values);
 type InstrPointer = Number;
 type InstrPointerBinding = Number;
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum Op {
-    AddRegister,  // stores into register C the result of adding register A and register B.
-    AddImmediate, // stores into register C the result of adding register A and value B.
-    MultiplyRegister, // stores into register C the result of multiplying register A and register B.
-    MultiplyImmediate, // stores into register C the result of multiplying register A and value B.
-    BitwiseAndRegister, // stores into register C the result of the bitwise AND of register A and register B.
-    BitwiseAndImmediate, // stores into register C the result of the bitwise AND of register A and value B.
-    BitwiseOrRegister, // stores into register C the result of the bitwise OR of register A and register B.
-    BitwiseOrImmediate, // stores into register C the result of the bitwise OR of register A and value B.
-    SetRegister,        // copies the contents of register A into register C. (Input B is ignored.)
-    SetImmediate,       // stores value A into register C. (Input B is ignored.)
-    GreaterThanImmediateRegister, // sets register C to 1 if value A is greater than register B. Otherwise, register C is set to 0.
-    GreaterThanRegisterImmediate, // sets register C to 1 if register A is greater than value B. Otherwise, register C is set to 0
-    GreaterThanRegisterRegister, // sets register C to 1 if register A is greater than register B. Otherwise, register C is set to 0.
-    EqualImmediateRegister, // sets register C to 1 if value A is equal to register B. Otherwise, register C is set to 0.
-    EqualRegisterImmediate, // sets register C to 1 if register A is equal to value B. Otherwise, register C is set to 0.
-    EqualRegisterRegister, // sets register C to 1 if register A is equal to register B. Otherwise, register C is set to 0.
-}
-
-impl<T: AsRef<str>> From<T> for Op {
-    fn from(s: T) -> Self {
-        match s.as_ref() {
-            "addr" => Op::AddRegister,
-            "addi" => Op::AddImmediate,
-            "mulr" => Op::MultiplyRegister,
-            "muli" => Op::MultiplyImmediate,
-            "banr" => Op::BitwiseAndRegister,
-            "bani" => Op::BitwiseAndImmediate,
-            "borr" => Op::BitwiseOrRegister,
-            "bori" => Op::BitwiseOrImmediate,
-            "setr" => Op::SetRegister,
-            "seti" => Op::SetImmediate,
-            "gtir" => Op::GreaterThanImmediateRegister,
-            "gtri" => Op::GreaterThanRegisterImmediate,
-            "gtrr" => Op::GreaterThanRegisterRegister,
-            "eqir" => Op::EqualImmediateRegister,
-            "eqri" => Op::EqualRegisterImmediate,
-            "eqrr" => Op::EqualRegisterRegister,
-            op => panic!("Illegal op code {}", op),
-        }
-    }
-}
-
-impl Op {
-    fn execute(&self, input: &mut Register, values: &Values) {
-        let (a, b, c) = *values;
-        input[c] = match self {
-            Op::AddRegister => input[a] + input[b],
-            Op::AddImmediate => input[a] + b,
-            Op::MultiplyRegister => input[a] * input[b],
-            Op::MultiplyImmediate => input[a] * b,
-            Op::BitwiseAndRegister => input[a] & input[b],
-            Op::BitwiseAndImmediate => input[a] & b,
-            Op::BitwiseOrRegister => input[a] | input[b],
-            Op::BitwiseOrImmediate => input[a] | b,
-            Op::SetRegister => input[a],
-            Op::SetImmediate => a,
-            Op::GreaterThanImmediateRegister => {
-                if a > input[b] {
-                    1
-                } else {
-                    0
-                }
-            }
-            Op::GreaterThanRegisterImmediate => {
-                if input[a] > b {
-                    1
-                } else {
-                    0
-                }
-            }
-            Op::GreaterThanRegisterRegister => {
-                if input[a] > input[b] {
-                    1
-                } else {
-                    0
-                }
-            }
-            Op::EqualImmediateRegister => {
-                if a == input[b] {
-                    1
-                } else {
-                    0
-                }
-            }
-            Op::EqualRegisterImmediate => {
-                if input[a] == b {
-                    1
-                } else {
-                    0
-                }
-            }
-            Op::EqualRegisterRegister => {
-                if input[a] == input[b] {
-                    1
-                } else {
-                    0
-                }
-            }
-        };
-    }
-}
 
 pub(crate) struct Device;
 
@@ -125,7 +18,7 @@ impl Device {
         let program = Device::parse_program(&input[1..]);
 
         let mut pointer: InstrPointer = 0;
-        let mut registers: Register = [0; 6];
+        let mut registers: Register = vec![0; 6];
         while let Some((op, values)) = program.get(pointer) {
             registers[binding] = pointer;
             op.execute(&mut registers, values);
