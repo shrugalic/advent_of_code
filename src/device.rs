@@ -13,12 +13,12 @@ impl Default for Device {
     }
 }
 
-const GET_REGISTER_0_WHEN_IT_HALTS_NATURALLY: InstrPointer = usize::MAX;
+const UNLIMITED: InstrPointer = usize::MAX;
 
 impl Device {
     pub(crate) fn run_program(&mut self, input: &[String]) -> Number {
         *self
-            .halting_values(input, GET_REGISTER_0_WHEN_IT_HALTS_NATURALLY, 0)
+            .halting_values(input, UNLIMITED, 0, UNLIMITED)
             .first()
             .unwrap()
     }
@@ -29,6 +29,7 @@ impl Device {
         input: &[String],
         halting_ip: InstrPointer,
         halting_reg: RegisterIndex,
+        limit: usize,
     ) -> Vec<Number> {
         let (binding, program) = Device::parse_input(&input);
         let mut halting_values = vec![];
@@ -41,11 +42,15 @@ impl Device {
             ip = registers[binding];
             ip += 1;
             if ip == halting_ip {
+                // println!("{}. value {}", halting_values.len(), registers[halting_reg],);
+                if halting_values.contains(&registers[halting_reg]) || halting_values.len() == limit
+                {
+                    break;
+                }
                 halting_values.push(registers[halting_reg]);
-                break;
             }
         }
-        if halting_ip == GET_REGISTER_0_WHEN_IT_HALTS_NATURALLY {
+        if halting_ip == UNLIMITED {
             halting_values.push(registers[0]);
         }
         halting_values
