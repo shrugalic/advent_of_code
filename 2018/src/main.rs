@@ -267,6 +267,9 @@ fn day20() {
 }
 
 fn day21() {
-    let halting_value = *reversed_day21program().first().unwrap();
+    let halting_value = *reversed_day21program(1).first().unwrap();
     assert_eq!(103548, halting_value);
+
+    let halting_values = reversed_day21program(usize::MAX);
+    assert_eq!(14256686, *halting_values.last().unwrap());
 }
