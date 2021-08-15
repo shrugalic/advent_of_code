@@ -22,6 +22,7 @@ use crate::day17::Ground;
 use crate::day18::LumberCollectionArea;
 use crate::day19::sum_of_divisors;
 use crate::day20::Base;
+use crate::day21::reversed_day21program;
 use crate::device::Device;
 use line_reader::read_file_to_lines;
 
@@ -266,8 +267,6 @@ fn day20() {
 }
 
 fn day21() {
-    let program = read_file_to_lines("input/day21.txt");
-    let mut device = Device::default();
-    let halting_value = device.halting_value(&program, 28, 4);
+    let halting_value = *reversed_day21program().first().unwrap();
     assert_eq!(103548, halting_value);
 }

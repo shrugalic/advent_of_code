@@ -1,9 +1,9 @@
 use crate::opcode::{Number, Op, Register, Values};
 
 type Instruction = (Op, Values);
-type InstrPointer = Number;
 type InstrPointerBinding = Number;
-type RegisterIndex = usize;
+pub(crate) type InstrPointer = Number;
+pub(crate) type RegisterIndex = usize;
 
 pub(crate) struct Device;
 
@@ -13,19 +13,25 @@ impl Default for Device {
     }
 }
 
+const GET_REGISTER_0_WHEN_IT_HALTS_NATURALLY: InstrPointer = usize::MAX;
+
 impl Device {
     pub(crate) fn run_program(&mut self, input: &[String]) -> Number {
-        self.halting_value(input, usize::MAX, 0).unwrap()
+        *self
+            .halting_values(input, GET_REGISTER_0_WHEN_IT_HALTS_NATURALLY, 0)
+            .first()
+            .unwrap()
     }
 
     /// Return the value of `register[halting_reg]` when the instruction pointer reaches `halting_ip`
-    pub(crate) fn halting_value(
+    pub(crate) fn halting_values(
         &mut self,
         input: &[String],
         halting_ip: InstrPointer,
         halting_reg: RegisterIndex,
-    ) -> Number {
+    ) -> Vec<Number> {
         let (binding, program) = Device::parse_input(&input);
+        let mut halting_values = vec![];
 
         let mut ip: InstrPointer = 0;
         let mut registers: Register = vec![0; 6];
@@ -35,10 +41,14 @@ impl Device {
             ip = registers[binding];
             ip += 1;
             if ip == halting_ip {
-                return registers[halting_reg];
+                halting_values.push(registers[halting_reg]);
+                break;
             }
         }
-        registers[halting_reg]
+        if halting_ip == GET_REGISTER_0_WHEN_IT_HALTS_NATURALLY {
+            halting_values.push(registers[0]);
+        }
+        halting_values
     }
 
     fn parse_input(input: &&[String]) -> (usize, Vec<(Op, (usize, usize, usize))>) {
