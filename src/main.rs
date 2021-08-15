@@ -20,8 +20,9 @@ use crate::day16::{
 };
 use crate::day17::Ground;
 use crate::day18::LumberCollectionArea;
-use crate::day19::Device;
+use crate::day19::sum_of_divisors;
 use crate::day20::Base;
+use crate::device::Device;
 use line_reader::read_file_to_lines;
 
 mod day01;
@@ -44,6 +45,7 @@ mod day17;
 mod day18;
 mod day19;
 mod day20;
+mod device;
 mod opcode;
 
 fn main() {
@@ -249,7 +251,7 @@ fn day19() {
     assert_eq!(1872, Device::default().run_program(&program));
     assert_eq!(
         18_992_592, // 1 + 2 + 5 + 10 + 1_055_143 + 2_110_286 + 5_275_715 + 10_551_430,
-        Device::sum_of_divisors(10_551_430)
+        sum_of_divisors(10_551_430)
     );
 }
 
