@@ -45,6 +45,7 @@ mod day17;
 mod day18;
 mod day19;
 mod day20;
+mod day21;
 mod device;
 mod opcode;
 
@@ -69,6 +70,7 @@ fn main() {
     day18();
     day19();
     day20();
+    day21();
 }
 
 fn day01() {
@@ -261,4 +263,11 @@ fn day20() {
 
     let base = Base::from(read_file_to_lines("input/day20.txt")[0].as_str());
     assert_eq!(8509, base.number_of_rooms_at_least_1000_doors_away());
+}
+
+fn day21() {
+    let program = read_file_to_lines("input/day21.txt");
+    let mut device = Device::default();
+    let halting_value = device.halting_value(&program, 28, 4);
+    assert_eq!(103548, halting_value);
 }

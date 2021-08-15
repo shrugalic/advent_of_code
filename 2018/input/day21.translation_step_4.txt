@@ -1,0 +1,20 @@
+'outer loop {
+    r3 = (r4 | 65536)   // 65536 = 0b1'0000'0000'0000'0000, with initial r4 == 0 this r3 = 65536
+    r4 = 10552971       // 0b1010'0001'0000'0110'1000'1011
+    'middle loop {
+        r5 = (r3 & 255) // the last byte of r3. initial r3 is 65536, so r5 is 0; on second pass r3 is 256 and r5 still 0
+        r4 += r5        // with initial r5 == 0 this r4 = 10552971 still; on second pass r5 still 0
+        r4 &= 16777215  // only the last 3 bytes of r4, initially 10552971; on second pass r4 = 14632729
+        r4 *= 65899     // 0b1'0000'0001'0110'1011, initially 695430235929; on second pass 964282208371
+        r4 &= 16777215  // only the last 3 bytes of r4, initially 14632729; on second pass 11718771
+        if 256 <= r3 {      // initially 65536, so true; on second pass r3 = 256 so still true
+            r3 = r3 / 256   // initially r3 = 256, go for second pass, r3 = 1, go for third pass
+        } else {
+            if r4 == r0 {
+                break 'outer // halt
+            } else {
+                break 'middle
+            }
+        }
+    }
+}
