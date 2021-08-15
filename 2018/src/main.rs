@@ -23,6 +23,7 @@ use crate::day18::LumberCollectionArea;
 use crate::day19::sum_of_divisors;
 use crate::day20::Base;
 use crate::day21::reversed_day21program;
+use crate::day22::part_1_cave;
 use crate::device::Device;
 use line_reader::read_file_to_lines;
 
@@ -47,6 +48,7 @@ mod day18;
 mod day19;
 mod day20;
 mod day21;
+mod day22;
 mod device;
 mod opcode;
 
@@ -72,6 +74,7 @@ fn main() {
     day19();
     day20();
     day21();
+    day22()
 }
 
 fn day01() {
@@ -272,4 +275,11 @@ fn day21() {
 
     let halting_values = reversed_day21program(usize::MAX);
     assert_eq!(14256686, *halting_values.last().unwrap());
+}
+
+fn day22() {
+    let cave = part_1_cave();
+    assert_eq!(10115, cave.risk_level());
+
+    todo!()
 }

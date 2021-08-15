@@ -55,6 +55,7 @@ mod tests {
     }
 
     // #[test] // slow at ~5 minutes
+    #[allow(dead_code)]
     fn part2_with_instructions() {
         let program = read_file_to_lines("input/day21.txt");
         let mut device = Device::default();
