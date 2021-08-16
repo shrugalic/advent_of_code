@@ -24,6 +24,9 @@ impl Loc {
     fn new(x: X, y: Y) -> Self {
         Loc { x, y }
     }
+    fn equals(&self, x: X, y: Y) -> bool {
+        self.x == x && self.y == y
+    }
 }
 impl Debug for Loc {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -32,12 +35,10 @@ impl Debug for Loc {
 }
 
 #[derive(Clone, Copy, PartialEq)]
-enum Type {
+pub(crate) enum Type {
     Rocky,
     Narrow,
     Wet,
-    Mouth,
-    Target,
 }
 
 impl ToString for Type {
@@ -46,8 +47,6 @@ impl ToString for Type {
             Type::Rocky => ".",
             Type::Narrow => "|",
             Type::Wet => "=",
-            Type::Mouth => "M",
-            Type::Target => "T",
         }
         .to_string()
     }
@@ -75,22 +74,32 @@ impl Type {
             Type::Rocky => 0,
             Type::Wet => 1,
             Type::Narrow => 2,
-            _ => unreachable!(),
         }
     }
 }
 
-struct Grid<T: ToString> {
+pub(crate) struct Cave<T> {
     grid: Vec<Vec<T>>,
+    depth: Depth,
+    target: Loc,
 }
-
-impl<T: ToString> ToString for Grid<T> {
+impl<T: ToString> ToString for Cave<T> {
     fn to_string(&self) -> String {
         self.grid
             .iter()
-            .map(|line| {
+            .enumerate()
+            .map(|(y, line)| {
                 line.iter()
-                    .map(|t| t.to_string())
+                    .enumerate()
+                    .map(|(x, t)| {
+                        if self.target.equals(x, y) {
+                            "T".to_string()
+                        } else if Cave::is_mouth(x, y) {
+                            "M".to_string()
+                        } else {
+                            t.to_string()
+                        }
+                    })
                     .collect::<Vec<_>>()
                     .join("")
             })
@@ -98,35 +107,15 @@ impl<T: ToString> ToString for Grid<T> {
             .join("\n")
     }
 }
-impl<T: ToString> Grid<T> {
-    fn get(&self, loc: &Loc) -> Option<&T> {
-        self.grid
-            .get(loc.y as usize)
-            .and_then(|line| line.get(loc.x as usize))
-    }
-    fn set(&mut self, loc: &Loc, t: T) {
-        self.grid[loc.y as usize][loc.x as usize] = t;
-    }
-}
-
-pub(crate) struct Cave {
-    grid: Grid<Type>,
-    depth: Depth,
-    target: Loc,
-}
-impl ToString for Cave {
-    fn to_string(&self) -> String {
-        self.grid.to_string()
-    }
-}
-impl Cave {
+impl Cave<Type> {
     fn new(depth: Depth, target: Loc) -> Self {
-        let width = target.x + 6;
-        let height = target.y + 6;
+        // Let the size be 60% larger than the target:
+        // - this works out for the example (10, 10) target's grid size of 16 x 16
+        // - hopefully is enough to find a path in part 2
+        let width = (target.x as f64 * 1.6) as usize;
+        let height = (target.y as f64 * 1.6) as usize;
         let mut cave = Cave {
-            grid: Grid {
-                grid: vec![vec![Type::Mouth; width]; height],
-            },
+            grid: vec![vec![Type::Rocky; width]; height],
             depth,
             target,
         };
@@ -138,7 +127,7 @@ impl Cave {
         (1..width).into_iter().for_each(|x| {
             let erosion_level = cave.erosion_level(x * X_MULTI);
             levels[y][x] = erosion_level;
-            cave.grid.set(&Loc::new(x, y), Type::from(erosion_level));
+            cave.set(&Loc::new(x, y), Type::from(erosion_level));
         });
 
         // init x = 0
@@ -146,7 +135,7 @@ impl Cave {
         (1..height).into_iter().for_each(|y| {
             let erosion_level = cave.erosion_level(y * Y_MULTI);
             levels[y][x] = erosion_level;
-            cave.grid.set(&Loc::new(x, y), Type::from(erosion_level));
+            cave.set(&Loc::new(x, y), Type::from(erosion_level));
         });
 
         // fill in the rest diagonally
@@ -156,7 +145,7 @@ impl Cave {
         while sum <= height + width - 2 {
             let erosion_level = cave.erosion_level_at(&mut levels, x, y);
             levels[y][x] = erosion_level;
-            cave.grid.set(&Loc::new(x, y), Type::from(erosion_level));
+            cave.set(&Loc::new(x, y), Type::from(erosion_level));
 
             if y == 1 || x == width - 1 {
                 sum += 1;
@@ -165,14 +154,6 @@ impl Cave {
             x += 1;
             y = sum - x;
         }
-
-        // (0..height).into_iter().for_each(|y| {
-        //     (0..width).into_iter().for_each(|x| {
-        //         cave.grid.set(&Loc::new(x, y), cave.type_at(x, y));
-        //     });
-        // });
-        cave.grid.set(&Loc::new(0, 0), Type::Mouth);
-        cave.grid.set(&target, Type::Target);
 
         cave
     }
@@ -191,7 +172,11 @@ impl Cave {
     }
 
     fn is_target_or_mouth(&self, x: X, y: Y) -> bool {
-        self.is_target(x, y) || (x == 0 && y == 0)
+        self.is_target(x, y) || Cave::is_mouth(x, y)
+    }
+
+    fn is_mouth(x: usize, y: usize) -> bool {
+        x == 0 && y == 0
     }
     fn is_target(&self, x: X, y: Y) -> bool {
         x == self.target.x && y == self.target.y
@@ -210,13 +195,22 @@ impl Cave {
         let tile_type = if self.is_target_or_mouth(x, y) {
             Type::from(self.erosion_level(0))
         } else {
-            *self.grid.get(&Loc::new(x, y)).unwrap()
+            *self.get(&Loc::new(x, y)).unwrap()
         };
         tile_type.to_risk_level()
     }
+
+    fn get(&self, loc: &Loc) -> Option<&Type> {
+        self.grid
+            .get(loc.y as usize)
+            .and_then(|line| line.get(loc.x as usize))
+    }
+    fn set(&mut self, loc: &Loc, t: Type) {
+        self.grid[loc.y as usize][loc.x as usize] = t;
+    }
 }
 
-pub(crate) fn part_1_cave() -> Cave {
+pub(crate) fn part_1_cave() -> Cave<Type> {
     Cave::new(DEPTH, Loc::new(TARGET.0, TARGET.1))
 }
 
