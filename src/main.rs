@@ -23,7 +23,7 @@ use crate::day18::LumberCollectionArea;
 use crate::day19::sum_of_divisors;
 use crate::day20::Base;
 use crate::day21::reversed_day21program;
-use crate::day22::part_1_cave;
+use crate::day22::full_cave;
 use crate::device::Device;
 use line_reader::read_file_to_lines;
 
@@ -278,7 +278,7 @@ fn day21() {
 }
 
 fn day22() {
-    let cave = part_1_cave();
+    let cave = full_cave();
     assert_eq!(10115, cave.risk_level());
 
     todo!()
