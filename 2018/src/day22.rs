@@ -27,6 +27,22 @@ impl Loc {
     fn equals(&self, x: X, y: Y) -> bool {
         self.x == x && self.y == y
     }
+    fn offset_by(&self, x: isize, y: isize) -> Self {
+        Loc::new(
+            (self.x as isize + x) as usize,
+            (self.y as isize + y) as usize,
+        )
+    }
+    fn neighbors(&self) -> Vec<Loc> {
+        let mut neighbors = vec![self.offset_by(1, 0), self.offset_by(0, 1)];
+        if self.x > 0 {
+            neighbors.push(self.offset_by(-1, 0));
+        }
+        if self.y > 0 {
+            neighbors.push(self.offset_by(0, -1));
+        }
+        neighbors
+    }
 }
 impl Debug for Loc {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -76,6 +92,13 @@ impl Type {
             Type::Narrow => 2,
         }
     }
+    fn is_incompatible_with(&self, tool: &Tool) -> bool {
+        match self {
+            Type::Rocky => tool == &Tool::Neither,
+            Type::Narrow => tool == &Tool::ClimbingGear,
+            Type::Wet => tool == &Tool::Torch,
+        }
+    }
 }
 
 pub(crate) struct Cave<T> {
@@ -107,6 +130,25 @@ impl<T: ToString> ToString for Cave<T> {
             .join("\n")
     }
 }
+#[derive(PartialEq, Copy, Clone, Debug)]
+enum Tool {
+    Torch,
+    ClimbingGear,
+    Neither,
+}
+
+impl Tool {
+    fn others(&self) -> Vec<Tool> {
+        match self {
+            Tool::Torch => vec![Tool::ClimbingGear, Tool::Neither],
+            Tool::ClimbingGear => vec![Tool::Torch, Tool::Neither],
+            Tool::Neither => vec![Tool::ClimbingGear, Tool::Torch],
+        }
+    }
+}
+
+impl Tool {}
+
 impl Cave<Type> {
     fn new(depth: Depth, target: Loc) -> Self {
         // Let the size be 60% larger than the target:
@@ -208,9 +250,81 @@ impl Cave<Type> {
     fn set(&mut self, loc: &Loc, t: Type) {
         self.grid[loc.y as usize][loc.x as usize] = t;
     }
+
+    fn shortest_path_len(&self) -> usize {
+        let mut counter = 0;
+        let mut shortest_path_len = vec![vec![usize::MAX; self.grid[0].len()]; self.grid.len()];
+        shortest_path_len[0][0] = 0;
+        let mut candidates = vec![(0, Loc::new(0, 0), Tool::Torch)];
+        while let Some((curr_len, curr_loc, curr_tool)) = candidates.pop() {
+            // while !candidates.is_empty() {
+            //     let (fastest, _, _) = candidates.iter().min_by_key(|(len, _, _)| len).unwrap();
+            //     let pos = candidates
+            //         .iter()
+            //         .position(|(len, _, _)| len == fastest)
+            //         .unwrap();
+            //     let (curr_len, curr_loc, curr_tool) = candidates.remove(pos);
+            curr_loc.neighbors().iter().for_each(|next_loc| {
+                if let Some(curr_shortest_path_to_next_loc) = shortest_path_len
+                    .get(next_loc.y)
+                    .and_then(|row| row.get(next_loc.x))
+                {
+                    let next_type = self.get(next_loc).unwrap();
+                    let reached_target_and_need_torch_switch =
+                        next_loc == &self.target && curr_tool != Tool::Torch;
+                    let (next_len, next_tools) = if next_type.is_incompatible_with(&curr_tool)
+                        || reached_target_and_need_torch_switch
+                    {
+                        (curr_len + 8, curr_tool.others())
+                    } else {
+                        (curr_len + 1, vec![curr_tool])
+                    };
+                    if next_len < *curr_shortest_path_to_next_loc {
+                        shortest_path_len[next_loc.y][next_loc.x] = next_len;
+                        next_tools.iter().for_each(|next_tool| {
+                            candidates.push((next_len, *next_loc, *next_tool))
+                        });
+                    }
+                } // else the next loc is outside the grid
+            });
+            counter += 1;
+
+            // Keep only candidates that are better than the current best
+            candidates = candidates
+                .into_iter()
+                .filter(|(len, loc, _)| *len <= shortest_path_len[loc.y][loc.x])
+                .collect();
+
+            // Prioritize candidates with shorter travel times
+            candidates.sort_by_key(|(len, _loc, _tool)| -(*len as isize));
+
+            // if counter >= 1000 {
+            //     break;
+            // }
+        }
+        println!("Finished in {} iterations", counter);
+
+        if false {
+            // print shortest paths
+            shortest_path_len.iter().for_each(|row| {
+                println!(
+                    "{:?}",
+                    row.iter()
+                        .map(|len| if len == &usize::MAX {
+                            "9999".to_string()
+                        } else {
+                            format!("{:4}", len)
+                        })
+                        .collect::<Vec<_>>()
+                );
+            });
+        }
+
+        shortest_path_len[self.target.y][self.target.x]
+    }
 }
 
-pub(crate) fn part_1_cave() -> Cave<Type> {
+pub(crate) fn full_cave() -> Cave<Type> {
     Cave::new(DEPTH, Loc::new(TARGET.0, TARGET.1))
 }
 
@@ -251,7 +365,20 @@ M=.|=.|.|=.|=|=.
 
     #[test]
     fn part1_risk_level() {
-        let cave = part_1_cave();
+        let cave = full_cave();
         assert_eq!(10115, cave.risk_level());
+    }
+
+    #[test]
+    fn example_shortest_path_len() {
+        let cave = Cave::new(510, Loc::new(10, 10));
+        assert_eq!(45, cave.shortest_path_len());
+    }
+
+    #[test]
+    fn part2_shortest_path_len() {
+        let cave = full_cave();
+        // 1040 is too high
+        assert_eq!(1039, cave.shortest_path_len());
     }
 }
