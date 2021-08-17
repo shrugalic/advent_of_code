@@ -1,4 +1,7 @@
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap};
 use std::fmt::{Debug, Formatter};
+use std::hash::Hash;
 
 const DEPTH: usize = 3066;
 const TARGET: (Coord, Coord) = (13, 726);
@@ -14,12 +17,27 @@ type Depth = usize;
 type GeologicIndex = usize;
 type ErosionLevel = usize;
 type RiskLevel = usize;
+type Time = usize;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct Loc {
     x: X,
     y: Y,
 }
+
+impl Loc {
+    pub(crate) fn hamming_distance_to(&self, other: &Loc) -> usize {
+        Loc::diff(self.x, other.x) + Loc::diff(self.y, other.y)
+    }
+    fn diff(a: usize, b: usize) -> usize {
+        if a < b {
+            b - a
+        } else {
+            a - b
+        }
+    }
+}
+
 impl Loc {
     fn new(x: X, y: Y) -> Self {
         Loc { x, y }
@@ -51,86 +69,64 @@ impl Debug for Loc {
 }
 
 #[derive(Clone, Copy, PartialEq)]
-pub(crate) enum Type {
+pub(crate) enum RegionType {
     Rocky,
     Narrow,
     Wet,
 }
 
-impl ToString for Type {
+impl ToString for RegionType {
     fn to_string(&self) -> String {
         match self {
-            Type::Rocky => ".",
-            Type::Narrow => "|",
-            Type::Wet => "=",
+            RegionType::Rocky => ".",
+            RegionType::Narrow => "|",
+            RegionType::Wet => "=",
         }
         .to_string()
     }
 }
-impl From<ErosionLevel> for Type {
+impl From<ErosionLevel> for RegionType {
     fn from(erosion_level: ErosionLevel) -> Self {
         match erosion_level % 3 {
-            0 => Type::Rocky,
-            1 => Type::Wet,
-            2 => Type::Narrow,
+            0 => RegionType::Rocky,
+            1 => RegionType::Wet,
+            2 => RegionType::Narrow,
             _ => unreachable!(),
         }
     }
 }
 
-impl Debug for Type {
+impl Debug for RegionType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.to_string())
     }
 }
 
-impl Type {
+impl RegionType {
     fn to_risk_level(self) -> RiskLevel {
         match self {
-            Type::Rocky => 0,
-            Type::Wet => 1,
-            Type::Narrow => 2,
+            RegionType::Rocky => 0,
+            RegionType::Wet => 1,
+            RegionType::Narrow => 2,
         }
     }
+
     fn is_incompatible_with(&self, tool: &Tool) -> bool {
         match self {
-            Type::Rocky => tool == &Tool::Neither,
-            Type::Narrow => tool == &Tool::ClimbingGear,
-            Type::Wet => tool == &Tool::Torch,
+            RegionType::Rocky => tool == &Tool::Neither,
+            RegionType::Narrow => tool == &Tool::ClimbingGear,
+            RegionType::Wet => tool == &Tool::Torch,
         }
     }
 }
 
-pub(crate) struct Cave<T> {
-    grid: Vec<Vec<T>>,
+pub(crate) struct Cave {
+    erosion_levels: HashMap<Loc, ErosionLevel>,
     depth: Depth,
     target: Loc,
 }
-impl<T: ToString> ToString for Cave<T> {
-    fn to_string(&self) -> String {
-        self.grid
-            .iter()
-            .enumerate()
-            .map(|(y, line)| {
-                line.iter()
-                    .enumerate()
-                    .map(|(x, t)| {
-                        if self.target.equals(x, y) {
-                            "T".to_string()
-                        } else if Cave::is_mouth(x, y) {
-                            "M".to_string()
-                        } else {
-                            t.to_string()
-                        }
-                    })
-                    .collect::<Vec<_>>()
-                    .join("")
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-    }
-}
-#[derive(PartialEq, Copy, Clone, Debug)]
+
+#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 enum Tool {
     Torch,
     ClimbingGear,
@@ -147,184 +143,215 @@ impl Tool {
     }
 }
 
-impl Tool {}
-
-impl Cave<Type> {
+impl Cave {
     fn new(depth: Depth, target: Loc) -> Self {
-        // Let the size be 60% larger than the target:
-        // - this works out for the example (10, 10) target's grid size of 16 x 16
-        // - hopefully is enough to find a path in part 2
-        let width = (target.x as f64 * 1.6) as usize;
-        let height = (target.y as f64 * 1.6) as usize;
-        let mut cave = Cave {
-            grid: vec![vec![Type::Rocky; width]; height],
+        Cave {
+            erosion_levels: HashMap::new(),
             depth,
             target,
-        };
-
-        let mut levels = vec![vec![0; width]; height];
-
-        // init y = 0
-        let y = 0;
-        (1..width).into_iter().for_each(|x| {
-            let erosion_level = cave.erosion_level(x * X_MULTI);
-            levels[y][x] = erosion_level;
-            cave.set(&Loc::new(x, y), Type::from(erosion_level));
-        });
-
-        // init x = 0
-        let x = 0;
-        (1..height).into_iter().for_each(|y| {
-            let erosion_level = cave.erosion_level(y * Y_MULTI);
-            levels[y][x] = erosion_level;
-            cave.set(&Loc::new(x, y), Type::from(erosion_level));
-        });
-
-        // fill in the rest diagonally
-        let mut x = 1;
-        let mut y = 1;
-        let mut sum = x + y;
-        while sum <= height + width - 2 {
-            let erosion_level = cave.erosion_level_at(&mut levels, x, y);
-            levels[y][x] = erosion_level;
-            cave.set(&Loc::new(x, y), Type::from(erosion_level));
-
-            if y == 1 || x == width - 1 {
-                sum += 1;
-                x = if sum > height { sum - height } else { 0 };
-            }
-            x += 1;
-            y = sum - x;
         }
-
-        cave
     }
 
-    fn erosion_level_at(&self, levels: &mut Vec<Vec<ErosionLevel>>, x: X, y: Y) -> ErosionLevel {
-        let geo_index = if self.is_target(x, y) {
-            0
+    fn as_string(&mut self, width: usize, height: usize) -> String {
+        (0..height)
+            .into_iter()
+            .map(|y| {
+                (0..width)
+                    .into_iter()
+                    .map(|x| {
+                        if self.target.equals(x, y) {
+                            "T".to_string()
+                        } else if Cave::is_mouth(x, y) {
+                            "M".to_string()
+                        } else {
+                            self.region_type_at(&x, &y).to_string()
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join("")
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    fn erosion_level_at(&mut self, x: &X, y: &Y) -> ErosionLevel {
+        let loc = Loc::new(*x, *y);
+        if let Some(erosion_level) = self.erosion_levels.get(&loc) {
+            *erosion_level
         } else {
-            levels[y][x - 1] * levels[y - 1][x]
-        };
-        self.erosion_level(geo_index)
+            let geo_index = match (x, y) {
+                (0, 0) => 0,
+                (0, y) => y * Y_MULTI,
+                (x, 0) => x * X_MULTI,
+                (x, y) => {
+                    if loc == self.target {
+                        0
+                    } else {
+                        let left = self.erosion_level_at(&(x - 1), y);
+                        let above = self.erosion_level_at(x, &(y - 1));
+                        left * above
+                    }
+                }
+            };
+            let erosion_level = self.erosion_level(geo_index);
+            self.erosion_levels.insert(loc, erosion_level);
+            erosion_level
+        }
     }
 
     fn erosion_level(&self, geo_index: GeologicIndex) -> ErosionLevel {
         (geo_index + self.depth) % MODULO
     }
 
-    fn is_target_or_mouth(&self, x: X, y: Y) -> bool {
-        self.is_target(x, y) || Cave::is_mouth(x, y)
-    }
-
     fn is_mouth(x: usize, y: usize) -> bool {
         x == 0 && y == 0
     }
-    fn is_target(&self, x: X, y: Y) -> bool {
-        x == self.target.x && y == self.target.y
-    }
-    pub(crate) fn risk_level(&self) -> RiskLevel {
+
+    pub(crate) fn risk_level(&mut self) -> RiskLevel {
         (0..=self.target.y)
             .into_iter()
-            .flat_map(|y| {
+            .map(|y| {
                 (0..=self.target.x)
                     .into_iter()
-                    .map(move |x| self.risk_level_at(x, y))
+                    .map(|x| self.risk_level_at(&x, &y))
+                    .sum::<usize>()
             })
             .sum()
     }
-    fn risk_level_at(&self, x: usize, y: usize) -> RiskLevel {
-        let tile_type = if self.is_target_or_mouth(x, y) {
-            Type::from(self.erosion_level(0))
-        } else {
-            *self.get(&Loc::new(x, y)).unwrap()
-        };
-        tile_type.to_risk_level()
+
+    fn risk_level_at(&mut self, x: &X, y: &Y) -> RiskLevel {
+        self.region_type_at(x, y).to_risk_level()
     }
 
-    fn get(&self, loc: &Loc) -> Option<&Type> {
-        self.grid
-            .get(loc.y as usize)
-            .and_then(|line| line.get(loc.x as usize))
-    }
-    fn set(&mut self, loc: &Loc, t: Type) {
-        self.grid[loc.y as usize][loc.x as usize] = t;
+    fn region_type_at_loc(&mut self, loc: &Loc) -> RegionType {
+        self.region_type_at(&loc.x, &loc.y)
     }
 
-    fn shortest_path_len(&self) -> usize {
-        let mut counter = 0;
-        let mut shortest_path_len = vec![vec![usize::MAX; self.grid[0].len()]; self.grid.len()];
-        shortest_path_len[0][0] = 0;
-        let mut candidates = vec![(0, Loc::new(0, 0), Tool::Torch)];
-        while let Some((curr_len, curr_loc, curr_tool)) = candidates.pop() {
-            // while !candidates.is_empty() {
-            //     let (fastest, _, _) = candidates.iter().min_by_key(|(len, _, _)| len).unwrap();
-            //     let pos = candidates
-            //         .iter()
-            //         .position(|(len, _, _)| len == fastest)
-            //         .unwrap();
-            //     let (curr_len, curr_loc, curr_tool) = candidates.remove(pos);
-            curr_loc.neighbors().iter().for_each(|next_loc| {
-                if let Some(curr_shortest_path_to_next_loc) = shortest_path_len
-                    .get(next_loc.y)
-                    .and_then(|row| row.get(next_loc.x))
-                {
-                    let next_type = self.get(next_loc).unwrap();
-                    let reached_target_and_need_torch_switch =
-                        next_loc == &self.target && curr_tool != Tool::Torch;
-                    let (next_len, next_tools) = if next_type.is_incompatible_with(&curr_tool)
-                        || reached_target_and_need_torch_switch
-                    {
-                        (curr_len + 8, curr_tool.others())
-                    } else {
-                        (curr_len + 1, vec![curr_tool])
-                    };
-                    if next_len < *curr_shortest_path_to_next_loc {
-                        shortest_path_len[next_loc.y][next_loc.x] = next_len;
-                        next_tools.iter().for_each(|next_tool| {
-                            candidates.push((next_len, *next_loc, *next_tool))
-                        });
-                    }
-                } // else the next loc is outside the grid
+    fn region_type_at(&mut self, x: &X, y: &Y) -> RegionType {
+        RegionType::from(self.erosion_level_at(x, y))
+    }
+
+    pub(crate) fn shortest_path_len(&mut self) -> usize {
+        let mut visited: HashMap<(Loc, Tool), Time> = HashMap::new();
+
+        let mut queue = BinaryHeap::new();
+        let origin = Loc::new(0, 0);
+        queue.push(State {
+            time: 0,
+            loc: origin,
+            tool: Tool::Torch,
+            dist: self.target.hamming_distance_to(&origin),
+        });
+
+        while let Some(curr) = queue.pop() {
+            if self
+                .region_type_at_loc(&curr.loc)
+                .is_incompatible_with(&curr.tool)
+            {
+                continue;
+            }
+
+            // Only redo a location if we got here faster than previously
+            let prev_time = visited.entry((curr.loc, curr.tool)).or_insert(usize::MAX);
+            if curr.time < *prev_time {
+                *prev_time = curr.time;
+            } else {
+                continue;
+            }
+
+            // Check if we found the target
+            if self.target == curr.loc && curr.tool == Tool::Torch {
+                // println!("Reached target in iteration {}", counter);
+                Cave::print_shortest_paths(&visited);
+                return curr.time;
+            }
+
+            // Try from neighboring positions with the same tool
+            curr.loc.neighbors().into_iter().for_each(|loc| {
+                let dist = self.target.hamming_distance_to(&loc);
+                queue.push(State::new(curr.time + 1, loc, curr.tool, dist));
             });
-            counter += 1;
 
-            // Keep only candidates that are better than the current best
-            candidates = candidates
-                .into_iter()
-                .filter(|(len, loc, _)| *len <= shortest_path_len[loc.y][loc.x])
-                .collect();
-
-            // Prioritize candidates with shorter travel times
-            candidates.sort_by_key(|(len, _loc, _tool)| -(*len as isize));
-
-            // if counter >= 1000 {
-            //     break;
-            // }
-        }
-        println!("Finished in {} iterations", counter);
-
-        if false {
-            // print shortest paths
-            shortest_path_len.iter().for_each(|row| {
-                println!(
-                    "{:?}",
-                    row.iter()
-                        .map(|len| if len == &usize::MAX {
-                            "9999".to_string()
-                        } else {
-                            format!("{:4}", len)
-                        })
-                        .collect::<Vec<_>>()
-                );
+            // Try from here with other tools
+            let dist = self.target.hamming_distance_to(&curr.loc);
+            curr.tool.others().into_iter().for_each(|tool| {
+                queue.push(State::new(curr.time + 7, curr.loc, tool, dist));
             });
         }
+        unreachable!()
+    }
 
-        shortest_path_len[self.target.y][self.target.x]
+    #[allow(dead_code)]
+    fn print_shortest_paths(times: &HashMap<(Loc, Tool), Time>) {
+        let width = times.keys().map(|(loc, _)| loc.x).max().unwrap();
+        let height = times.keys().map(|(loc, _)| loc.y).max().unwrap();
+        println!("w x h = {} x {}", width, height);
+        let mut grid: Vec<Vec<Option<Time>>> = vec![vec![None; width + 1]; height + 1];
+        // Move the best time for each square into the grid
+        [Tool::Neither, Tool::Torch, Tool::ClimbingGear]
+            .iter()
+            .for_each(|tool| {
+                (0..height).into_iter().for_each(|y| {
+                    (0..width).into_iter().for_each(|x| {
+                        match (times.get(&(Loc::new(x, y), *tool)), grid[y][x]) {
+                            (Some(time), Some(other)) => grid[y][x] = Some(*time.min(&other)),
+                            (Some(time), None) => grid[y][x] = Some(*time),
+                            (None, _) => {}
+                        }
+                    })
+                })
+            });
+        // Then print the grid
+        let max_value_width = times.values().max().unwrap().to_string().len();
+        grid.iter().for_each(|row| {
+            println!(
+                "{:?}",
+                row.iter()
+                    .map(|time| match time {
+                        Some(time) => format!("{:width$}", time, width = max_value_width),
+                        None => " ".repeat(max_value_width),
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            );
+        });
     }
 }
 
-pub(crate) fn full_cave() -> Cave<Type> {
+#[derive(PartialEq, Eq, Debug, Clone)]
+struct State {
+    time: Time,
+    loc: Loc,
+    tool: Tool,
+    dist: usize,
+}
+
+impl State {
+    fn new(time: Time, loc: Loc, tool: Tool, dist: usize) -> Self {
+        State {
+            time,
+            loc,
+            tool,
+            dist,
+        }
+    }
+}
+
+impl PartialOrd<Self> for State {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for State {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (self.time + self.dist)
+            .cmp(&(other.time + other.dist))
+            .reverse()
+    }
+}
+
+pub(crate) fn full_cave() -> Cave {
     Cave::new(DEPTH, Loc::new(TARGET.0, TARGET.1))
 }
 
@@ -334,9 +361,9 @@ mod tests {
 
     #[test]
     fn example_to_string() {
-        let cave = Cave::new(510, Loc::new(10, 10));
+        let mut cave = Cave::new(510, Loc::new(10, 10));
         assert_eq!(
-            cave.to_string(),
+            cave.as_string(16, 16),
             "\
 M=.|=.|.|=.|=|=.
 .|=|=|||..|.=...
@@ -356,29 +383,45 @@ M=.|=.|.|=.|=|=.
 ||.|==.|.|.||=||"
         )
     }
-
     #[test]
     fn example_risk_level() {
-        let cave = Cave::new(510, Loc::new(10, 10));
+        let mut cave = Cave::new(510, Loc::new(10, 10));
         assert_eq!(114, cave.risk_level());
     }
 
     #[test]
     fn part1_risk_level() {
-        let cave = full_cave();
+        let mut cave = full_cave();
         assert_eq!(10115, cave.risk_level());
     }
 
     #[test]
     fn example_shortest_path_len() {
-        let cave = Cave::new(510, Loc::new(10, 10));
+        let mut cave = Cave::new(510, Loc::new(10, 10));
         assert_eq!(45, cave.shortest_path_len());
     }
 
     #[test]
     fn part2_shortest_path_len() {
-        let cave = full_cave();
-        // 1040 is too high
-        assert_eq!(1039, cave.shortest_path_len());
+        let mut cave = full_cave();
+        assert_eq!(990, cave.shortest_path_len());
+    }
+
+    #[test]
+    fn binary_heap_ordering() {
+        let tool = Tool::Torch;
+        let loc = Loc::new(0, 0);
+
+        let one = State::new(0, loc, tool, 10);
+        let three = State::new(2, loc, tool, 6);
+        let two = State::new(1, loc, tool, 8);
+
+        let mut queue = BinaryHeap::new();
+        queue.push(one);
+        queue.push(three.clone());
+        queue.push(two);
+
+        // ordering is by lowest (dist + time)
+        assert_eq!(queue.peek(), Some(&three));
     }
 }
