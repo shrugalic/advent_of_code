@@ -24,6 +24,7 @@ use crate::day19::sum_of_divisors;
 use crate::day20::Base;
 use crate::day21::reversed_day21program;
 use crate::day22::full_cave;
+use crate::day23::count_nanobots_in_signal_range;
 use crate::device::Device;
 use line_reader::read_file_to_lines;
 
@@ -49,6 +50,7 @@ mod day19;
 mod day20;
 mod day21;
 mod day22;
+mod day23;
 mod device;
 mod opcode;
 
@@ -74,7 +76,8 @@ fn main() {
     day19();
     day20();
     day21();
-    day22()
+    day22();
+    day23();
 }
 
 fn day01() {
@@ -283,4 +286,13 @@ fn day22() {
 
     let mut cave = full_cave();
     assert_eq!(990, cave.shortest_path_len());
+}
+
+fn day23() {
+    assert_eq!(
+        417,
+        count_nanobots_in_signal_range(read_file_to_lines("input/day23.txt"))
+    );
+
+    todo!()
 }
