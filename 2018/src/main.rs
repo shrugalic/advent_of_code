@@ -278,8 +278,9 @@ fn day21() {
 }
 
 fn day22() {
-    let cave = full_cave();
+    let mut cave = full_cave();
     assert_eq!(10115, cave.risk_level());
 
-    todo!()
+    let mut cave = full_cave();
+    assert_eq!(990, cave.shortest_path_len());
 }
