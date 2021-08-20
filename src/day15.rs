@@ -68,12 +68,12 @@ impl Grid {
             if let Some(sum_of_remaining_hit_points) =
                 self.play_until_all_an_elf_dies_or_all_goblins_are_dead(elf_attack_power)
             {
-                println!(
-                    "{} elves won after {} rounds with {} attack power",
-                    self.elves().len(),
-                    self.rounds,
-                    elf_attack_power,
-                );
+                // println!(
+                //     "{} elves won after {} rounds with {} attack power",
+                //     self.elves().len(),
+                //     self.rounds,
+                //     elf_attack_power,
+                // );
                 return sum_of_remaining_hit_points;
             }
             // reset

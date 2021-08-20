@@ -42,6 +42,7 @@ impl Loc {
     fn new(x: X, y: Y) -> Self {
         Loc { x, y }
     }
+    #[allow(dead_code)]
     fn equals(&self, x: X, y: Y) -> bool {
         self.x == x && self.y == y
     }
@@ -151,7 +152,7 @@ impl Cave {
             target,
         }
     }
-
+    #[allow(dead_code)]
     fn as_string(&mut self, width: usize, height: usize) -> String {
         (0..height)
             .into_iter()
@@ -203,6 +204,7 @@ impl Cave {
         (geo_index + self.depth) % MODULO
     }
 
+    #[allow(dead_code)]
     fn is_mouth(x: usize, y: usize) -> bool {
         x == 0 && y == 0
     }
@@ -262,7 +264,7 @@ impl Cave {
             // Check if we found the target
             if self.target == curr.loc && curr.tool == Tool::Torch {
                 // println!("Reached target in iteration {}", counter);
-                Cave::print_shortest_paths(&visited);
+                // Cave::print_shortest_paths(&visited);
                 return curr.time;
             }
 
