@@ -140,6 +140,7 @@ impl Army {
     fn unit_count(&self) -> usize {
         self.groups.iter().map(|g| g.count).sum()
     }
+    #[allow(unused)]
     fn print_summary(&self) {
         println!("{}:", self.name);
         self.groups
@@ -223,6 +224,28 @@ pub(crate) fn fight_until_one_army_left(lines: Vec<String>) -> usize {
     fight_armies_until_only_one_left(army1, army2).unit_count()
 }
 
+#[allow(unused)]
+pub(crate) fn fight_until_army1_wins_with_smallest_possible_boost(lines: Vec<String>) -> usize {
+    let (orig_army1, orig_army2) = parse_input(lines);
+    let mut damage_boost = 1;
+    loop {
+        let (mut army1, army2) = (orig_army1.clone(), orig_army2.clone());
+        army1.apply_damage_boost(damage_boost);
+        let army = fight_armies_until_only_one_left(army1, army2);
+        if army.name.eq(&orig_army1.name) {
+            return army.unit_count();
+        }
+        damage_boost += 1;
+    }
+}
+
+#[allow(unused)]
+fn fight_until_one_army_left_with_boost(lines: Vec<String>, army1_damage_boost: usize) -> usize {
+    let (mut army1, army2) = parse_input(lines);
+    army1.apply_damage_boost(army1_damage_boost);
+    fight_armies_until_only_one_left(army1, army2).unit_count()
+}
+
 fn parse_input(lines: Vec<String>) -> (Army, Army) {
     let (army1, army2) = lines.split_at(lines.iter().position(|s| s.is_empty()).unwrap());
     let (army1, army2) = (Army::from(army1), Army::from(&army2[1..]));
@@ -230,41 +253,63 @@ fn parse_input(lines: Vec<String>) -> (Army, Army) {
 }
 
 fn fight_armies_until_only_one_left(mut army1: Army, mut army2: Army) -> Army {
+    let mut counts = (army1.unit_count(), army2.unit_count());
     while army1.unit_count() > 0 && army2.unit_count() > 0 {
-        println!("\n--------------------------\n");
-        army1.print_summary();
-        army2.print_summary();
+        // println!("\n--------------------------\n");
+        // army1.print_summary();
+        // army2.print_summary();
 
         // Target selection phase
-        let mut fights = arrange_fights(&mut army1, &mut army2);
-
-        print_fight_plans(&mut fights, &mut army1, &mut army2);
+        let fights = arrange_fights(&mut army1, &mut army2);
+        // print_fight_plans(&fights, &mut army1, &mut army2);
 
         for (attacker, defender) in fights {
             let (attacking_group, defending_group) =
                 mut_group_of(&attacker, &defender, &mut army1, &mut army2);
             if attacking_group.count == 0 {
-                println!("Skipping attacking group {:?}", attacker);
+                // This must have been killed earlier during this fight
+                continue;
             }
             let damage = attacking_group.damage_to(defending_group);
             let killed = usize::min(defending_group.count, damage / defending_group.hp);
             defending_group.count -= killed;
-            println!(
-                "{} group {} attacks defending group {}, killing {} units",
-                attacker.name,
-                attacker.idx + 1,
-                defender.idx + 1,
-                killed
-            );
+            // print_fight_details(attacker, defender, defending_group, killed);
+        }
+        if counts == (army1.unit_count(), army2.unit_count()) {
+            // Infinite loop, bail!
+            return army2;
+        } else {
+            counts = (army1.unit_count(), army2.unit_count());
         }
     }
     if army1.unit_count() > 0 {
-        army1.print_summary();
+        // army1.print_summary();
         army1
     } else {
-        army2.print_summary();
+        // army2.print_summary();
         army2
     }
+}
+
+#[allow(unused)]
+fn print_fight_details(
+    attacker: GroupId,
+    defender: GroupId,
+    defending_group: &mut Group,
+    killed: usize,
+) {
+    println!(
+        "{} group {} attacks defending group {}, killing {}{} units",
+        attacker.name,
+        attacker.idx + 1,
+        defender.idx + 1,
+        if defending_group.count == 0 {
+            "*all* "
+        } else {
+            ""
+        },
+        killed
+    );
 }
 
 fn arrange_fights(army1: &mut Army, army2: &mut Army) -> Vec<(GroupId, GroupId)> {
@@ -275,8 +320,6 @@ fn arrange_fights(army1: &mut Army, army2: &mut Army) -> Vec<(GroupId, GroupId)>
     while let Some(attacker) = attackers.pop() {
         if let Some(target) = attacker.find_and_remove_target(&mut targets, army1, army2) {
             fights.push((attacker, target));
-        } else {
-            println!("did not find a target.")
         }
     }
     fights.sort_unstable_by(|a, b| {
@@ -289,7 +332,8 @@ fn arrange_fights(army1: &mut Army, army2: &mut Army) -> Vec<(GroupId, GroupId)>
     fights
 }
 
-fn print_fight_plans(fights: &mut Vec<(GroupId, GroupId)>, army1: &mut Army, army2: &mut Army) {
+#[allow(unused)]
+fn print_fight_plans(fights: &[(GroupId, GroupId)], army1: &mut Army, army2: &mut Army) {
     println!();
     fights.iter().for_each(|(a, d)| {
         let ag = group_of(a, army1, army2);
@@ -404,6 +448,23 @@ Infection:
         let unit_count_of_winning_army = fight_until_one_army_left(lines);
         assert_eq!(
             3186 + 1252 + 2241 + 2590 + 1650 + 7766 + 1790 + 264 + 2257, // 22996
+            unit_count_of_winning_army
+        );
+    }
+
+    #[test]
+    fn part2_example() {
+        let lines = read_str_to_lines(EXAMPLE);
+        let unit_count_of_winning_army = fight_until_one_army_left_with_boost(lines, 1570);
+        assert_eq!(51, unit_count_of_winning_army);
+    }
+
+    #[test]
+    fn part2_input() {
+        let lines = read_file_to_lines("input/day24.txt");
+        let unit_count_of_winning_army = fight_until_army1_wins_with_smallest_possible_boost(lines);
+        assert_eq!(
+            935 + 857 + 2535, // 4327
             unit_count_of_winning_army
         );
     }
