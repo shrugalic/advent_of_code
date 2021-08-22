@@ -27,7 +27,9 @@ use crate::day22::full_cave;
 use crate::day23::{
     count_nanobots_in_signal_range, distance_to_origin_from_point_within_range_of_most_nanobots,
 };
-use crate::day24::fight_until_one_army_left;
+use crate::day24::{
+    fight_until_army1_wins_with_smallest_possible_boost, fight_until_one_army_left,
+};
 use crate::device::Device;
 use line_reader::read_file_to_lines;
 
@@ -315,5 +317,10 @@ fn day24() {
         unit_count_of_winning_army
     );
 
-    todo!();
+    let lines = read_file_to_lines("input/day24.txt");
+    let unit_count_of_winning_army = fight_until_army1_wins_with_smallest_possible_boost(lines);
+    assert_eq!(
+        935 + 857 + 2535, // 4327
+        unit_count_of_winning_army
+    );
 }
