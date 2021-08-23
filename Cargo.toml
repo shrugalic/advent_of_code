@@ -1,9 +1,13 @@
 [package]
-name = "aoc_2019-12-17"
+name = "advent_of_code_2019"
 version = "0.1.0"
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-coffee = { version = "0.3.2", features = ["opengl"] }
+rayon = "1.5.1"
+lazy_static = "1.4.0"
+regex = "1.5.4"
+num-format = "0.4.0"
+permutohedron = "0.2.4"
