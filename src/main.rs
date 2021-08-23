@@ -30,6 +30,7 @@ use crate::day23::{
 use crate::day24::{
     fight_until_army1_wins_with_smallest_possible_boost, fight_until_one_army_left,
 };
+use crate::day25::number_of_constellations;
 use crate::device::Device;
 use line_reader::read_file_to_lines;
 
@@ -57,6 +58,7 @@ mod day21;
 mod day22;
 mod day23;
 mod day24;
+mod day25;
 mod device;
 mod opcode;
 
@@ -85,6 +87,7 @@ fn main() {
     day22();
     day23();
     day24();
+    day25();
 }
 
 fn day01() {
@@ -322,5 +325,12 @@ fn day24() {
     assert_eq!(
         935 + 857 + 2535, // 4327
         unit_count_of_winning_army
+    );
+}
+
+fn day25() {
+    assert_eq!(
+        399,
+        number_of_constellations(&read_file_to_lines("input/day25.txt"))
     );
 }
