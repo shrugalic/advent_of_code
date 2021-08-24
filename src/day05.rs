@@ -1,15 +1,15 @@
 use Mode::*;
 use Op::*;
 
-const DEFAULT_INPUT: i32 = 1;
+const DEFAULT_INPUT: isize = 1;
 
-fn to_5_digit_string_padded_with_leading_zeroes(n: i32) -> String {
+fn to_5_digit_string_padded_with_leading_zeroes(n: isize) -> String {
     let s = n.to_string();
     "0".repeat(5 - s.len()) + s.as_ref()
 }
 
-fn to_num(s: &str) -> i32 {
-    s.parse::<i32>().unwrap()
+fn to_num(s: &str) -> isize {
+    s.parse::<isize>().unwrap()
 }
 
 fn extract_modes(s: &str) -> Vec<Mode> {
@@ -20,18 +20,18 @@ fn extract_modes(s: &str) -> Vec<Mode> {
     ]
 }
 
-fn param_value(v: &Vec<i32>, idx: usize, mode: &Mode) -> i32 {
+fn param_value(v: &Vec<isize>, idx: usize, mode: &Mode) -> isize {
     match mode {
         POSITION => v[v[idx] as usize],
         IMMEDIATE => v[idx],
     }
 }
 
-fn process_int_code(v: &mut Vec<i32>) -> Option<i32> {
+fn process_int_code(v: &mut Vec<isize>) -> Option<isize> {
     process_int_code_with_input(v, DEFAULT_INPUT)
 }
 
-fn eval(b: bool) -> i32 {
+fn eval(b: bool) -> isize {
     if b {
         1
     } else {
@@ -39,7 +39,7 @@ fn eval(b: bool) -> i32 {
     }
 }
 
-pub(crate) fn process_int_code_with_input(v: &mut Vec<i32>, input: i32) -> Option<i32> {
+pub(crate) fn process_int_code_with_input(v: &mut Vec<isize>, input: isize) -> Option<isize> {
     let mut idx = 0;
     let mut output = None;
     while idx < v.len() {
@@ -108,7 +108,7 @@ enum Op {
 }
 
 impl Op {
-    fn from_code(code: i32) -> Op {
+    fn from_code(code: isize) -> Op {
         match code {
             1 => Add,
             2 => Multiply,
@@ -139,7 +139,7 @@ enum Mode {
 }
 
 impl Mode {
-    fn from_code(code: i32) -> Mode {
+    fn from_code(code: isize) -> Mode {
         match code {
             0 => POSITION,
             1 => IMMEDIATE,
@@ -155,7 +155,7 @@ impl Mode {
     }
 }
 
-pub(crate) fn day05_puzzle_input() -> Vec<i32> {
+pub(crate) fn day5_puzzle_input() -> Vec<isize> {
     vec![
         3, 225, 1, 225, 6, 6, 1100, 1, 238, 225, 104, 0, 1, 192, 154, 224, 101, -161, 224, 224, 4,
         224, 102, 8, 223, 223, 101, 5, 224, 224, 1, 223, 224, 223, 1001, 157, 48, 224, 1001, 224,
@@ -250,7 +250,7 @@ mod tests {
 
     #[test]
     fn part_1() {
-        let mut v = day05_puzzle_input();
+        let mut v = day5_puzzle_input();
         assert_eq!(process_int_code_with_input(&mut v, 1), Some(11049715));
     }
 
@@ -317,7 +317,7 @@ mod tests {
         assert_eq!(process_int_code_with_input(&mut v, 0), Some(0));
     }
 
-    fn larger_example_input() -> Vec<i32> {
+    fn larger_example_input() -> Vec<isize> {
         vec![
             3, 21, 1008, 21, 8, 20, 1005, 20, 22, 107, 8, 21, 20, 1006, 20, 31, 1106, 0, 36, 98, 0,
             0, 1002, 21, 125, 20, 4, 20, 1105, 1, 46, 104, 999, 1105, 1, 46, 1101, 1000, 1, 20, 4,
@@ -342,7 +342,7 @@ mod tests {
 
     #[test]
     fn part_2() {
-        let mut v = day05_puzzle_input();
+        let mut v = day5_puzzle_input();
         assert_eq!(process_int_code_with_input(&mut v, 5), Some(2140710));
     }
 }

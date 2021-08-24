@@ -1,11 +1,8 @@
-mod intcode;
-mod point2d;
-
-use crate::intcode::{IntCodeComputer, State, State::*};
 use crate::point2d::Point2D;
 use coffee::graphics::{Color, Frame, Mesh, Point, Rectangle, Shape, Window, WindowSettings};
 use coffee::load::Task;
 use coffee::{Game, Result, Timer};
+use intcode::{IntCodeComputer, State, State::*};
 use std::collections::{HashMap, VecDeque};
 use std::ops::RangeInclusive;
 
@@ -65,7 +62,7 @@ enum CameraOutput {
 }
 impl From<isize> for CameraOutput {
     fn from(i: isize) -> Self {
-        if i <= std::u8::MAX as isize {
+        if i <= u8::MAX as isize {
             let c = i as u8 as char;
             match c {
                 '#' => CameraOutput::Scaffold,       // #
@@ -89,7 +86,7 @@ struct ASCII {
 }
 impl ASCII {
     fn new() -> Self {
-        let input = &mut day_17_puzzle_input();
+        let input = day_17_puzzle_input();
         let icc = IntCodeComputer::new(input);
         let camera_output = HashMap::new();
 
@@ -104,7 +101,7 @@ impl ASCII {
         let mut y = 0;
         let mut line = vec![];
         self.icc.run_until_halted();
-        for output in self.icc.outputs.clone() {
+        for output in self.icc.outputs() {
             line.push(output as u8 as char);
             let out = CameraOutput::from(output /*as u8 as char*/);
             if out == CameraOutput::NewLine {
@@ -139,7 +136,7 @@ impl ASCII {
     }
     fn wake_robot_and_add_inputs(&mut self) {
         println!("Creating new int code computer with woken up robot");
-        let input = &mut day_17_puzzle_input();
+        let mut input = day_17_puzzle_input();
         input[0] = 2;
         self.icc = IntCodeComputer::new(input);
 
@@ -159,41 +156,22 @@ impl ASCII {
         let fn_c = "L,12,L,12,L,10,R,10\n";
         let feed = "n\n";
 
-        self.run_until_waiting_for_input();
+        self.icc.run_until_waiting_for_input();
 
         println!("Adding main");
         self.icc.add_inputs(&ASCII::codes(main));
-        self.run_until_waiting_for_input();
+        self.icc.run_until_waiting_for_input();
 
         self.icc.add_inputs(&ASCII::codes(fn_a));
-        self.run_until_waiting_for_input();
+        self.icc.run_until_waiting_for_input();
 
         self.icc.add_inputs(&ASCII::codes(fn_b));
-        self.run_until_waiting_for_input();
+        self.icc.run_until_waiting_for_input();
 
         self.icc.add_inputs(&ASCII::codes(fn_c));
-        self.run_until_waiting_for_input();
+        self.icc.run_until_waiting_for_input();
 
         self.icc.add_inputs(&ASCII::codes(feed));
-    }
-    fn run_until_waiting_for_input(&mut self) {
-        let mut line = vec![];
-        while self.icc.ptr < self.icc.instr.len() {
-            match self.icc.step() {
-                State::Idle => (),
-                State::ExpectingInput => return,
-                State::WroteOutput(output) => {
-                    let c = output as u8 as char;
-                    if c == '\n' {
-                        println!("{}", line.into_iter().collect::<String>());
-                        line = vec![];
-                    } else {
-                        line.push(c);
-                    }
-                }
-                State::Halted => (),
-            }
-        }
     }
     fn is_scaffold(&self, p: &Point2D) -> bool {
         if let Some(&CameraOutput::Scaffold) = self.camera_output.get(p) {

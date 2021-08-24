@@ -7,6 +7,18 @@
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/aoc_2019_18/.idea" />
       <excludeFolder url="file://$MODULE_DIR$/aoc_2019_18/target" />
+      <excludeFolder url="file://$MODULE_DIR$/intcode/.idea" />
+      <excludeFolder url="file://$MODULE_DIR$/intcode/target/debug/build" />
+      <excludeFolder url="file://$MODULE_DIR$/intcode/target/debug/examples" />
+      <excludeFolder url="file://$MODULE_DIR$/aoc_2019_15/.idea" />
+      <excludeFolder url="file://$MODULE_DIR$/aoc_2019_15/target" />
+      <excludeFolder url="file://$MODULE_DIR$/aoc_2019_17/.idea" />
+      <excludeFolder url="file://$MODULE_DIR$/aoc_2019_17/target" />
+      <excludeFolder url="file://$MODULE_DIR$/intcode/target/debug/incremental/intcode-3p7t6h66tqyh/s-g1pwvvtx1q-16miw1t-working" />
+      <excludeFolder url="file://$MODULE_DIR$/intcode/target/debug/incremental/intcode-3p7t6h66tqyh/s-g1pwvx085b-kj8nxy-working" />
+      <excludeFolder url="file://$MODULE_DIR$/intcode/target/debug/incremental/intcode-3p7t6h66tqyh/s-g1pwvzrbh4-19u8ynb-working" />
+      <excludeFolder url="file://$MODULE_DIR$/intcode/target/debug/incremental/intcode-3p7t6h66tqyh/s-g1pww12fm8-dck6vh-dg40m4d42nom" />
+      <excludeFolder url="file://$MODULE_DIR$/intcode/target/debug/incremental/intcode-nv1gtf4qo80y/s-g1px0vw5go-18anp3i-working" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
