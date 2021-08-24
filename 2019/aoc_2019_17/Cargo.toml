@@ -7,3 +7,4 @@ edition = "2018"
 
 [dependencies]
 coffee = { version = "0.3.2", features = ["opengl"] }
+intcode = {path = "../intcode"}

@@ -5,19 +5,20 @@ use crate::day01::{day01input, sum_of_fuel_needed_for};
 use crate::day02::process_noun_and_verb;
 use crate::day03::{combined_step_to_closest_intersection, distance_of_closest_intersection};
 use crate::day04::IsValidPassword;
-use crate::day05::{day05_puzzle_input, process_int_code_with_input};
+use crate::day05::{day5_puzzle_input, process_int_code_with_input};
 use crate::day06::{count_orbit_transfers, count_orbits, day06_puzzle_input, OrbitCount};
 use crate::day07::{
     day07_puzzle_input, max_thrust_in_feedback_loop_mode, max_thrust_in_serial_mode,
 };
 use crate::day08::{day08_puzzle_input, SpaceImageFormat};
-use crate::day09::{day09_puzzle_input, IntCodeComputer};
-use crate::day10::{day10_puzzle_input, MonitoringStation, Point};
-use crate::day11::{day11_puzzle_input, Robot};
+use crate::day09::day9_puzzle_input;
+use crate::day10::{day10_puzzle_input, MonitoringStation};
+use crate::day11::day11_puzzle_input;
 use crate::day12::{day12_puzzle_input, lcm, Jupiter};
-use crate::day13::{day_13_puzzle_input, stats, ArcadeCabinet, Tile};
+use crate::day13::{day_13_puzzle_input, stats, ArcadeCabinet, Robot, Tile};
 use crate::day14::{day14_puzzle_input, Chemical, NanoFactory};
 use crate::day16::{day_16_puzzle_input, FlawedFrequencyTransmission};
+use intcode::IntCodeComputer;
 use rayon::prelude::*;
 use std::cmp::Ordering;
 
@@ -103,10 +104,10 @@ fn day04() {
 }
 
 fn day05() {
-    let mut v = day05_puzzle_input();
+    let mut v = day5_puzzle_input();
     assert_eq!(process_int_code_with_input(&mut v, 1), Some(11049715));
     //
-    let mut v = day05_puzzle_input();
+    let mut v = day5_puzzle_input();
     assert_eq!(process_int_code_with_input(&mut v, 5), Some(2140710));
 }
 
@@ -128,10 +129,10 @@ AAA)CCC",
 
 fn day07() {
     let v = day07_puzzle_input();
-    assert_eq!(max_thrust_in_serial_mode(&v), 87138);
+    assert_eq!(max_thrust_in_serial_mode(v), 87138);
 
     let input = day07_puzzle_input();
-    assert_eq!(max_thrust_in_feedback_loop_mode(&input), 17279674);
+    assert_eq!(max_thrust_in_feedback_loop_mode(input), 17279674);
 }
 
 fn day08() {
@@ -145,10 +146,10 @@ fn day08() {
 }
 
 fn day09() {
-    let mut icc = IntCodeComputer::new(&mut day09_puzzle_input());
+    let mut icc = IntCodeComputer::new(day9_puzzle_input());
     assert_eq!(icc.process_int_code_with_input(1), Some(3518157894));
 
-    let mut icc = IntCodeComputer::new(&mut day09_puzzle_input());
+    let mut icc = IntCodeComputer::new(day9_puzzle_input());
     assert_eq!(icc.process_int_code_with_input(2), Some(80379));
 }
 
@@ -157,23 +158,23 @@ fn day10() {
 
     let mut station = MonitoringStation::from(day10_puzzle_input());
     let vaporized = station.vaporized();
-    assert_eq!(vaporized[199], Point(8, 15));
+    assert_eq!(vaporized[199], day10::Point(8, 15));
 }
 
 fn day11() {
     // part 2
-    let mut robot = Robot::new(&mut day11_puzzle_input(), Some(1));
+    let mut robot = Robot::new(day11_puzzle_input(), Some(1));
     robot.run();
-    let min_x = robot.canvas.iter().map(|(p, _)| p.0).min().unwrap();
-    let max_x = robot.canvas.iter().map(|(p, _)| p.0).max().unwrap();
-    let min_y = robot.canvas.iter().map(|(p, _)| p.1).min().unwrap();
-    let max_y = robot.canvas.iter().map(|(p, _)| p.1).max().unwrap();
+    let min_x = robot.canvas().iter().map(|(p, _)| p.0).min().unwrap();
+    let max_x = robot.canvas().iter().map(|(p, _)| p.0).max().unwrap();
+    let min_y = robot.canvas().iter().map(|(p, _)| p.1).min().unwrap();
+    let max_y = robot.canvas().iter().map(|(p, _)| p.1).max().unwrap();
 
     let mut y = max_y;
     while y >= min_y {
         let mut line: Vec<char> = vec![];
         for x in min_x..=max_x {
-            if let Some(&color) = robot.canvas.get(&day11::Point(x, y)) {
+            if let Some(&color) = robot.canvas().get(&day13::Point(x, y)) {
                 if color == 0 {
                     line.push('#');
                 } else {
@@ -185,7 +186,7 @@ fn day11() {
         }
         y -= 1;
     }
-    assert_eq!(robot.painted_panels.len(), 249);
+    assert_eq!(robot.painted_panel_count(), 249);
 }
 
 fn day12() {
@@ -200,12 +201,12 @@ fn day12() {
 }
 
 fn day13() {
-    let mut arcade = ArcadeCabinet::new(&mut day_13_puzzle_input());
+    let mut arcade = ArcadeCabinet::new(day_13_puzzle_input());
     let tiles = arcade.run();
     let (block_count, _, _, _, _) = stats(&tiles);
     assert_eq!(block_count, 265);
 
-    let mut arcade = ArcadeCabinet::new(&mut day_13_puzzle_input());
+    let mut arcade = ArcadeCabinet::new(day_13_puzzle_input());
     let tiles: Vec<(day13::Point, Tile)> = arcade.play();
     assert_eq!(tiles.len(), 26947); // Score 13331
 }

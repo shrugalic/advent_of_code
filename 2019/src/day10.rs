@@ -60,13 +60,13 @@ impl Point {
             other.1 as i64 - self.1 as i64,
         )
     }
-    fn detectable_others(&self, asteroids: &Vec<Point>) -> Vec<Point> {
+    fn detectable_others(&self, asteroids: &[Point]) -> Vec<Point> {
         // Save a copy of the other asteroids
         let mut others: Vec<(Point, Dir)> = asteroids
             .iter()
             .filter_map(|point| {
                 if self != point {
-                    Some((point.clone(), self.dir_to(&point)))
+                    Some((point.clone(), self.dir_to(point)))
                 } else {
                     None
                 }
