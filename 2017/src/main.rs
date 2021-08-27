@@ -5,6 +5,7 @@ use crate::day04::{day4_part1, day4_part2};
 use crate::day05::{day5_part1, day5_part2};
 use crate::day06::{day6_part1, day6_part2};
 use crate::day07::{day7_part1, day7_part2};
+use crate::day08::{day8_part1, day8_part2};
 
 mod day01;
 mod day02;
@@ -13,6 +14,7 @@ mod day04;
 mod day05;
 mod day06;
 mod day07;
+mod day08;
 
 fn main() {
     day01();
@@ -23,6 +25,7 @@ fn main() {
     day05();
     day06();
     day07();
+    day08();
 }
 
 fn day01() {
@@ -58,4 +61,9 @@ fn day06() {
 fn day07() {
     assert_eq!("eqgvf", day7_part1());
     assert_eq!(757, day7_part2());
+}
+
+fn day08() {
+    assert_eq!(4902, day8_part1());
+    assert_eq!(7037, day8_part2());
 }
