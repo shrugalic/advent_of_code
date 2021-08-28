@@ -107,7 +107,11 @@ fn part1_hash_checksum(max_idx: u8, input: Vec<String>) -> usize {
 }
 
 fn part2_hash(input: Vec<String>) -> String {
-    let mut lengths: Vec<u8> = input[0].chars().map(|c| c as u8).collect();
+    day10_part2_hash(&input[0])
+}
+
+pub(crate) fn day10_part2_hash(input: &str) -> String {
+    let mut lengths: Vec<u8> = input.chars().map(|c| c as u8).collect();
     lengths.extend_from_slice(&[17, 31, 73, 47, 23]);
     let mut hasher = Hasher::new(255, lengths);
     (0..64).into_iter().for_each(|_| {
