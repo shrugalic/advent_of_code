@@ -1,4 +1,16 @@
-pub(crate) fn day9_puzzle_input() -> Vec<isize> {
+use intcode::IntCodeComputer;
+
+pub(crate) fn day9_part1() -> Option<isize> {
+    let mut icc = IntCodeComputer::new(day9_puzzle_input());
+    icc.process_int_code_with_input(1)
+}
+
+pub(crate) fn day9_part2() -> Option<isize> {
+    let mut icc = IntCodeComputer::new(day9_puzzle_input());
+    icc.process_int_code_with_input(2)
+}
+
+fn day9_puzzle_input() -> Vec<isize> {
     vec![
         1102, 34463338, 34463338, 63, 1007, 63, 34463338, 63, 1005, 63, 53, 1101, 3, 0, 1000, 109,
         988, 209, 12, 9, 1000, 209, 6, 209, 3, 203, 0, 1008, 1000, 1, 63, 1005, 63, 65, 1008, 1000,
@@ -52,8 +64,9 @@ pub(crate) fn day9_puzzle_input() -> Vec<isize> {
     ]
 }
 
+#[cfg(test)]
 mod tests {
-    use super::day9_puzzle_input;
+    use super::*;
     use intcode::IntCodeComputer;
 
     // day 9 part 1
@@ -124,14 +137,12 @@ mod tests {
     }
 
     #[test]
-    fn day9_part1() {
-        let mut icc = IntCodeComputer::new(day9_puzzle_input());
-        assert_eq!(icc.process_int_code_with_input(1), Some(3518157894));
+    fn day9_part_1() {
+        assert_eq!(day9_part1(), Some(3518157894));
     }
 
     #[test]
-    fn day9_part2() {
-        let mut icc = IntCodeComputer::new(day9_puzzle_input());
-        assert_eq!(icc.process_int_code_with_input(2), Some(80379));
+    fn day9_part_2() {
+        assert_eq!(day9_part2(), Some(80379));
     }
 }

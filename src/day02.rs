@@ -1,4 +1,19 @@
-pub(crate) fn process_noun_and_verb(noun: usize, verb: usize) -> usize {
+pub(crate) fn day2_part1() -> usize {
+    process_noun_and_verb(12, 2)
+}
+
+pub(crate) fn day2_part2() -> usize {
+    for noun in 0..=99 {
+        for verb in 0..=99 {
+            if process_noun_and_verb(noun, verb) == 19690720 {
+                return 100 * noun + verb;
+            }
+        }
+    }
+    unreachable!()
+}
+
+fn process_noun_and_verb(noun: usize, verb: usize) -> usize {
     let mut input = vec![
         1, 0, 0, 3, 1, 1, 2, 3, 1, 3, 4, 3, 1, 5, 0, 3, 2, 9, 1, 19, 1, 19, 5, 23, 1, 23, 6, 27, 2,
         9, 27, 31, 1, 5, 31, 35, 1, 35, 10, 39, 1, 39, 10, 43, 2, 43, 9, 47, 1, 6, 47, 51, 2, 51,
@@ -18,15 +33,15 @@ fn process_int_code(mut v: Vec<usize>) -> Vec<usize> {
     while i < v.len() {
         // println!("v = {:?}", v);
         match Op::from_code(v[i]) {
-            ADD => {
+            Add => {
                 let res_idx = v[i + 3];
                 v[res_idx] = v[v[i + 1]] + v[v[i + 2]];
             }
-            MULTIPLY => {
+            Multiply => {
                 let res_idx = v[i + 3];
                 v[res_idx] = v[v[i + 1]] * v[v[i + 2]];
             }
-            STOP => return v,
+            Stop => return v,
         }
         i += 4;
     }
@@ -35,41 +50,42 @@ fn process_int_code(mut v: Vec<usize>) -> Vec<usize> {
 
 #[derive(PartialEq, Debug)]
 enum Op {
-    ADD,
-    MULTIPLY,
-    STOP,
+    Add,
+    Multiply,
+    Stop,
 }
 
 impl Op {
     fn from_code(code: usize) -> Op {
         match code {
-            1 => ADD,
-            2 => MULTIPLY,
-            99 => STOP,
+            1 => Add,
+            2 => Multiply,
+            99 => Stop,
             _ => panic!("Unknown int_code {:?}", code),
         }
     }
     #[allow(unused)]
     fn to_code(&self) -> usize {
         match self {
-            ADD => 1,
-            MULTIPLY => 2,
-            STOP => 99,
+            Add => 1,
+            Multiply => 2,
+            Stop => 99,
         }
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn op_from_int_code() {
-        assert_eq!(ADD, Op::from_code(1));
+        assert_eq!(Add, Op::from_code(1));
     }
 
     #[test]
     fn op_to_int_code() {
-        assert_eq!(1, ADD.to_code());
+        assert_eq!(1, Add.to_code());
     }
 
     #[test]
@@ -119,17 +135,11 @@ mod tests {
 
     #[test]
     fn part_1() {
-        assert_eq!(process_noun_and_verb(12, 2), 3516593);
+        assert_eq!(3516593, day2_part1());
     }
 
     #[test]
     fn part_2() {
-        for noun in 0..=99 {
-            for verb in 0..=99 {
-                if process_noun_and_verb(noun, verb) == 19690720 {
-                    assert_eq!(7749, 100 * noun + verb);
-                }
-            }
-        }
+        assert_eq!(7749, day2_part2());
     }
 }

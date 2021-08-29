@@ -1,6 +1,19 @@
 use intcode::IntCodeComputer;
 use std::collections::{HashMap, HashSet};
 
+pub(crate) fn day13_part1() -> usize {
+    let mut arcade = ArcadeCabinet::new(day_13_puzzle_input());
+    let tiles = arcade.run();
+    let (block_count, _, _, _, _) = stats(&tiles);
+    block_count
+}
+
+pub(crate) fn day13_part2() -> usize {
+    let mut arcade = ArcadeCabinet::new(day_13_puzzle_input());
+    let tiles: Vec<(Point, Tile)> = arcade.play();
+    tiles.len()
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub(crate) struct Point(pub(crate) isize, pub(crate) isize);
 
@@ -40,7 +53,7 @@ impl Robot {
     }
     pub(crate) fn run(&mut self) {
         let mut input = self.color_at_current_loc();
-        println!("Color {} at {:?}", input, &self.loc);
+        // println!("Color {} at {:?}", input, &self.loc);
         while let Some(color) = self.process(input) {
             // println!("{:?} {}", self.loc, self.canvas.get(&self.loc).unwrap());
             self.paint(color);
@@ -107,7 +120,7 @@ impl Robot {
 // day 13
 
 #[derive(Debug, PartialEq)]
-pub(crate) enum Tile {
+enum Tile {
     Empty,  // No game object appears in this tile.
     Wall,   // Walls are indestructible barriers.
     Block,  // Blocks can be broken by the ball.
@@ -128,7 +141,7 @@ impl From<isize> for Tile {
 }
 
 #[derive(Debug)]
-pub(crate) struct ArcadeCabinet {
+struct ArcadeCabinet {
     icc: intcode::IntCodeComputer,
 }
 impl ArcadeCabinet {
@@ -220,7 +233,7 @@ impl JoyStick {
     }
 }
 
-pub(crate) fn day_13_puzzle_input() -> Vec<isize> {
+fn day_13_puzzle_input() -> Vec<isize> {
     vec![
         1, 380, 379, 385, 1008, 2267, 610415, 381, 1005, 381, 12, 99, 109, 2268, 1101, 0, 0, 383,
         1101, 0, 0, 382, 20102, 1, 382, 1, 20101, 0, 383, 2, 21101, 37, 0, 0, 1106, 0, 578, 4, 382,
@@ -320,7 +333,7 @@ pub(crate) fn day_13_puzzle_input() -> Vec<isize> {
     ]
 }
 
-pub(crate) fn stats(tiles: &[(Point, Tile)]) -> (usize, usize, usize, usize, usize) {
+fn stats(tiles: &[(Point, Tile)]) -> (usize, usize, usize, usize, usize) {
     let blocks = tiles.iter().filter(|(_, t)| t == &Tile::Block).count();
     let balls = tiles.iter().filter(|(_, t)| t == &Tile::Ball).count();
     let paddles = tiles.iter().filter(|(_, t)| t == &Tile::Paddle).count();
@@ -338,21 +351,17 @@ pub(crate) fn stats(tiles: &[(Point, Tile)]) -> (usize, usize, usize, usize, usi
     (blocks, balls, paddles, walls, empty)
 }
 
+#[cfg(test)]
 mod tests {
-    use super::{day_13_puzzle_input, stats, ArcadeCabinet, Point, Tile};
+    use super::*;
 
     #[test]
     fn day_13_part1() {
-        let mut arcade = ArcadeCabinet::new(day_13_puzzle_input());
-        let tiles = arcade.run();
-        let (block_count, _, _, _, _) = stats(&tiles);
-
-        assert_eq!(block_count, 265)
+        assert_eq!(day13_part1(), 265);
     }
+
     #[test]
     fn day_13_part2() {
-        let mut arcade = ArcadeCabinet::new(day_13_puzzle_input());
-        let tiles: Vec<(Point, Tile)> = arcade.play();
-        assert_eq!(tiles.len(), 26947); // Score 13331
+        assert_eq!(day13_part2(), 26947); // Score 13331
     }
 }

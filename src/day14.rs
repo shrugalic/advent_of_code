@@ -1,14 +1,45 @@
 use regex::Regex;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::hash::Hash;
 
+pub(crate) fn day14_part1() -> usize {
+    let mut nf = NanoFactory::from(day14_puzzle_input());
+    let target = Chemical::new(1, "FUEL");
+    nf.count_reactant_to_make_wanted_product(&target, "ORE")
+}
+
+pub(crate) fn day14_part2() -> usize {
+    // 158'482 ORE were needed for 1 FUEL, so the amount of fuel that can be made
+    // with 1'000'000'000'000 is at least 1'000'000'000'000 / 158'482 = 6'309'864.8,
+    // and likely more. Let's try a binary search to find the right amount
+    let mut range = 6_309_864..10_000_000;
+    let mut max_fuel = 0;
+    while range.start + 1 < range.end {
+        let mid = ((range.start + range.end) as f64 / 2.0).round() as usize;
+        let fuel = Chemical::new(mid, "FUEL");
+        let ore_count = NanoFactory::from(day14_puzzle_input())
+            .count_reactant_to_make_wanted_product(&fuel, "ORE");
+        match ore_count.cmp(&1_000_000_000_000usize) {
+            Ordering::Less => {
+                max_fuel = fuel.amount;
+                range = mid..range.end;
+            }
+            Ordering::Equal => break,
+            Ordering::Greater => {
+                range = range.start..mid;
+            }
+        }
+    }
+    max_fuel
+}
 /// For example: 123 ORE
 const INGREDIENT_PATTERN: &str = r"^((\d+) (\D+)(, )?)+$";
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 /// Amount and name of a single ingredient, such as 123 ORE
-pub(crate) struct Chemical {
-    pub(crate) amount: usize,
+struct Chemical {
+    amount: usize,
     name: String,
 }
 impl From<&'static str> for Chemical {
@@ -29,13 +60,13 @@ impl From<&'static str> for Chemical {
     }
 }
 impl Chemical {
-    pub(crate) fn new(count: usize, name: &str) -> Self {
+    fn new(count: usize, name: &str) -> Self {
         Chemical {
             amount: count,
             name: name.to_string(),
         }
     }
-    fn dependency_count(name: &String, formulae: &Vec<Formula>) -> usize {
+    fn dependency_count(name: &str, formulae: &[Formula]) -> usize {
         formulae
             .iter()
             .filter(|other_formula| other_formula.reactants.contains_key(name))
@@ -91,7 +122,7 @@ impl Formula {
             .collect()
     }
     /// Get the chemical that is depended on by the smallest number of the given formulae
-    fn least_dependant_reactant(&self, formulae: &Vec<Formula>) -> Chemical {
+    fn least_dependant_reactant(&self, formulae: &[Formula]) -> Chemical {
         self.reactants
             .iter()
             .map(|(name, &count)| Chemical::new(count, name))
@@ -116,7 +147,7 @@ impl Formula {
 }
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct NanoFactory {
+struct NanoFactory {
     formulae: Vec<Formula>,
 }
 impl NanoFactory {
@@ -157,12 +188,12 @@ impl NanoFactory {
         }
     }
 
-    pub(crate) fn count_reactant_to_make_wanted_product(
+    fn count_reactant_to_make_wanted_product(
         &mut self,
         wanted_product: &Chemical,
         wanted_reactant: &str,
     ) -> usize {
-        let mut final_formula = self.formula_to_make(&wanted_product);
+        let mut final_formula = self.formula_to_make(wanted_product);
         while final_formula.reactants.len() > 1
             || !final_formula.reactants.contains_key(wanted_reactant)
         {
@@ -195,17 +226,14 @@ impl NanoFactory {
 impl From<&'static str> for NanoFactory {
     fn from(formulae: &'static str) -> Self {
         //        println!("{:?}", formulae);
-        let sources_by_target = formulae
-            .split("\n")
-            .map(|formula: &str| Formula::from(formula))
-            .collect();
+        let sources_by_target = formulae.split('\n').map(Formula::from).collect();
         NanoFactory {
             formulae: sources_by_target,
         }
     }
 }
 
-pub(crate) fn day14_puzzle_input() -> &'static str {
+fn day14_puzzle_input() -> &'static str {
     "1 FJFL, 1 BPVQN => 7 CMNH
 6 FJFL, 2 KZJLT, 3 DZQJ => 2 NSPZ
 11 TPZDN => 2 TNMC
@@ -276,7 +304,6 @@ pub(crate) fn day14_puzzle_input() -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::cmp::Ordering;
 
     #[test]
     fn single_ingredient() {
@@ -441,40 +468,12 @@ mod tests {
     }
 
     #[test]
-    fn day14_part1() {
-        let mut nf = NanoFactory::from(day14_puzzle_input());
-        let target = Chemical::new(1, "FUEL");
-        assert_eq!(
-            nf.count_reactant_to_make_wanted_product(&target, "ORE"),
-            158482
-        );
+    fn day14_part_1() {
+        assert_eq!(day14_part1(), 158482);
     }
     #[test]
-    fn day14_part2() {
-        // 158'482 ORE were needed for 1 FUEL, so the amount of fuel that can be made
-        // with 1'000'000'000'000 is at least 1'000'000'000'000 / 158'482 = 6'309'864.8,
-        // and likely more. Let's try a binary search to find the right amount
-        let mut range = 6_309_864..10_000_000;
-        let mut max_fuel = 0;
-        while range.start + 1 < range.end {
-            let mid = ((range.start + range.end) as f64 / 2.0).round() as usize;
-            let fuel = Chemical::new(mid, "FUEL");
-            let ore_count = NanoFactory::from(day14_puzzle_input())
-                .count_reactant_to_make_wanted_product(&fuel, "ORE");
-            println!("{} OREs yield {} FUEL", ore_count, fuel.amount);
-            match ore_count.cmp(&1_000_000_000_000usize) {
-                Ordering::Less => {
-                    max_fuel = fuel.amount;
-                    range = mid..range.end;
-                }
-                Ordering::Equal => break,
-                Ordering::Greater => {
-                    range = range.start..mid;
-                }
-            }
-        }
-        println!("Max fuel = {}", max_fuel);
-        assert_eq!(max_fuel, 7993831);
+    fn day14_part_2() {
+        assert_eq!(day14_part2(), 7993831);
     }
 
     fn example_1_input() -> &'static str {

@@ -2,6 +2,16 @@ use rayon::prelude::*;
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
 
+pub(crate) fn day16_part1() -> String {
+    let fft = FlawedFrequencyTransmission::from(day_16_puzzle_input());
+    fft.check_sum(100)
+}
+
+pub(crate) fn day16_part2() -> String {
+    let mut fft = FlawedFrequencyTransmission::from(day_16_puzzle_input());
+    fft.message(100)
+}
+
 const BASE_PATTERN: [i8; 4] = [0, 1, 0, -1];
 const SIGNAL_REPETITION_COUNT: usize = 10_000;
 
@@ -56,7 +66,7 @@ impl Pattern {
     }
 }
 #[derive(Debug)]
-pub(crate) struct FlawedFrequencyTransmission {
+struct FlawedFrequencyTransmission {
     list: Vec<u8>,
     pattern: Pattern,
     offset: usize,
@@ -88,7 +98,7 @@ impl fmt::Display for FlawedFrequencyTransmission {
 }
 impl FlawedFrequencyTransmission {
     // Verify that the FFT works
-    pub(crate) fn check_sum(&self, phase_count: usize) -> String {
+    fn check_sum(&self, phase_count: usize) -> String {
         let mut list = self.list.clone();
         for _ in 0..phase_count {
             list = FlawedFrequencyTransmission::apply_pattern(&list, &self.pattern);
@@ -98,7 +108,7 @@ impl FlawedFrequencyTransmission {
             .map(|digit| digit.to_string())
             .collect::<String>()
     }
-    fn apply_pattern(list: &Vec<u8>, pattern: &Pattern) -> Vec<u8> {
+    fn apply_pattern(list: &[u8], pattern: &Pattern) -> Vec<u8> {
         list.par_iter() // parallelism out here helps, below it doesn't
             .enumerate()
             .map(|(idx, _c)| {
@@ -113,12 +123,12 @@ impl FlawedFrequencyTransmission {
             })
             .collect()
     }
-    pub(crate) fn message(&mut self, phase_count: usize) -> String {
+    fn message(&mut self, phase_count: usize) -> String {
         if 2 * self.offset < SIGNAL_REPETITION_COUNT * self.list.len() {
             // The offset places the signal in the first half of the list,
             // which makes the pattern more complicated
             println!("going slow path");
-            let mut list = self.list.repeat(SIGNAL_REPETITION_COUNT).clone();
+            let mut list = self.list.repeat(SIGNAL_REPETITION_COUNT);
             for _ in 0..phase_count {
                 list = FlawedFrequencyTransmission::apply_pattern(&list, &self.pattern);
             }
@@ -166,10 +176,7 @@ impl FlawedFrequencyTransmission {
                 let value = list
                     .par_iter()
                     .zip(matrix_line.par_iter())
-                    .map(|(&digit, &matrix)| {
-                        let prod = (digit as usize * matrix as usize) % 10;
-                        prod
-                    })
+                    .map(|(&digit, &matrix)| (digit as usize * matrix as usize) % 10)
                     .sum::<usize>();
                 let value = (value % 10) as u8;
                 result.push(value);
@@ -187,7 +194,7 @@ impl FlawedFrequencyTransmission {
         }
     }
     fn apply_matrix_several_times(&self, phase_count: usize) -> String {
-        let mut result = self
+        let mut result: Vec<u8> = self
             .list
             .repeat(SIGNAL_REPETITION_COUNT)
             .iter()
@@ -218,7 +225,7 @@ impl FlawedFrequencyTransmission {
                 list.iter_mut()
                     .rev() // start from the back
                     .for_each(|i| {
-                        sum = (sum + *i) % 10 as u8;
+                        sum = (sum + *i) % 10_u8;
                         *i = sum
                     });
             }
@@ -268,7 +275,7 @@ impl FlawedFrequencyTransmission {
         });
         matrix
     }
-    fn multiply(mat: &Vec<Vec<u8>>, vec: &Vec<u8>) -> Vec<u8> {
+    fn multiply(mat: &[Vec<u8>], vec: &[u8]) -> Vec<u8> {
         mat.iter()
             .map(|row| {
                 println!("mat   = {:?}", row);
@@ -295,7 +302,7 @@ impl FlawedFrequencyTransmission {
     }
 }
 
-pub(crate) fn day_16_puzzle_input() -> &'static str {
+fn day_16_puzzle_input() -> &'static str {
     "59755896917240436883590128801944128314960209697748772345812613779993681653921392130717892227131006192013685880745266526841332344702777305618883690373009336723473576156891364433286347884341961199051928996407043083548530093856815242033836083385939123450194798886212218010265373470007419214532232070451413688761272161702869979111131739824016812416524959294631126604590525290614379571194343492489744116326306020911208862544356883420805148475867290136336455908593094711599372850605375386612760951870928631855149794159903638892258493374678363533942710253713596745816693277358122032544598918296670821584532099850685820371134731741105889842092969953797293495"
 }
 
@@ -362,10 +369,6 @@ mod tests {
         assert_eq!(Pattern::base().for_pos(3, 8), vec![0, 0, 1, 1, 1, 0, 0, 0]);
     }
     #[test]
-    fn keep_ones_digit() {
-        assert_eq!(17 % 10, 7);
-    }
-    #[test]
     fn day_16_initial_fft() {
         assert_eq!(
             FlawedFrequencyTransmission::from("12345678").check_sum(0),
@@ -403,9 +406,8 @@ mod tests {
         assert_eq!(fft.check_sum(100), "52432133");
     }
     #[test]
-    fn day_16_part_1_with_puzzle_input() {
-        let fft = FlawedFrequencyTransmission::from(day_16_puzzle_input());
-        assert_eq!(fft.check_sum(100), "78009100");
+    fn day_16_part_1() {
+        assert_eq!(day16_part1(), "78009100");
     }
     #[test]
     fn day_16_part_2_example_1_offset() {
@@ -478,9 +480,8 @@ mod tests {
         assert_eq!(fft.message(100), "53553731");
     }
     #[test]
-    fn day_16_part_2_puzzle_input() {
-        let mut fft = FlawedFrequencyTransmission::from(day_16_puzzle_input());
-        assert_eq!(fft.message(100), "37717791");
+    fn day_16_part_2() {
+        assert_eq!(day16_part2(), "37717791");
     }
 
     #[test]

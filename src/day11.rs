@@ -1,6 +1,39 @@
-use std::collections::HashSet;
+use crate::day13::{Point, Robot};
 
-pub(crate) fn day11_puzzle_input() -> Vec<isize> {
+pub(crate) fn day11_part1() -> usize {
+    let mut robot = Robot::new(day11_puzzle_input(), None);
+    robot.run();
+    robot.painted_panel_count()
+}
+
+pub(crate) fn day11_part2() -> usize {
+    let mut robot = Robot::new(day11_puzzle_input(), Some(1));
+    robot.run();
+    let min_x = robot.canvas().iter().map(|(p, _)| p.0).min().unwrap();
+    let max_x = robot.canvas().iter().map(|(p, _)| p.0).max().unwrap();
+    let min_y = robot.canvas().iter().map(|(p, _)| p.1).min().unwrap();
+    let max_y = robot.canvas().iter().map(|(p, _)| p.1).max().unwrap();
+
+    let mut y = max_y;
+    while y >= min_y {
+        let mut line: Vec<char> = vec![];
+        for x in min_x..=max_x {
+            if let Some(&color) = robot.canvas().get(&Point(x, y)) {
+                if color == 0 {
+                    line.push('#');
+                } else {
+                    line.push(' ');
+                }
+            } else {
+                line.push(' ');
+            }
+        }
+        y -= 1;
+    }
+    robot.painted_panel_count()
+}
+
+fn day11_puzzle_input() -> Vec<isize> {
     vec![
         3,
         8,
@@ -659,51 +692,18 @@ pub(crate) fn day11_puzzle_input() -> Vec<isize> {
     ]
 }
 
+#[cfg(test)]
 mod tests {
-    use super::day11_puzzle_input;
-    use crate::day13::{Point, Robot};
-
-    // day 11
+    use super::*;
 
     #[test]
     fn part1() {
-        let mut robot = Robot::new(day11_puzzle_input(), None);
-        robot.run();
-        assert_eq!(robot.painted_panel_count(), 2373);
+        assert_eq!(day11_part1(), 2373);
     }
+
     #[test]
     fn part2() {
-        let mut robot = Robot::new(day11_puzzle_input(), Some(1));
-        robot.run();
-        // println!("number of painted panels = {}", robot.painted_panels.len());
-        let min_x = robot.canvas().iter().map(|(p, _)| p.0).min().unwrap();
-        let max_x = robot.canvas().iter().map(|(p, _)| p.0).max().unwrap();
-        let min_y = robot.canvas().iter().map(|(p, _)| p.1).min().unwrap();
-        let max_y = robot.canvas().iter().map(|(p, _)| p.1).max().unwrap();
-        // println!(
-        //     "x: from {} to {}, y: from {} to {}",
-        //     min_x, max_x, min_y, max_y
-        // );
-
-        // print the result: PCKRLPUK
-        let mut y = max_y;
-        while y >= min_y {
-            let mut line: Vec<char> = vec![];
-            for x in min_x..=max_x {
-                if let Some(&color) = robot.canvas().get(&Point(x, y)) {
-                    if color == 0 {
-                        line.push('#');
-                    } else {
-                        line.push(' ');
-                    }
-                } else {
-                    line.push(' ');
-                }
-            }
-            // println!("{}", line.into_iter().collect::<String>());
-            y -= 1;
-        }
-        assert_eq!(robot.painted_panel_count(), 249);
+        assert_eq!(day11_part2(), 249);
         /*
         #   ###  ## ## #   ## ####   ## ## # ## ##
           ## # ## # # ## ## # #### ## # ## # # ####

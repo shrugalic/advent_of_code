@@ -1,6 +1,21 @@
 extern crate rayon;
+use rayon::prelude::*;
 
-pub(crate) trait IsValidPassword {
+pub(crate) fn day4_part2() -> usize {
+    let range = 172851..=675869usize;
+    let mut v = vec![];
+    for pw in range {
+        v.push(pw);
+    }
+    let valid_pw_count = v
+        .par_iter()
+        .filter(|pw| pw.is_valid_password())
+        .collect::<Vec<&usize>>()
+        .len();
+    valid_pw_count
+}
+
+trait IsValidPassword {
     fn is_valid_password(&self) -> bool;
 }
 impl IsValidPassword for usize {
@@ -47,8 +62,7 @@ impl HasNoDecreasingDigits for usize {
 
 #[cfg(test)]
 mod tests {
-    use super::{HasDoubleDigits, HasNoDecreasingDigits, IsSixDigitsLong, IsValidPassword};
-    use rayon::prelude::*;
+    use super::*;
 
     #[test]
     fn has_double_digits() {
@@ -79,16 +93,6 @@ mod tests {
 
     #[test]
     fn part2_test_range() {
-        let range = 172851..=675869usize;
-        let mut v = vec![];
-        for pw in range {
-            v.push(pw);
-        }
-        let valid_pw_count = v
-            .par_iter()
-            .filter(|pw| pw.is_valid_password())
-            .collect::<Vec<&usize>>()
-            .len();
-        assert_eq!(1135, valid_pw_count);
+        assert_eq!(1135, day4_part2());
     }
 }

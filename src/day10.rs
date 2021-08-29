@@ -1,6 +1,16 @@
 use std::cmp::Ordering;
 use std::f64::consts::PI;
 
+pub(crate) fn day10_part1() -> usize {
+    MonitoringStation::from(day10_puzzle_input()).count
+}
+
+pub(crate) fn day10_part2() -> Point {
+    let mut station = MonitoringStation::from(day10_puzzle_input());
+    let vaporized = station.vaporized();
+    vaporized[199].clone()
+}
+
 #[derive(PartialEq, Debug, Clone)]
 pub(crate) struct Point(pub(crate) usize, pub(crate) usize);
 #[derive(Eq, PartialEq, Debug, Clone)]
@@ -95,7 +105,7 @@ impl Point {
     }
 }
 
-pub(crate) struct MonitoringStation {
+struct MonitoringStation {
     loc: Point,
     pub(crate) count: usize,
     asteroids: Vec<Point>,
@@ -160,7 +170,7 @@ impl MonitoringStation {
     }
 }
 
-pub(crate) fn day10_puzzle_input() -> &'static str {
+fn day10_puzzle_input() -> &'static str {
     "#..#.#.#.######..#.#...##
 ##.#..#.#..##.#..######.#
 .#.##.#..##..#.#.####.#..
@@ -190,8 +200,7 @@ pub(crate) fn day10_puzzle_input() -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::{Dir, MonitoringStation, Point};
-    use crate::day10::day10_puzzle_input;
+    use super::*;
 
     // positive_angle
     #[test]
@@ -532,12 +541,11 @@ mod tests {
     }
     #[test]
     fn part2() {
-        let mut station = MonitoringStation::from(day10_puzzle_input());
-        let vaporized = station.vaporized();
-        assert_eq!(vaporized[199], Point(8, 15));
+        assert_eq!(day10_part2(), Point(8, 15));
     }
+
     #[test]
-    fn max_detectable_asteroids_part1() {
-        assert_eq!(MonitoringStation::from(day10_puzzle_input()).count, 253);
+    fn part1_max_detectable_asteroids() {
+        assert_eq!(day10_part1(), 253);
     }
 }

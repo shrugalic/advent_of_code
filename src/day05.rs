@@ -1,7 +1,19 @@
 use Mode::*;
 use Op::*;
 
+pub(crate) fn day5_part1() -> Option<isize> {
+    process_int_code_with_default_input(&mut day5_puzzle_input())
+}
+
+pub(crate) fn day5_part2() -> Option<isize> {
+    process_int_code_with_input(&mut day5_puzzle_input(), 5)
+}
+
 const DEFAULT_INPUT: isize = 1;
+
+fn process_int_code_with_default_input(v: &mut Vec<isize>) -> Option<isize> {
+    process_int_code_with_input(v, DEFAULT_INPUT)
+}
 
 fn to_5_digit_string_padded_with_leading_zeroes(n: isize) -> String {
     let s = n.to_string();
@@ -20,15 +32,11 @@ fn extract_modes(s: &str) -> Vec<Mode> {
     ]
 }
 
-fn param_value(v: &Vec<isize>, idx: usize, mode: &Mode) -> isize {
+fn param_value(v: &[isize], idx: usize, mode: &Mode) -> isize {
     match mode {
-        POSITION => v[v[idx] as usize],
-        IMMEDIATE => v[idx],
+        Position => v[v[idx] as usize],
+        Immediate => v[idx],
     }
-}
-
-fn process_int_code(v: &mut Vec<isize>) -> Option<isize> {
-    process_int_code_with_input(v, DEFAULT_INPUT)
 }
 
 fn eval(b: bool) -> isize {
@@ -39,7 +47,7 @@ fn eval(b: bool) -> isize {
     }
 }
 
-pub(crate) fn process_int_code_with_input(v: &mut Vec<isize>, input: isize) -> Option<isize> {
+fn process_int_code_with_input(v: &mut Vec<isize>, input: isize) -> Option<isize> {
     let mut idx = 0;
     let mut output = None;
     while idx < v.len() {
@@ -50,8 +58,8 @@ pub(crate) fn process_int_code_with_input(v: &mut Vec<isize>, input: isize) -> O
         // let pre = format!("{:?}: {:?}", s, op);
         match op {
             Add | Multiply | LessThan | Equals => {
-                let p1 = param_value(&v, idx + 1, &modes[0]);
-                let p2 = param_value(&v, idx + 2, &modes[1]);
+                let p1 = param_value(v, idx + 1, &modes[0]);
+                let p2 = param_value(v, idx + 2, &modes[1]);
                 let res = match op {
                     Add => p1 + p2,
                     Multiply => p1 * p2,
@@ -70,13 +78,13 @@ pub(crate) fn process_int_code_with_input(v: &mut Vec<isize>, input: isize) -> O
                 v[res_idx] = input;
             }
             Output => {
-                let p1 = param_value(&v, idx + 1, &modes[0]);
+                let p1 = param_value(v, idx + 1, &modes[0]);
                 output = Some(p1);
                 // println!("{} = {}", pre, p1);
             }
             JumpIfTrue | JumpIfFalse => {
-                let p1 = param_value(&v, idx + 1, &modes[0]);
-                let p2 = param_value(&v, idx + 2, &modes[1]);
+                let p1 = param_value(v, idx + 1, &modes[0]);
+                let p2 = param_value(v, idx + 2, &modes[1]);
                 if op == JumpIfTrue && p1 != 0 || op == JumpIfFalse && p1 == 0 {
                     idx = p2 as usize;
                     // println!("{} ({}) == true -> jump to {}", pre, p1, p2);
@@ -134,28 +142,28 @@ impl Op {
 
 #[derive(Debug)]
 enum Mode {
-    POSITION,
-    IMMEDIATE,
+    Position,
+    Immediate,
 }
 
 impl Mode {
     fn from_code(code: isize) -> Mode {
         match code {
-            0 => POSITION,
-            1 => IMMEDIATE,
+            0 => Position,
+            1 => Immediate,
             _ => panic!("Unknown Mode code {:?}", code),
         }
     }
     #[allow(unused)]
     fn to_code(&self) -> usize {
         match self {
-            POSITION => 0,
-            IMMEDIATE => 1,
+            Position => 0,
+            Immediate => 1,
         }
     }
 }
 
-pub(crate) fn day5_puzzle_input() -> Vec<isize> {
+fn day5_puzzle_input() -> Vec<isize> {
     vec![
         3, 225, 1, 225, 6, 6, 1100, 1, 238, 225, 104, 0, 1, 192, 154, 224, 101, -161, 224, 224, 4,
         224, 102, 8, 223, 223, 101, 5, 224, 224, 1, 223, 224, 223, 1001, 157, 48, 224, 1001, 224,
@@ -196,46 +204,44 @@ pub(crate) fn day5_puzzle_input() -> Vec<isize> {
     ]
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn op_from_int_code() {
-        assert_eq!(Add, Op::from_code(1));
-    }
+    // Test adjustments from day 2
 
     #[test]
     fn explanation_example() {
         let mut v = vec![1, 9, 10, 3, 2, 3, 11, 0, 99, 30, 40, 50];
-        assert_eq!(process_int_code(&mut v), None);
+        assert_eq!(process_int_code_with_default_input(&mut v), None);
         assert_eq!(v, vec![3500, 9, 10, 70, 2, 3, 11, 0, 99, 30, 40, 50])
     }
 
     #[test]
     fn add_example_1() {
         let mut v = vec![1, 0, 0, 0, 99];
-        assert_eq!(process_int_code(&mut v), None);
+        assert_eq!(process_int_code_with_default_input(&mut v), None);
         assert_eq!(v, vec![2, 0, 0, 0, 99]);
     }
 
     #[test]
     fn mult_example_1() {
         let mut v = vec![2, 3, 0, 3, 99];
-        assert_eq!(process_int_code(&mut v), None);
+        assert_eq!(process_int_code_with_default_input(&mut v), None);
         assert_eq!(v, vec![2, 3, 0, 6, 99]);
     }
 
     #[test]
     fn mult_example_2() {
         let mut v = vec![2, 4, 4, 5, 99, 0];
-        assert_eq!(process_int_code(&mut v), None);
+        assert_eq!(process_int_code_with_default_input(&mut v), None);
         assert_eq!(v, vec![2, 4, 4, 5, 99, 9801]);
     }
 
     #[test]
     fn add_example_2() {
         let mut v = vec![1, 1, 1, 4, 99, 5, 6, 0, 99];
-        assert_eq!(process_int_code(&mut v), None);
+        assert_eq!(process_int_code_with_default_input(&mut v), None);
         assert_eq!(v, vec![30, 1, 1, 4, 2, 5, 6, 0, 99]);
     }
 
@@ -244,14 +250,13 @@ mod tests {
     #[test]
     fn multiply_example() {
         let mut v = vec![1002, 4, 3, 4, 33];
-        assert_eq!(process_int_code(&mut v), None);
+        assert_eq!(process_int_code_with_default_input(&mut v), None);
         assert_eq!(v, vec![1002, 4, 3, 4, 99]);
     }
 
     #[test]
     fn part_1() {
-        let mut v = day5_puzzle_input();
-        assert_eq!(process_int_code_with_input(&mut v, 1), Some(11049715));
+        assert_eq!(day5_part1(), Some(11049715));
     }
 
     // day 5 part 2
@@ -342,7 +347,6 @@ mod tests {
 
     #[test]
     fn part_2() {
-        let mut v = day5_puzzle_input();
-        assert_eq!(process_int_code_with_input(&mut v, 5), Some(2140710));
+        assert_eq!(day5_part2(), Some(2140710));
     }
 }
