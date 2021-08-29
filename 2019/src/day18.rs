@@ -1,6 +1,6 @@
 use line_reader::read_file_to_lines;
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::collections::{BinaryHeap, HashMap};
 use std::fmt::{Display, Formatter};
 
 pub(crate) fn day18_part1() -> usize {
@@ -14,6 +14,7 @@ pub(crate) fn day18_part2() -> usize {
 
 type Key = char;
 type KeyDesc = String;
+type Keys = String;
 type Steps = usize;
 fn count_steps_to_collect_every_key(input: Vec<String>) -> Steps {
     let vault = Vault::from(input);
@@ -25,15 +26,10 @@ fn count_steps_to_collect_every_key(input: Vec<String>) -> Steps {
         vec![vec![HashMap::new(); vault.width()]; vault.height()];
     let mut finished = vec![];
     let mut explorers = BinaryHeap::new();
-    explorers.push(Explorer::new(
-        vault.entrance(),
-        0,
-        HashSet::new(),
-        (vault.entrance(), HashSet::new()),
-    ));
+    explorers.push(Explorer::initial(vault.entrance()));
     while let Some(mut explorer) = explorers.pop() {
         if let Some(Tile::Key(key)) = vault.tile_at(&explorer.loc) {
-            explorer.keys.insert(*key);
+            explorer.add_key(*key);
         }
         let local_steps = visited[explorer.loc.y][explorer.loc.x]
             .entry(explorer.key_desc())
@@ -55,9 +51,7 @@ fn count_steps_to_collect_every_key(input: Vec<String>) -> Steps {
                 .loc
                 .neighbors()
                 .iter()
-                .filter(|loc| {
-                    explorer.can_visit(vault.tile_at(loc)) && !explorer.already_visited(loc)
-                })
+                .filter(|loc| explorer.can_visit(vault.tile_at(loc)) && !explorer.just_visited(loc))
                 .map(|loc| explorer.stepped_once_to(loc)),
         );
         // println!(" {} explorers", explorers.len());
@@ -83,8 +77,8 @@ fn key_for(door: &char) -> char {
 struct Explorer {
     loc: Loc,
     steps: Steps,
-    keys: HashSet<Key>,
-    prev: (Loc, HashSet<Key>),
+    keys: Keys,
+    prev: Loc,
 }
 
 impl Ord for Explorer {
@@ -111,11 +105,12 @@ impl Display for Explorer {
 }
 
 impl Explorer {
-    fn new(loc: Loc, steps: usize, keys: HashSet<Key>, prev: (Loc, HashSet<Key>)) -> Self {
+    fn initial(loc: Loc) -> Self {
+        let prev = loc.clone();
         Explorer {
             loc,
-            steps,
-            keys,
+            steps: 0,
+            keys: String::new(),
             prev,
         }
     }
@@ -126,28 +121,35 @@ impl Explorer {
             Some(Tile::Wall) | None => false,
         }
     }
-    fn already_visited(&self, loc: &Loc) -> bool {
-        &self.prev.0 == loc && self.prev.1.eq(&self.keys)
+    fn just_visited(&self, loc: &Loc) -> bool {
+        &self.prev == loc
     }
     fn stepped_once_to(&self, new: &Loc) -> Self {
-        Explorer::new(
-            new.clone(),
-            self.steps + 1,
-            self.keys.clone(),
-            (self.loc.clone(), self.keys.clone()),
-        )
+        Explorer {
+            loc: new.clone(),
+            steps: self.steps + 1,
+            keys: self.keys.clone(),
+            prev: self.loc.clone(),
+        }
     }
     fn has_key_for(&self, door: &char) -> bool {
-        self.keys.contains(&key_for(door))
+        self.keys.chars().any(|key| key == key_for(door))
     }
     fn found_all_keys(&self, key_count: usize) -> bool {
         self.keys.len() == key_count
     }
-    fn key_desc(&self) -> KeyDesc {
-        let mut keys: Vec<_> = self.keys.iter().cloned().collect();
+    fn add_key(&mut self, key: Key) {
+        let mut keys: Vec<_> = self.keys.chars().collect();
+        if !keys.contains(&key) {
+            keys.push(key);
+            // prev loc may be visited again with more keys, only otherwise it would be pointless
+            self.prev = self.loc.clone();
+        }
         keys.sort_unstable();
-        // keys
-        keys.iter().collect()
+        self.keys = keys.iter().collect();
+    }
+    fn key_desc(&self) -> KeyDesc {
+        self.keys.clone()
     }
 }
 
@@ -340,7 +342,7 @@ mod tests {
         );
     }
 
-    // Slow at ~2s
+    // Slowish ~1s
     #[test]
     fn example_4() {
         assert_eq!(
@@ -376,7 +378,7 @@ mod tests {
         );
     }
 
-    // Very slow, ~76s
+    // Slow! ~19s
     #[test]
     fn part1() {
         assert_eq!(3270, day18_part1());
