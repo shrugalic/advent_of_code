@@ -2,6 +2,25 @@ use regex::Regex;
 use std::cmp::Ordering;
 use std::fmt;
 
+pub(crate) fn day12_part1() -> usize {
+    let mut jupiter = Jupiter::from(day12_puzzle_input());
+    jupiter.steps(1000);
+    jupiter.total_energy()
+}
+
+pub(crate) fn day12_part2() -> usize {
+    let mut jupiter = Jupiter::from(day12_puzzle_input());
+    let periods = jupiter.determine_periods();
+    // Periods = (56'344, 286'332, 231'614)
+    // println!(
+    //     "Periods = ({}, {}, {})",
+    //     periods.0.to_formatted_string(&Locale::de_CH),
+    //     periods.1.to_formatted_string(&Locale::de_CH),
+    //     periods.2.to_formatted_string(&Locale::de_CH)
+    // );
+    lcm(periods.0, lcm(periods.1, periods.2))
+}
+
 // For example: <x=-1, y=0, z=2>
 const SINGLE_MOON_PATTERN: &str = r"<x=(-?\d+), y=(-?\d+), z=(-?\d+)>";
 
@@ -73,6 +92,7 @@ impl From<&str> for Moon {
     }
 }
 impl Moon {
+    #[cfg(test)]
     fn new(x: isize, y: isize, z: isize) -> Self {
         Moon {
             pos: Vector(x, y, z),
@@ -116,7 +136,7 @@ enum Axis {
     Z,
 }
 #[derive(Default, Debug, PartialEq)]
-pub(crate) struct Jupiter {
+struct Jupiter {
     moons: Vec<Moon>,
 }
 impl fmt::Display for Jupiter {
@@ -139,7 +159,7 @@ impl Jupiter {
         self.apply_gravity();
         self.apply_velocities();
     }
-    pub(crate) fn steps(&mut self, steps: usize) {
+    fn steps(&mut self, steps: usize) {
         for _step in 0..steps {
             self.apply_gravity();
             self.apply_velocities();
@@ -164,13 +184,13 @@ impl Jupiter {
             m.apply_velocity();
         });
     }
-    pub(crate) fn total_energy(&self) -> usize {
+    fn total_energy(&self) -> usize {
         self.moons.iter().map(|m| m.total_energy()).sum()
     }
     fn value_pairs(&self, axis: Axis) -> Vec<(isize, isize)> {
         self.moons.iter().map(|m| m.value_pair(&axis)).collect()
     }
-    pub(crate) fn determine_periods(&mut self) -> (usize, usize, usize) {
+    fn determine_periods(&mut self) -> (usize, usize, usize) {
         let initial_xs: Vec<(isize, isize)> = self.value_pairs(Axis::X);
         let initial_ys: Vec<(isize, isize)> = self.value_pairs(Axis::Y);
         let initial_zs: Vec<(isize, isize)> = self.value_pairs(Axis::Z);
@@ -205,11 +225,11 @@ fn gcd(a: usize, b: usize) -> usize {
 }
 
 /// least common multiple
-pub(crate) fn lcm(a: usize, b: usize) -> usize {
+fn lcm(a: usize, b: usize) -> usize {
     a * b / gcd(a, b)
 }
 
-pub(crate) fn day12_puzzle_input() -> &'static str {
+fn day12_puzzle_input() -> &'static str {
     "<x=-6, y=2, z=-9>
 <x=12, y=-14, z=-4>
 <x=9, y=5, z=-6>
@@ -219,24 +239,6 @@ pub(crate) fn day12_puzzle_input() -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use num_format::{Locale, ToFormattedString};
-
-    // part 2
-
-    #[test]
-    fn determine_periods() {
-        let mut jupiter = Jupiter::from(day12_puzzle_input());
-        let periods = jupiter.determine_periods();
-        // Periods = (56'344, 286'332, 231'614)
-        println!(
-            "Periods = ({}, {}, {})",
-            periods.0.to_formatted_string(&Locale::de_CH),
-            periods.1.to_formatted_string(&Locale::de_CH),
-            periods.2.to_formatted_string(&Locale::de_CH)
-        );
-        let count = lcm(periods.0, lcm(periods.1, periods.2));
-        assert_eq!(count, 467_081_194_429_464);
-    }
 
     // part 1
 
@@ -374,10 +376,10 @@ pos=<x=16, y=-13, z=23>, vel=<x=7, y=1, z=1>"
     }
     #[test]
     fn part1() {
-        let mut jupiter = Jupiter::from(day12_puzzle_input());
-        jupiter.steps(1000);
-        assert_eq!(jupiter.total_energy(), 14907);
+        assert_eq!(day12_part1(), 14907);
     }
+
+    // part 2
 
     #[test]
     fn part2_example1() {
@@ -385,5 +387,10 @@ pos=<x=16, y=-13, z=23>, vel=<x=7, y=1, z=1>"
         let initial_state = jupiter.to_string();
         jupiter.steps(2772);
         assert_eq!(initial_state, jupiter.to_string());
+    }
+
+    #[test]
+    fn determine_periods() {
+        assert_eq!(day12_part2(), 467_081_194_429_464);
     }
 }

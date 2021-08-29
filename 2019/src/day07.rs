@@ -6,6 +6,14 @@ use Op::*;
 const DEFAULT_INPUT: isize = 1;
 const PRINT_OPS: bool = false;
 
+pub(crate) fn day7_part1() -> isize {
+    max_thrust_in_serial_mode(day07_puzzle_input())
+}
+
+pub(crate) fn day7_part2() -> isize {
+    max_thrust_in_feedback_loop_mode(day07_puzzle_input())
+}
+
 fn to_5_digit_string_padded_with_leading_zeroes(n: isize) -> String {
     let s = n.to_string();
     "0".repeat(5 - s.len()) + s.as_ref()
@@ -43,7 +51,7 @@ fn eval(b: bool) -> isize {
     }
 }
 
-pub(crate) fn max_thrust_in_serial_mode(prg: Vec<isize>) -> isize {
+fn max_thrust_in_serial_mode(prg: Vec<isize>) -> isize {
     let phases = [0, 1, 2, 3, 4];
     permutations_of(phases)
         .iter()
@@ -52,7 +60,7 @@ pub(crate) fn max_thrust_in_serial_mode(prg: Vec<isize>) -> isize {
         .unwrap()
 }
 
-pub(crate) fn max_thrust_in_feedback_loop_mode(prg: Vec<isize>) -> isize {
+fn max_thrust_in_feedback_loop_mode(prg: Vec<isize>) -> isize {
     let phases = [5, 6, 7, 8, 9];
     permutations_of(phases)
         .par_iter()
@@ -237,7 +245,7 @@ impl Mode {
     }
 }
 
-pub(crate) fn day07_puzzle_input() -> Vec<isize> {
+fn day07_puzzle_input() -> Vec<isize> {
     vec![
         3, 8, 1001, 8, 10, 8, 105, 1, 0, 0, 21, 46, 67, 76, 101, 118, 199, 280, 361, 442, 99999, 3,
         9, 1002, 9, 4, 9, 1001, 9, 2, 9, 102, 3, 9, 9, 101, 3, 9, 9, 102, 2, 9, 9, 4, 9, 99, 3, 9,
@@ -262,6 +270,7 @@ pub(crate) fn day07_puzzle_input() -> Vec<isize> {
     ]
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -294,10 +303,10 @@ mod tests {
 
     #[test]
     fn day7_part_1() {
-        assert_eq!(87138, max_thrust_in_serial_mode(day07_puzzle_input()));
+        assert_eq!(day7_part1(), 87138);
     }
 
-    // day 7 part 1
+    // day 7 part 2
 
     #[test]
     fn day7_part2_example_1() {
@@ -316,96 +325,9 @@ mod tests {
         ];
         assert_eq!(max_thrust_in_feedback_loop_mode(input), 18216);
     }
-    #[test]
-    fn day7_part2() {
-        let input = day07_puzzle_input();
-        assert_eq!(max_thrust_in_feedback_loop_mode(input), 17279674);
-    }
-
-    // day 5 part 2
 
     #[test]
-    fn input_equal_to_8_position_mode() {
-        let v = vec![3, 9, 8, 9, 10, 9, 4, 9, 99, -1, 8];
-        assert_eq!(process_int_code_with_input(v, 8), Some(1));
-    }
-    #[test]
-    fn input_not_equal_to_8_position_mode() {
-        let v = vec![3, 9, 8, 9, 10, 9, 4, 9, 99, -1, 8];
-        assert_eq!(process_int_code_with_input(v, 9), Some(0));
-    }
-    #[test]
-    fn input_less_than_8_position_mode() {
-        let v = vec![3, 9, 7, 9, 10, 9, 4, 9, 99, -1, 8];
-        assert_eq!(process_int_code_with_input(v, 7), Some(1));
-    }
-    #[test]
-    fn input_not_less_than_8_position_mode() {
-        let v = vec![3, 9, 7, 9, 10, 9, 4, 9, 99, -1, 8];
-        assert_eq!(process_int_code_with_input(v, 8), Some(0));
-    }
-    #[test]
-    fn input_equal_to_8_immediate_mode() {
-        let v = vec![3, 3, 1108, -1, 8, 3, 4, 3, 99, -1, 8];
-        assert_eq!(process_int_code_with_input(v, 8), Some(1));
-    }
-    #[test]
-    fn input_not_equal_to_8_immediate_mode() {
-        let v = vec![3, 3, 1108, -1, 8, 3, 4, 3, 99, -1, 8];
-        assert_eq!(process_int_code_with_input(v, 9), Some(0));
-    }
-    #[test]
-    fn input_less_than_to_8_immediate_mode() {
-        let v = vec![3, 3, 1107, -1, 8, 3, 4, 3, 99];
-        assert_eq!(process_int_code_with_input(v, 7), Some(1));
-    }
-    #[test]
-    fn input_not_less_than_to_8_immediate_mode() {
-        let v = vec![3, 3, 1107, -1, 8, 3, 4, 3, 99];
-        assert_eq!(process_int_code_with_input(v, 8), Some(0));
-    }
-    #[test]
-    fn jump_test_position_mode_1() {
-        let v = vec![3, 12, 6, 12, 15, 1, 13, 14, 13, 4, 13, 99, -1, 0, 1, 9];
-        assert_eq!(process_int_code_with_input(v, 1), Some(1));
-    }
-    #[test]
-    fn jump_test_position_mode_0() {
-        let v = vec![3, 12, 6, 12, 15, 1, 13, 14, 13, 4, 13, 99, -1, 0, 1, 9];
-        assert_eq!(process_int_code_with_input(v, 0), Some(0));
-    }
-    #[test]
-    fn jump_test_immediate_mode_1() {
-        let v = vec![3, 3, 1105, -1, 9, 1101, 0, 0, 12, 4, 12, 99, 1];
-        assert_eq!(process_int_code_with_input(v, 1), Some(1));
-    }
-    #[test]
-    fn jump_test_immediate_mode_0() {
-        let v = vec![3, 3, 1105, -1, 9, 1101, 0, 0, 12, 4, 12, 99, 1];
-        assert_eq!(process_int_code_with_input(v, 0), Some(0));
-    }
-
-    #[allow(unused)]
-    fn larger_example_input() -> Vec<isize> {
-        vec![
-            3, 21, 1008, 21, 8, 20, 1005, 20, 22, 107, 8, 21, 20, 1006, 20, 31, 1106, 0, 36, 98, 0,
-            0, 1002, 21, 125, 20, 4, 20, 1105, 1, 46, 104, 999, 1105, 1, 46, 1101, 1000, 1, 20, 4,
-            20, 1105, 1, 46, 98, 99,
-        ]
-    }
-    #[test]
-    fn larger_example_less_than_8() {
-        let v = larger_example_input();
-        assert_eq!(process_int_code_with_input(v, 7), Some(999));
-    }
-    #[test]
-    fn larger_example_exactly_8() {
-        let v = larger_example_input();
-        assert_eq!(process_int_code_with_input(v, 8), Some(1000));
-    }
-    #[test]
-    fn larger_example_greater_than_8() {
-        let v = larger_example_input();
-        assert_eq!(process_int_code_with_input(v, 9), Some(1001));
+    fn day7_part_2() {
+        assert_eq!(day7_part2(), 17279674);
     }
 }

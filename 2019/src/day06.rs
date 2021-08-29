@@ -1,5 +1,13 @@
 use std::collections::HashMap;
 
+pub(crate) fn day6_part1() -> OrbitCount {
+    count_orbits(day06_puzzle_input())
+}
+
+pub(crate) fn day6_part2() -> usize {
+    count_orbit_transfers(day06_puzzle_input(), "YOU", "SAN")
+}
+
 #[derive(Debug)]
 struct Orbiter<'a> {
     name: &'a str,
@@ -33,7 +41,7 @@ impl OrbitCount {
     }
 }
 
-pub(crate) fn count_orbit_transfers(input: &str, orbiter_1: &str, orbiter_2: &str) -> usize {
+fn count_orbit_transfers(input: &str, orbiter_1: &str, orbiter_2: &str) -> usize {
     let mut orbiters: HashMap<&str, &str> = HashMap::new();
     input.split('\n').map(|s| Orbiter::from(s)).for_each(|o| {
         orbiters.insert(o.name, o.center);
@@ -60,7 +68,7 @@ pub(crate) fn count_orbit_transfers(input: &str, orbiter_1: &str, orbiter_2: &st
     0
 }
 
-pub(crate) fn count_orbits(input: &str) -> OrbitCount {
+fn count_orbits(input: &str) -> OrbitCount {
     if input.is_empty() {
         return OrbitCount::empty();
     }
@@ -87,7 +95,7 @@ pub(crate) fn count_orbits(input: &str) -> OrbitCount {
     OrbitCount::from(direct, indirect)
 }
 
-pub(crate) fn day06_puzzle_input() -> &'static str {
+fn day06_puzzle_input() -> &'static str {
     "F6J)1YB
 6LV)SG3
 K7G)GD2
@@ -1753,10 +1761,7 @@ I)SAN",
 
     #[test]
     fn part_2() {
-        assert_eq!(
-            count_orbit_transfers(day06_puzzle_input(), "YOU", "SAN"),
-            445
-        );
+        assert_eq!(day6_part2(), 445);
     }
 
     // part 1
@@ -1826,9 +1831,6 @@ K)L"
 
     #[test]
     fn part_1() {
-        assert_eq!(
-            count_orbits(day06_puzzle_input()),
-            OrbitCount::from(1605, 252842)
-        );
+        assert_eq!(day6_part1(), OrbitCount::from(1605, 252842));
     }
 }

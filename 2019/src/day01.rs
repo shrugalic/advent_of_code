@@ -1,6 +1,10 @@
 type Mass = isize;
 
-pub fn fuel_needed_for(mass: &Mass) -> Mass {
+pub(crate) fn day1_part2() -> Mass {
+    sum_of_fuel_needed_for(&day01input())
+}
+
+fn fuel_needed_for(mass: &Mass) -> Mass {
     let fuel = (mass / 3) - 2;
     if fuel <= 0 {
         0
@@ -9,11 +13,11 @@ pub fn fuel_needed_for(mass: &Mass) -> Mass {
     }
 }
 
-pub(crate) fn sum_of_fuel_needed_for(masses: &[Mass]) -> Mass {
+fn sum_of_fuel_needed_for(masses: &[Mass]) -> Mass {
     masses.iter().map(fuel_needed_for).sum()
 }
 
-pub(crate) fn day01input() -> Vec<Mass> {
+fn day01input() -> Vec<Mass> {
     vec![
         95815, 58493, 77277, 57491, 124211, 134530, 86842, 63308, 139649, 75958, 74312, 63413,
         128293, 118123, 108576, 105474, 50366, 63203, 119792, 147054, 110863, 51551, 101243,
@@ -57,7 +61,7 @@ mod tests {
     }
 
     #[test]
-    fn calc_actual_fuel_sum() {
-        assert_eq!(sum_of_fuel_needed_for(&day01input()), 4943994);
+    fn part2_calc_actual_fuel_sum() {
+        assert_eq!(4943994, day1_part2());
     }
 }

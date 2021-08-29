@@ -315,9 +315,9 @@ impl From<isize> for Mode {
     }
 }
 
+#[cfg(test)]
 mod tests {
-    use super::IntCodeComputer;
-    use crate::{Op, PRINT_INT_CODE_COMPUTER_OUTPUT};
+    use super::*;
 
     #[test]
     fn test_autoextend_on_get() {
