@@ -111,6 +111,13 @@ fn day18() {
     assert_eq!(1628, day18_part2()); // Very slow, ~9min
 }
 
+mod day19;
+use crate::day19::{day19_part1, day19_part2};
+fn day19() {
+    assert_eq!(118, day19_part1());
+    assert_eq!(18651593, day19_part2());
+}
+
 fn main() {
     day01();
     day02();
@@ -130,4 +137,5 @@ fn main() {
     day16();
     // 17 is in its own project
     day18();
+    day19();
 }

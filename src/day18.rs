@@ -236,6 +236,7 @@ fn explore(vault: &Vault, start: Loc) -> (Keys, Steps) {
 }
 
 // This can also be used to solve part 1, but it's slower than the alternative above
+#[allow(unused)]
 fn count_steps_to_collect_every_key_part1(input: Vec<String>) -> Steps {
     let vault = Vault::from(input);
     println!("Vault:\n{}", vault.to_string());
@@ -770,6 +771,7 @@ mod tests {
     }
 
     // #[test]
+    #[allow(unused)]
     fn part2() {
         assert_eq!(1628, day18_part2());
     }
