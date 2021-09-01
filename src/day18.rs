@@ -4,7 +4,7 @@ use std::collections::{BinaryHeap, HashMap};
 use std::fmt::{Debug, Display, Formatter};
 
 pub(crate) fn day18_part1() -> usize {
-    count_steps_to_collect_every_key_part1(read_file_to_lines("input/day18.txt"))
+    count_steps_to_collect_every_key(read_file_to_lines("input/day18.txt"))
 }
 
 pub(crate) fn day18_part2() -> usize {
@@ -165,6 +165,7 @@ impl Display for BoolArrayKeys {
     }
 }
 
+// This can be used to solve part 1 – it's faster than the alternative below
 fn count_steps_to_collect_every_key(input: Vec<String>) -> Steps {
     let vault = Vault::from(input);
     println!("Vault:\n{}", vault.to_string());
@@ -234,8 +235,9 @@ fn explore(vault: &Vault, start: Loc) -> (Keys, Steps) {
         .unwrap()
 }
 
+// This can also be used to solve part 1, but it's slower than the alternative above
 fn count_steps_to_collect_every_key_part1(input: Vec<String>) -> Steps {
-    let mut vault = Vault::from(input);
+    let vault = Vault::from(input);
     println!("Vault:\n{}", vault.to_string());
 
     // The following is *not* an original solution
@@ -272,30 +274,27 @@ fn min_steps_to_collect_all_keys(
     if cache.contains_key(&state) {
         return *cache.get(&state).unwrap();
     }
-    // Otherwise find all the next key locations that can be reached from
-    // the given starting locations with the given keys
-    let reached_keys: HashMap<Key, (Loc, Steps, Loc)> = starts
-        .into_iter()
+    // Otherwise find all the next key locations that can be reached from the given
+    // starting locations with the given keys,
+    // and recursively try to reach more keys from the previously reached key locations
+    let step_count = starts
+        .iter()
         .flat_map(|start| find_reachable_keys_from(start, keys, vault))
-        .collect();
-    // Recursively try to reach more keys from the previously reached key locations,
-    let step_count = reached_keys
-        .into_iter()
-        .map(|(key, (key_loc, steps_to_key, prev_start))| {
+        .map(|(reached_key, at_loc, steps, from_start_loc)| {
             // Remove the previous starting position
             let mut new_starts = starts.to_vec();
-            if let Some(pos) = new_starts.iter().position(|loc| loc == &prev_start) {
+            if let Some(pos) = new_starts.iter().position(|loc| loc == &from_start_loc) {
                 new_starts.remove(pos);
             }
             // Add the key location as new starting position
-            new_starts.push(key_loc);
+            new_starts.push(at_loc);
 
             // Add the new key
             let mut new_keys = keys.clone();
-            new_keys.add(key);
+            new_keys.add(reached_key);
 
             // Add the steps to this key to the next steps that are found recursively
-            steps_to_key + min_steps_to_collect_all_keys(&new_starts, &new_keys, cache, vault)
+            steps + min_steps_to_collect_all_keys(&new_starts, &new_keys, cache, vault)
         })
         // Use the shortest total distance if there are several paths
         .min()
@@ -307,46 +306,47 @@ fn min_steps_to_collect_all_keys(
 }
 
 // HashMap is kinda slow, so let's try alternatives
-// HashMap          ~3.5s
-// Vec<Vec<Steps>>  ~2.6s
-// Vec<(Loc,Steps)> ~3.4s
-trait StepCount {
-    fn put(&mut self, loc: Loc, steps: Steps);
+// Times for example 4
+// - Vec<Vec<Steps>>  ~2.6s
+// - Vec<(Loc,Steps)> ~3.4s
+// - HashMap          ~3.5s
+trait StepCountAtLoc {
+    fn set_steps_at(&mut self, loc: Loc, steps: Steps);
     fn contains(&self, loc: &Loc) -> bool;
-    fn retrieve(&self, loc: &Loc) -> Steps;
+    fn get_steps_at(&self, loc: &Loc) -> Steps;
 }
-impl StepCount for HashMap<Loc, Steps> {
-    fn put(&mut self, loc: Loc, steps: Steps) {
+impl StepCountAtLoc for HashMap<Loc, Steps> {
+    fn set_steps_at(&mut self, loc: Loc, steps: Steps) {
         self.insert(loc, steps);
     }
     fn contains(&self, loc: &Loc) -> bool {
         self.contains_key(loc)
     }
 
-    fn retrieve(&self, loc: &Loc) -> Steps {
+    fn get_steps_at(&self, loc: &Loc) -> Steps {
         *self.get(loc).unwrap()
     }
 }
-impl StepCount for Vec<Vec<Steps>> {
-    fn put(&mut self, loc: Loc, steps: Steps) {
+impl StepCountAtLoc for Vec<Vec<Steps>> {
+    fn set_steps_at(&mut self, loc: Loc, steps: Steps) {
         self[loc.y][loc.x] = steps;
     }
     fn contains(&self, loc: &Loc) -> bool {
         self[loc.y][loc.x] < Steps::MAX
     }
-    fn retrieve(&self, loc: &Loc) -> Steps {
+    fn get_steps_at(&self, loc: &Loc) -> Steps {
         self[loc.y][loc.x]
     }
 }
-impl StepCount for Vec<(Loc, Steps)> {
-    fn put(&mut self, loc: Loc, steps: Steps) {
+impl StepCountAtLoc for Vec<(Loc, Steps)> {
+    fn set_steps_at(&mut self, loc: Loc, steps: Steps) {
         self.push((loc, steps));
     }
     fn contains(&self, loc: &Loc) -> bool {
-        self.iter().any(|(l, s)| l == loc)
+        self.iter().any(|(l, _s)| l == loc)
     }
-    fn retrieve(&self, loc: &Loc) -> Steps {
-        self.iter().find(|(l, s)| l == loc).unwrap().1
+    fn get_steps_at(&self, loc: &Loc) -> Steps {
+        self.iter().find(|(l, _s)| l == loc).unwrap().1
     }
 }
 
@@ -354,12 +354,10 @@ fn find_reachable_keys_from(
     start: &Loc,
     keys: &Keys,
     vault: &Vault,
-) -> HashMap<Key, (Loc, Steps, Loc)> {
-    let mut reachable_keys = HashMap::new();
-    // let mut steps = HashMap::new();
+) -> Vec<(Key, Loc, Steps, Loc)> {
+    let mut reachable_keys: Vec<(Key, Loc, Steps, Loc)> = vec![];
     let mut steps = vec![vec![Steps::MAX; vault.width()]; vault.height()];
-    // let mut steps: Vec<(Loc, Steps)> = vec![];
-    steps.put(*start, 0);
+    steps.set_steps_at(*start, 0);
     let mut queue = BinaryHeap::new();
     queue.push(*start);
     while let Some(next) = queue.pop() {
@@ -372,10 +370,10 @@ fn find_reachable_keys_from(
             })
             .for_each(|loc| {
                 if !steps.contains(loc) {
-                    steps.put(*loc, steps.retrieve(&next) + 1);
+                    steps.set_steps_at(*loc, steps.get_steps_at(&next) + 1);
                     if let Some(Tile::Key(key)) = vault.tile_at(loc) {
                         if !keys.contains(key) {
-                            reachable_keys.insert(*key, (*loc, steps.retrieve(loc), *start));
+                            reachable_keys.push((*key, *loc, steps.get_steps_at(loc), *start));
                         } else {
                             queue.push(*loc);
                         }
@@ -664,7 +662,7 @@ mod tests {
     fn example_4() {
         assert_eq!(
             136,
-            count_steps_to_collect_every_key_part1(read_str_to_lines(
+            count_steps_to_collect_every_key(read_str_to_lines(
                 "\
 #################
 #i.G..c...e..H.p#
@@ -694,8 +692,8 @@ mod tests {
             ))
         );
     }
-    // ~19s slow when using explore(…)
-    // ~66s very slow when using minimum_steps(…)
+    // ~25s slow when using explore(…)
+    // ~32s slow when using minimum_steps(…)
     #[test]
     fn part1() {
         assert_eq!(3270, day18_part1());
