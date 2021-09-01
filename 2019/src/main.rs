@@ -108,7 +108,7 @@ mod day18;
 use crate::day18::{day18_part1, day18_part2};
 fn day18() {
     assert_eq!(3270, day18_part1()); // Slow, ~25s
-    assert_eq!(1628, day18_part2()); // Very slow, ~18min
+    assert_eq!(1628, day18_part2()); // Very slow, ~9min
 }
 
 fn main() {
