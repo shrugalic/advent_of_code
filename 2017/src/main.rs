@@ -117,6 +117,13 @@ fn day17() {
     assert_eq!(13326437, day17_part2());
 }
 
+mod day18;
+use crate::day18::{day18_part1, day18_part2};
+fn day18() {
+    assert_eq!(2951, day18_part1());
+    assert_eq!(7366, day18_part2());
+}
+
 fn main() {
     day01();
     day02();
@@ -136,4 +143,5 @@ fn main() {
     day15();
     day16();
     day17();
+    day18();
 }
