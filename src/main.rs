@@ -118,6 +118,7 @@ fn day17() {
 }
 
 mod day18;
+mod program;
 use crate::day18::{day18_part1, day18_part2};
 fn day18() {
     assert_eq!(2951, day18_part1());
