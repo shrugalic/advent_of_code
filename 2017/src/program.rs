@@ -3,6 +3,9 @@ use crate::program::State::*;
 use crate::program::Value::*;
 use std::collections::VecDeque;
 
+pub(crate) type NumberValue = isize;
+type RegisterName = char;
+
 pub(crate) enum State {
     Running,
     SentOutput(NumberValue),
@@ -36,11 +39,21 @@ impl<'a> Program<'a> {
             received: VecDeque::new(),
         }
     }
+
     pub(crate) fn receive(&mut self, input: NumberValue) {
         self.received.push_back(input);
     }
+
     pub(crate) fn step(&mut self) -> State {
-        if let Some(instr) = self.instr.get(self.instr_ptr) {
+        self.execute(self.instruction())
+    }
+
+    pub(crate) fn instruction(&self) -> Option<Instr> {
+        self.instr.get(self.instr_ptr).cloned()
+    }
+
+    pub(crate) fn execute(&mut self, instr: Option<Instr>) -> State {
+        if let Some(instr) = instr {
             // println!("{}: {:?} {:?}", self.instr_ptr, instr, self.registers);
             match instr {
                 Snd(Register(x)) => {
@@ -49,37 +62,37 @@ impl<'a> Program<'a> {
                 }
                 Snd(Number(x)) => {
                     self.instr_ptr += 1;
-                    return State::SentOutput(*x);
+                    return State::SentOutput(x);
                 }
                 Set(x, Register(y)) => {
                     self.registers[x.to_idx()] = self.registers[y.to_idx()];
                 }
                 Set(x, Number(y)) => {
-                    self.registers[x.to_idx()] = *y;
+                    self.registers[x.to_idx()] = y;
                 }
                 Add(x, Register(y)) => {
                     self.registers[x.to_idx()] += self.registers[y.to_idx()];
                 }
                 Add(x, Number(y)) => {
-                    self.registers[x.to_idx()] += *y;
+                    self.registers[x.to_idx()] += y;
                 }
                 Sub(x, Register(y)) => {
                     self.registers[x.to_idx()] -= self.registers[y.to_idx()];
                 }
                 Sub(x, Number(y)) => {
-                    self.registers[x.to_idx()] -= *y;
+                    self.registers[x.to_idx()] -= y;
                 }
                 Mul(x, Register(y)) => {
                     self.registers[x.to_idx()] *= self.registers[y.to_idx()];
                 }
                 Mul(x, Number(y)) => {
-                    self.registers[x.to_idx()] *= *y;
+                    self.registers[x.to_idx()] *= y;
                 }
                 Mod(x, Register(y)) => {
                     self.registers[x.to_idx()] %= self.registers[y.to_idx()];
                 }
                 Mod(x, Number(y)) => {
-                    self.registers[x.to_idx()] %= *y;
+                    self.registers[x.to_idx()] %= y;
                 }
                 Rcv(x) => {
                     if let Some(received) = self.received.pop_front() {
@@ -102,15 +115,15 @@ impl<'a> Program<'a> {
                     }
                 }
                 Jgz(Number(x), Register(y)) => {
-                    if *x > 0 {
+                    if x > 0 {
                         self.instr_ptr =
                             (self.instr_ptr as isize + self.registers[y.to_idx()]) as usize;
                         return State::Running;
                     }
                 }
                 Jgz(Number(x), Number(y)) => {
-                    if *x > 0 {
-                        self.instr_ptr = (self.instr_ptr as isize + *y) as usize;
+                    if x > 0 {
+                        self.instr_ptr = (self.instr_ptr as isize + y) as usize;
                         return State::Running;
                     }
                 }
@@ -128,15 +141,15 @@ impl<'a> Program<'a> {
                     }
                 }
                 Jnz(Number(x), Register(y)) => {
-                    if *x != 0 {
+                    if x != 0 {
                         self.instr_ptr =
                             (self.instr_ptr as isize + self.registers[y.to_idx()]) as usize;
                         return State::Running;
                     }
                 }
                 Jnz(Number(x), Number(y)) => {
-                    if *x != 0 {
-                        self.instr_ptr = (self.instr_ptr as isize + *y) as usize;
+                    if x != 0 {
+                        self.instr_ptr = (self.instr_ptr as isize + y) as usize;
                         return State::Running;
                     }
                 }
@@ -149,10 +162,7 @@ impl<'a> Program<'a> {
     }
 }
 
-pub(crate) type NumberValue = isize;
-type RegisterName = char;
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum Value {
     Register(RegisterName),
     Number(NumberValue),
@@ -168,7 +178,7 @@ impl From<&str> for Value {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum Instr {
     Snd(Value),
     Set(RegisterName, Value),

@@ -1,0 +1,32 @@
+b = 93
+c = b
+if a != 0 goto 5
+goto 9
+b *= 100
+b += 100000
+c = b
+c += 17000
+f = 1
+d = 2
+e = 2
+g = d
+g *= e
+g -= b
+if g != 0 goto 17
+f = 0
+e += 1
+g = e
+g -= b
+if g != 0 goto 12
+d += 1
+g = d
+g -= b
+if g != 0 goto 11
+if f != 0 goto 27
+h += 1
+g = b
+g -= c
+if g != 0 goto 31
+halt
+b += 17
+goto 9
