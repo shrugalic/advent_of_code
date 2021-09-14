@@ -168,7 +168,7 @@ impl Display for BoolArrayKeys {
 // This can be used to solve part 1 – it's faster than the alternative below
 fn count_steps_to_collect_every_key(input: Vec<String>) -> Steps {
     let vault = Vault::from(input);
-    println!("Vault:\n{}", vault.to_string());
+    // println!("Vault:\n{}", vault.to_string());
 
     let (_keys, steps) = explore(&vault, vault.entrance());
     steps
@@ -239,7 +239,7 @@ fn explore(vault: &Vault, start: Loc) -> (Keys, Steps) {
 #[allow(unused)]
 fn count_steps_to_collect_every_key_part1(input: Vec<String>) -> Steps {
     let vault = Vault::from(input);
-    println!("Vault:\n{}", vault.to_string());
+    // println!("Vault:\n{}", vault.to_string());
 
     // The following is *not* an original solution
     min_steps_to_collect_all_keys(
@@ -253,7 +253,7 @@ fn count_steps_to_collect_every_key_part1(input: Vec<String>) -> Steps {
 fn count_steps_to_collect_every_key_part2(input: Vec<String>) -> Steps {
     let mut vault = Vault::from(input);
     vault.replace_single_entrance_with_four_entrances();
-    println!("Vault:\n{}", vault.to_string());
+    // println!("Vault:\n{}", vault.to_string());
 
     // The following is *not* an original solution
     min_steps_to_collect_all_keys(

@@ -118,6 +118,13 @@ fn day19() {
     assert_eq!(18651593, day19_part2());
 }
 
+mod day20;
+use crate::day20::{day20_part1, day20_part2};
+fn day20() {
+    assert_eq!(686, day20_part1());
+    assert_eq!(8384, day20_part2());
+}
+
 fn main() {
     day01();
     day02();
@@ -138,4 +145,5 @@ fn main() {
     // 17 is in its own project
     day18();
     day19();
+    day20();
 }
