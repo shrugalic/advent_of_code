@@ -5,6 +5,7 @@ use Op::*;
 pub const TEST_MODE_INPUT: isize = 1;
 const PRINT_INT_CODE_COMPUTER_OUTPUT: bool = false;
 
+#[derive(Debug)]
 pub enum State {
     Idle,
     ExpectingInput,
@@ -32,6 +33,9 @@ impl IntCodeComputer {
     }
     pub fn outputs(&self) -> VecDeque<isize> {
         self.outputs.clone()
+    }
+    pub fn add_input(&mut self, i: isize) {
+        self.inputs.push_back(i);
     }
     pub fn add_inputs(&mut self, iq: &[isize]) {
         self.inputs.append(&mut VecDeque::from(iq.to_vec()));
@@ -101,7 +105,7 @@ impl IntCodeComputer {
         if self.ptr >= self.instr.len() && PRINT_INT_CODE_COMPUTER_OUTPUT {
             println!("ptr >= len");
         }
-        while self.ptr < self.instr.len() {
+        while !self.is_halted() {
             match self.step() {
                 State::Idle => (),
                 State::ExpectingInput => (),
@@ -111,12 +115,15 @@ impl IntCodeComputer {
         }
         None
     }
+    pub fn is_halted(&self) -> bool {
+        self.ptr >= self.instr.len()
+    }
     // needed for day13
     fn run_until_first_output(&mut self) -> Option<isize> {
         if self.ptr >= self.instr.len() && PRINT_INT_CODE_COMPUTER_OUTPUT {
             println!("ptr >= len");
         }
-        while self.ptr < self.instr.len() {
+        while !self.is_halted() {
             match self.step() {
                 State::Idle => (),
                 State::ExpectingInput => (),

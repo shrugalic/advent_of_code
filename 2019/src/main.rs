@@ -129,7 +129,7 @@ mod day21;
 use crate::day21::{day21_part1, day21_part2};
 fn day21() {
     assert_eq!(19355364, day21_part1());
-    assert_eq!(0, day21_part2());
+    assert_eq!(1142530574, day21_part2());
 }
 
 mod day22;
@@ -137,6 +137,13 @@ use crate::day22::{day22_part1, day22_part2};
 fn day22() {
     assert_eq!(2519, day22_part1());
     assert_eq!(58966729050483, day22_part2());
+}
+
+mod day23;
+use crate::day23::{day23_part1, day23_part2};
+fn day23() {
+    assert_eq!(20764, day23_part1());
+    assert_eq!(14805, day23_part2());
 }
 
 fn main() {
@@ -162,4 +169,5 @@ fn main() {
     day20();
     day21();
     day22();
+    day23();
 }
