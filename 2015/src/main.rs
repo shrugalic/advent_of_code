@@ -23,7 +23,7 @@ mod day04;
 use crate::day04::{day04_part1, day04_part2};
 fn day04() {
     assert_eq!(282749, day04_part1());
-    assert_eq!(9962624, day04_part2()); // Slow 27s
+    assert_eq!(9962624, day04_part2());
 }
 
 fn main() {
