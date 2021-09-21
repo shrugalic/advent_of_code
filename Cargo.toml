@@ -7,3 +7,4 @@ edition = "2018"
 
 [dependencies]
 line_reader = { path = "../2020/line_reader" }
+md5 = "0.7.0"
