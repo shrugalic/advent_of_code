@@ -1,9 +1,9 @@
 use line_reader::read_file_to_lines;
 
-pub(crate) fn day2_part1() -> usize {
+pub(crate) fn day02_part1() -> usize {
     total_wrapping_paper_needed(read_file_to_lines("input/day02.txt"))
 }
-pub(crate) fn day2_part2() -> usize {
+pub(crate) fn day02_part2() -> usize {
     total_ribbon_needed(read_file_to_lines("input/day02.txt"))
 }
 
@@ -58,7 +58,7 @@ mod tests {
 
     #[test]
     fn part1() {
-        assert_eq!(1588178, day2_part1());
+        assert_eq!(1588178, day02_part1());
     }
 
     #[test]
@@ -69,6 +69,6 @@ mod tests {
 
     #[test]
     fn part2() {
-        assert_eq!(3783758, day2_part2());
+        assert_eq!(3783758, day02_part2());
     }
 }

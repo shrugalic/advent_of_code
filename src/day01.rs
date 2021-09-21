@@ -1,9 +1,9 @@
 use line_reader::read_file_to_lines;
 
-pub(crate) fn day1_part1() -> isize {
+pub(crate) fn day01_part1() -> isize {
     result_floor(&read_file_to_lines("input/day01.txt")[0])
 }
-pub(crate) fn day1_part2() -> usize {
+pub(crate) fn day01_part2() -> usize {
     position_of_char_that_results_in_basement_floor(&read_file_to_lines("input/day01.txt")[0])
 }
 
@@ -50,7 +50,7 @@ mod tests {
 
     #[test]
     fn part1() {
-        assert_eq!(280, day1_part1());
+        assert_eq!(280, day01_part1());
     }
 
     #[test]
@@ -61,6 +61,6 @@ mod tests {
 
     #[test]
     fn part2() {
-        assert_eq!(1797, day1_part2());
+        assert_eq!(1797, day01_part2());
     }
 }
