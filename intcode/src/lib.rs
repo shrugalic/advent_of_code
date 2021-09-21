@@ -134,26 +134,21 @@ impl IntCodeComputer {
         None
     }
     // needed for day17
-    pub fn run_until_waiting_for_input(&mut self) {
+    pub fn run_until_waiting_for_input(&mut self) -> String {
         let mut line = vec![];
         while self.ptr < self.instr.len() {
             match self.step() {
                 State::Idle => (),
-                State::ExpectingInput => return,
-                State::WroteOutput(output) => {
-                    if PRINT_INT_CODE_COMPUTER_OUTPUT {
-                        let c = output as u8 as char;
-                        if c == '\n' {
-                            println!("{}", line.into_iter().collect::<String>());
-                            line = vec![];
-                        } else {
-                            line.push(c);
-                        }
-                    }
-                }
-                State::Halted => (),
+                State::ExpectingInput => break,
+                State::WroteOutput(output) => line.push(output as u8 as char),
+                State::Halted => break,
             }
         }
+        let line = line.into_iter().collect::<String>();
+        if PRINT_INT_CODE_COMPUTER_OUTPUT {
+            println!("{}", line);
+        }
+        line
     }
     pub fn step(&mut self) -> State {
         let s = self.next_op_as_5_digit_string_padded_with_leading_zeroes();
