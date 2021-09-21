@@ -1,4 +1,5 @@
 use md5::Digest;
+use rayon::prelude::*;
 
 const PUZZLE_INPUT: &str = "yzbqklnj";
 
@@ -18,11 +19,27 @@ fn smallest_i_where_hash_starts_with_6_zeroes(secret_key: &str) -> usize {
 }
 
 fn hash_until_filter_matches(secret_key: &str, filter: fn(Digest) -> bool) -> usize {
-    let mut i = 1;
-    while !filter(md5::compute(format!("{}{}", secret_key, i))) {
-        i += 1;
+    let parallel = true;
+    if parallel {
+        let step_size = 16_000; // seems to work fine on my 9900K
+        let mut start = 1;
+        loop {
+            if let Some(min) = (start..(start + step_size))
+                .into_par_iter()
+                .filter(|i| filter(md5::compute(format!("{}{}", secret_key, i))))
+                .min()
+            {
+                return min;
+            }
+            start += step_size;
+        }
+    } else {
+        let mut i = 1;
+        while !filter(md5::compute(format!("{}{}", secret_key, i))) {
+            i += 1;
+        }
+        i
     }
-    i
 }
 
 fn starts_with_5_leading_zeroes(digest: Digest) -> bool {
@@ -58,7 +75,7 @@ mod tests {
         assert_eq!(282749, day04_part1());
     }
 
-    // Slow 27s
+    // 27s single-core, ~4.5s multi-core
     #[test]
     fn part2() {
         assert_eq!(9962624, day04_part2());
