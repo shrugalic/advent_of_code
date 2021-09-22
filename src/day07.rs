@@ -1,17 +1,21 @@
 use line_reader::read_file_to_lines;
 use std::collections::HashMap;
 
-pub(crate) fn day07_part1() -> Value {
+pub(crate) fn day07_part1() -> Num {
     let input = read_file_to_lines("input/day07.txt");
     let signals = determine_signals(input);
     *signals.get(&"a".to_string()).unwrap()
 }
 
-pub(crate) fn day07_part2() -> Value {
+pub(crate) fn day07_part2() -> Num {
     let input = read_file_to_lines("input/day07.txt");
     let mut instructions: Vec<_> = input.into_iter().map(Instruction::from).collect();
     instructions.iter_mut().for_each(|instr| {
-        if let Instruction::Signal { v, o } = instr {
+        if let Instruction::Signal {
+            i: Type::Value(v),
+            o,
+        } = instr
+        {
             if "b".eq(o) {
                 *v = 46065;
             }
@@ -21,37 +25,51 @@ pub(crate) fn day07_part2() -> Value {
     *signals.get(&"a".to_string()).unwrap()
 }
 
-fn determine_signals(input: Vec<String>) -> HashMap<Id, Value> {
+fn determine_signals(input: Vec<String>) -> HashMap<Id, Num> {
     let instructions: Vec<_> = input.into_iter().map(Instruction::from).collect();
     signals_from(instructions)
 }
 
-fn signals_from(mut instructions: Vec<Instruction>) -> HashMap<Id, Value> {
+fn signals_from(mut instructions: Vec<Instruction>) -> HashMap<Id, Num> {
     let mut signals = Signals::new();
     while let Some(pos) = instructions.iter().position(|instr| match instr {
+        Instruction::Signal { i: Type::Id(i), .. } => signals.contains_key(i),
         Instruction::Signal { .. } => true,
-        Instruction::Forward { i, o: _ } => signals.contains_key(i),
-        Instruction::AndV { i1: _, i2, o: _ } => signals.contains_key(i2),
-        Instruction::And { i1, i2, o: _ } | Instruction::Or { i1, i2, o: _ } => {
-            signals.contains_key(i1) && signals.contains_key(i2)
+        Instruction::And {
+            i1: Type::Id(i1),
+            i2,
+            o: _,
         }
+        | Instruction::Or { i1, i2, o: _ } => signals.contains_key(i1) && signals.contains_key(i2),
+        Instruction::And { i2, .. } => signals.contains_key(i2),
         Instruction::LShift { i, v: _, o: _ } | Instruction::RShift { i, v: _, o: _ } => {
             signals.contains_key(i)
         }
         Instruction::Not { i, o: _ } => signals.contains_key(i),
     }) {
         match instructions.remove(pos) {
-            Instruction::Signal { v, o } => {
+            Instruction::Signal {
+                i: Type::Value(v),
+                o,
+            } => {
                 signals.insert(o, v);
             }
-            Instruction::Forward { i, o } => {
+            Instruction::Signal { i: Type::Id(i), o } => {
                 let v = *signals.get(&i).unwrap();
                 signals.insert(o, v);
             }
-            Instruction::AndV { i1, i2, o } => {
-                signals.insert(o, i1 & signals.get(&i2).unwrap());
+            Instruction::And {
+                i1: Type::Value(v),
+                i2,
+                o,
+            } => {
+                signals.insert(o, v & signals.get(&i2).unwrap());
             }
-            Instruction::And { i1, i2, o } => {
+            Instruction::And {
+                i1: Type::Id(i1),
+                i2,
+                o,
+            } => {
                 signals.insert(o, signals.get(&i1).unwrap() & signals.get(&i2).unwrap());
             }
             Instruction::Or { i1, i2, o } => {
@@ -72,18 +90,22 @@ fn signals_from(mut instructions: Vec<Instruction>) -> HashMap<Id, Value> {
 }
 
 type Id = String;
-type Value = u16;
-type Signals = HashMap<Id, Value>;
+type Num = u16;
+type Signals = HashMap<Id, Num>;
+
+#[derive(Debug)]
+enum Type {
+    Id(Id),
+    Value(Num),
+}
 
 #[derive(Debug)]
 enum Instruction {
-    Signal { v: Value, o: Id },
-    Forward { i: Id, o: Id },
-    AndV { i1: Value, i2: Id, o: Id },
-    And { i1: Id, i2: Id, o: Id },
+    Signal { i: Type, o: Id },
+    And { i1: Type, i2: Id, o: Id },
     Or { i1: Id, i2: Id, o: Id },
-    LShift { i: Id, v: Value, o: Id },
-    RShift { i: Id, v: Value, o: Id },
+    LShift { i: Id, v: Num, o: Id },
+    RShift { i: Id, v: Num, o: Id },
     Not { i: Id, o: Id },
 }
 impl From<String> for Instruction {
@@ -91,13 +113,13 @@ impl From<String> for Instruction {
         let p: Vec<_> = s.split_ascii_whitespace().collect();
         match p.len() {
             3 => {
-                let i = p[0].to_string();
-                let o = p[2].to_string();
-                if let Ok(v) = i.parse() {
-                    Instruction::Signal { v, o }
+                let i = if let Ok(v) = p[0].parse() {
+                    Type::Value(v)
                 } else {
-                    Instruction::Forward { i, o }
-                }
+                    Type::Id(p[0].to_string())
+                };
+                let o = p[2].to_string();
+                Instruction::Signal { i, o }
             }
             4 => Instruction::Not {
                 i: p[1].to_string(),
@@ -109,11 +131,12 @@ impl From<String> for Instruction {
                 let o = p[4].to_string();
                 match p[1] {
                     "AND" => {
-                        if let Ok(i1) = i1.parse() {
-                            Instruction::AndV { i1, i2, o }
+                        let i1 = if let Ok(v) = i1.parse() {
+                            Type::Value(v)
                         } else {
-                            Instruction::And { i1, i2, o }
-                        }
+                            Type::Id(i1)
+                        };
+                        Instruction::And { i1, i2, o }
                     }
                     "OR" => Instruction::Or { i1, i2, o },
                     "LSHIFT" => Instruction::LShift {
