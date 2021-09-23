@@ -1,5 +1,8 @@
 use md5::Digest;
 use rayon::prelude::*;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::thread;
 
 const PUZZLE_INPUT: &str = "yzbqklnj";
 
@@ -18,27 +21,60 @@ fn smallest_i_where_hash_starts_with_6_zeroes(secret_key: &str) -> usize {
     hash_until_filter_matches(secret_key, starts_with_6_leading_zeroes)
 }
 
+#[allow(unused)]
+enum CalcType {
+    Threaded,
+    Parallel,
+    Single,
+}
 fn hash_until_filter_matches(secret_key: &str, filter: fn(Digest) -> bool) -> usize {
-    let parallel = true;
-    if parallel {
-        let step_size = 16_000; // seems to work fine on my 9900K
-        let mut start = 1;
-        loop {
-            if let Some(min) = (start..(start + step_size))
-                .into_par_iter()
-                .filter(|i| filter(md5::compute(format!("{}{}", secret_key, i))))
-                .min()
-            {
-                return min;
+    let calc = CalcType::Threaded;
+    match calc {
+        CalcType::Threaded => {
+            let best = Arc::new(AtomicUsize::new(usize::MAX));
+            // 9900K (8-cores, 16-threads)
+            let thread_count = 16;
+            let mut handles = vec![];
+            for start in 1..=thread_count {
+                let best = Arc::clone(&best);
+                let secret_key = secret_key.to_string();
+                handles.push(thread::spawn(move || {
+                    let mut i: usize = start;
+                    while !filter(md5::compute(format!("{}{}", secret_key, i))) {
+                        if best.load(Ordering::Relaxed) < i {
+                            return;
+                        }
+                        i += thread_count;
+                    }
+                    best.fetch_min(i, Ordering::Relaxed);
+                }));
             }
-            start += step_size;
+            for handle in handles {
+                handle.join().unwrap();
+            }
+            best.load(Ordering::Relaxed)
         }
-    } else {
-        let mut i = 1;
-        while !filter(md5::compute(format!("{}{}", secret_key, i))) {
-            i += 1;
+        CalcType::Parallel => {
+            let step_size = 16_000; // seems to work fine on my 9900K
+            let mut start = 1;
+            loop {
+                if let Some(min) = (start..(start + step_size))
+                    .into_par_iter()
+                    .filter(|i| filter(md5::compute(format!("{}{}", secret_key, i))))
+                    .min()
+                {
+                    return min;
+                }
+                start += step_size;
+            }
         }
-        i
+        CalcType::Single => {
+            let mut i = 1;
+            while !filter(md5::compute(format!("{}{}", secret_key, i))) {
+                i += 1;
+            }
+            i
+        }
     }
 }
 
@@ -78,6 +114,6 @@ mod tests {
     // 27s single-core, ~4.5s multi-core
     #[test]
     fn part2() {
-        assert_eq!(9962624, day04_part2());
+        assert_eq!(9_962_624, day04_part2());
     }
 }
