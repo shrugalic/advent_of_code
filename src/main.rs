@@ -68,6 +68,13 @@ fn day10() {
     assert_eq!(6989950, day10_part2());
 }
 
+mod day11;
+use crate::day11::{day11_part1, day11_part2};
+fn day11() {
+    assert_eq!("vzbxxyzz", day11_part1());
+    assert_eq!("vzcaabcc", day11_part2());
+}
+
 fn main() {
     day01();
     day02();
@@ -79,4 +86,5 @@ fn main() {
     day08();
     day09();
     day10();
+    day11();
 }
