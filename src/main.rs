@@ -1,4 +1,5 @@
 mod day01;
+mod permutation;
 use crate::day01::{day01_part1, day01_part2};
 fn day01() {
     assert_eq!(280, day01_part1());
@@ -82,6 +83,13 @@ fn day12() {
     assert_eq!(68466, day12_part2());
 }
 
+mod day13;
+use crate::day13::{day13_part1, day13_part2};
+fn day13() {
+    assert_eq!(733, day13_part1());
+    assert_eq!(725, day13_part2());
+}
+
 fn main() {
     day01();
     day02();
@@ -95,4 +103,5 @@ fn main() {
     day10();
     day11();
     day12();
+    day13();
 }
