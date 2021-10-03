@@ -129,7 +129,7 @@ mod day19;
 use crate::day19::{day19_part1, day19_part2};
 fn day19() {
     assert_eq!(535, day19_part1());
-    assert_eq!(0, day19_part2());
+    assert_eq!(212, day19_part2());
 }
 
 fn main() {
