@@ -1,5 +1,6 @@
 use line_reader::read_file_to_lines;
-use std::collections::{HashMap, HashSet};
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap, HashSet};
 
 pub(crate) fn day19_part1() -> usize {
     let (replacements, molecule) = parse_day19_input();
@@ -9,8 +10,8 @@ pub(crate) fn day19_part1() -> usize {
 
 pub(crate) fn day19_part2() -> usize {
     let (replacements, medicine) = parse_day19_input();
-    let replacements = parse_replacements(&replacements);
-    number_of_replacements(STARTING_MOLECULE, &medicine, &replacements)
+    let replacements = parse_reverse_replacements(&replacements);
+    count_number_of_replacements(&medicine, &replacements)
 }
 
 const STARTING_MOLECULE: &str = "e";
@@ -25,13 +26,23 @@ type Replacements = HashMap<String, Vec<String>>;
 type Results = HashSet<String>;
 
 fn parse_replacements(input: &[String]) -> Replacements {
+    replacements_from(input, &|line| line.split_once(" => ").unwrap())
+}
+
+fn parse_reverse_replacements(input: &[String]) -> Replacements {
+    replacements_from(input, &|line| {
+        line.split_once(" => ").map(|(l, r)| (r, l)).unwrap()
+    })
+}
+
+fn replacements_from(input: &[String], split: &dyn Fn(&String) -> (&str, &str)) -> Replacements {
     let mut replacements = Replacements::new();
     input.iter().for_each(|line| {
-        let (from, to) = line.split_once(" => ").unwrap();
+        let (left, right) = split(line);
         replacements
-            .entry(from.to_string())
+            .entry(left.to_string())
             .or_insert_with(Vec::new)
-            .push(to.to_string());
+            .push(right.to_string())
     });
     replacements
 }
@@ -55,22 +66,46 @@ fn results_of_one_replacement(molecule: &str, replacements: &Replacements) -> Re
     results
 }
 
-fn number_of_replacements(start: &str, target: &str, replacements: &Replacements) -> usize {
-    replacement_count(start, target, replacements).unwrap()
+#[derive(PartialEq, Eq)]
+struct ReplacementStep {
+    count: usize,
+    molecule: String,
+}
+impl Ord for ReplacementStep {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.molecule.len().cmp(&other.molecule.len()) {
+            Ordering::Equal => self.count.cmp(&other.count).reverse(),
+            shorter_is_better => shorter_is_better.reverse(),
+        }
+    }
+}
+impl PartialOrd for ReplacementStep {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
-fn replacement_count(start: &str, target: &str, replacements: &Replacements) -> Option<usize> {
-    if start == target {
-        Some(0)
-    } else if start.len() > target.len() {
-        None
-    } else {
-        results_of_one_replacement(start, replacements)
+fn count_number_of_replacements(curr: &str, replacements: &Replacements) -> usize {
+    let mut candidates = BinaryHeap::new();
+    candidates.push(ReplacementStep {
+        count: 0,
+        molecule: curr.to_string(),
+    });
+
+    while let Some(curr) = candidates.pop() {
+        if curr.molecule == STARTING_MOLECULE {
+            return curr.count;
+        }
+        results_of_one_replacement(&curr.molecule, replacements)
             .into_iter()
-            .filter_map(|new_start| replacement_count(&new_start, target, replacements))
-            .map(|c| c + 1)
-            .min()
+            .for_each(|next| {
+                candidates.push(ReplacementStep {
+                    count: curr.count + 1,
+                    molecule: next,
+                })
+            });
     }
+    unreachable!()
 }
 
 #[cfg(test)]
@@ -104,25 +139,25 @@ H => HO
 H => OH
 O => HH";
 
-    const EXAMPLE2_TARGET1: &str = "HOH";
-    const EXAMPLE2_TARGET2: &str = "HOHOHO";
+    const EXAMPLE2_MOLECULE1: &str = "HOH";
+    const EXAMPLE2_MOLECULE2: &str = "HOHOHO";
 
     #[test]
     fn part2_examples() {
         let input = read_str_to_lines(EXAMPLE2_REPLACEMENTS);
-        let replacements = parse_replacements(&input);
+        let replacements = parse_reverse_replacements(&input);
         assert_eq!(
             3,
-            number_of_replacements(STARTING_MOLECULE, EXAMPLE2_TARGET1, &replacements)
+            count_number_of_replacements(EXAMPLE2_MOLECULE1, &replacements)
         );
         assert_eq!(
             6,
-            number_of_replacements(STARTING_MOLECULE, EXAMPLE2_TARGET2, &replacements)
+            count_number_of_replacements(EXAMPLE2_MOLECULE2, &replacements)
         );
     }
 
     #[test]
     fn part2() {
-        assert_eq!(0, day19_part2());
+        assert_eq!(212, day19_part2());
     }
 }
