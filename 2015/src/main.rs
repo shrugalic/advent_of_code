@@ -160,6 +160,13 @@ fn day23() {
     assert_eq!(334, day23_part2());
 }
 
+mod day24;
+use crate::day24::{day24_part1, day24_part2};
+fn day24() {
+    assert_eq!(11_846_773_891, day24_part1());
+    assert_eq!(80_393_059, day24_part2());
+}
+
 fn main() {
     day01();
     day02();
@@ -184,4 +191,5 @@ fn main() {
     day21();
     day22();
     day23();
+    day24();
 }

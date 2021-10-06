@@ -9,3 +9,4 @@ edition = "2018"
 line_reader = { path = "../2020/line_reader" }
 md5 = "0.7.0"
 rayon = "1.5.1"
+itertools = "0.10.1"
