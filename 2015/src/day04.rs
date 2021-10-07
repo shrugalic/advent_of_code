@@ -81,7 +81,8 @@ fn hash_until_filter_matches(secret_key: &str, filter: fn(Digest) -> bool) -> us
 fn starts_with_5_leading_zeroes(digest: Digest) -> bool {
     // The 5 zeroes are made up of 5 hex digits
     // Two hex digits are made up of a single u8
-    digest[0] == 0 && digest[1] == 0 && digest[2] < 8
+    // 16 equals 0b10000, so < 16 means the left-most 4 bits are zero
+    digest[0] == 0 && digest[1] == 0 && digest[2] < 16
 }
 fn starts_with_6_leading_zeroes(digest: Digest) -> bool {
     digest[0] == 0 && digest[1] == 0 && digest[2] == 0
