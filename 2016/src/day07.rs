@@ -60,7 +60,6 @@ fn has_abba(s: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
 
     #[test]
     fn test_has_abba() {
