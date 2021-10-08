@@ -33,10 +33,18 @@ fn day05() {
     assert_eq!("424a0197", day05_part2());
 }
 
+mod day06;
+use crate::day06::{day06_part1, day06_part2};
+fn day06() {
+    assert_eq!("qtbjqiuq", day06_part1());
+    assert_eq!("akothqli", day06_part2());
+}
+
 fn main() {
     day01();
     day02();
     day03();
     day04();
     day05();
+    day06();
 }
