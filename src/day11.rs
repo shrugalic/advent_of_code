@@ -135,6 +135,14 @@ impl From<Vec<String>> for Facility {
     }
 }
 impl Facility {
+    fn state(&self) -> Vec<usize> {
+        let mut counts = vec![self.elevator_floor];
+        for floor in 0..4 {
+            counts.push(self.microchips_on(&floor).len());
+            counts.push(self.generators_on(&floor).len());
+        }
+        counts
+    }
     fn is_safe(&self) -> bool {
         for floor in 0..4 {
             let generators = self.generators_on(&floor);
@@ -181,10 +189,11 @@ impl Facility {
         let mut seen = HashSet::new();
         while let Some(curr) = states.pop() {
             // println!("\nPopped state {:?}", curr);
-            if seen.contains(&curr.facility) {
+            let state = curr.facility.state();
+            if seen.contains(&state) {
                 continue;
             } else {
-                seen.insert(curr.facility.clone());
+                seen.insert(state);
             }
             if curr.facility.is_done() {
                 return curr.steps;
@@ -283,13 +292,11 @@ The fourth floor contains nothing relevant.";
         assert_eq!(11, facility.steps_to_bring_everything_to_floor_3());
     }
 
-    // Slow at 17s
     #[test]
     fn part1() {
         assert_eq!(37, day11_part1());
     }
 
-    // Very slow at almost 21 minutes
     #[test]
     fn part2() {
         assert_eq!(61, day11_part2());
