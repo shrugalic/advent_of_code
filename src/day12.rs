@@ -9,15 +9,15 @@ pub(crate) fn day12_part1() -> isize {
 
 pub(crate) fn day12_part2() -> isize {
     let mut computer = Computer::from(read_file_to_lines("input/day12.txt"));
-    computer.register['c'.to_idx()] = 1;
+    computer.set_register('c', 1);
     computer.run()
 }
 
 type Register = char;
 type Value = isize;
 
-#[derive(Debug)]
-enum Input {
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum Input {
     Register(Register),
     Value(Value),
 }
@@ -32,11 +32,14 @@ impl From<&str> for Input {
 }
 
 #[derive(Debug)]
-enum Op {
+pub(crate) enum Op {
     Cpy(Input, Register),
     Inc(Register),
     Dec(Register),
-    Jnz(Input, Value),
+    Jnz(Input, Input),
+    // The ops below are for day 23 only. This is the toggle command
+    Tgl(Register),     // toggle
+    Nop(Input, Input), // no-op used to store the previous ops parameters
 }
 impl From<String> for Op {
     fn from(s: String) -> Self {
@@ -45,7 +48,8 @@ impl From<String> for Op {
             "cpy" => Cpy(Input::from(p[1]), p[2].to_char()),
             "inc" => Inc(p[1].to_char()),
             "dec" => Dec(p[1].to_char()),
-            "jnz" => Jnz(Input::from(p[1]), p[2].parse().unwrap()),
+            "jnz" => Jnz(Input::from(p[1]), Input::from(p[2])),
+            "tgl" => Tgl(p[1].to_char()),
             _ => panic!("Invalid op {}", s),
         }
     }
@@ -70,7 +74,7 @@ impl ToIndex for char {
 }
 
 #[derive(Debug)]
-struct Computer {
+pub(crate) struct Computer {
     code: Vec<Op>,
     register: Vec<Value>,
 }
@@ -83,7 +87,7 @@ impl From<Vec<String>> for Computer {
 }
 
 impl Computer {
-    fn run(&mut self) -> isize {
+    pub(crate) fn run(&mut self) -> isize {
         let mut instr_ptr = 0;
         while let Some(op) = self.code.get(instr_ptr) {
             match op {
@@ -95,12 +99,16 @@ impl Computer {
                 }
                 Inc(r) => self.register[r.to_idx()] += 1,
                 Dec(r) => self.register[r.to_idx()] -= 1,
-                Jnz(i, diff) => {
+                Jnz(i, v) => {
                     if 0 != match i {
                         Input::Register(r) => self.register[r.to_idx()],
                         Input::Value(v) => *v,
                     } {
-                        let ip = instr_ptr as isize + *diff;
+                        let offset = match v {
+                            Input::Register(r) => self.register[r.to_idx()],
+                            Input::Value(v) => *v,
+                        };
+                        let ip = instr_ptr as isize + offset;
                         if ip < 0 {
                             // still out of bounds, but valid for a usize
                             instr_ptr = self.code.len();
@@ -110,10 +118,34 @@ impl Computer {
                         continue; // Avoid increasing of instr_ptr below
                     }
                 }
+                // This is for day 23 only
+                Tgl(r) => {
+                    let offset = self.register[r.to_idx()];
+                    let ip = instr_ptr as isize + offset;
+                    if 0 <= ip && (ip as usize) < self.code.len() {
+                        let op = self.code.get_mut(ip as usize).unwrap();
+                        // println!("old op = {:?}", op);
+                        match op {
+                            Jnz(i, v) => match v {
+                                Register(r) => *op = Cpy(*i, *r),
+                                Value(_) => *op = Nop(*i, *v),
+                            },
+                            Cpy(i, r) => *op = Jnz(*i, Input::Register(*r)),
+                            Nop(i, v) => *op = Jnz(*i, *v),
+                            Inc(r) => *op = Dec(*r),
+                            Dec(r) | Tgl(r) => *op = Inc(*r),
+                        }
+                        // println!("new op = {:?}", op);
+                    } // else nothing happens if out of bounds
+                }
+                Nop(_, _) => {} // Just skip this no-op
             }
             instr_ptr += 1;
         }
         self.register['a'.to_idx()]
+    }
+    pub(crate) fn set_register(&mut self, r: Register, v: Value) {
+        self.register[r.to_idx()] = v;
     }
 }
 
