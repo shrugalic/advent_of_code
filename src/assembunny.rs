@@ -1,15 +1,16 @@
-use Input::*;
+use std::collections::HashSet;
 use Op::*;
+use Param::*;
 
 type Register = char;
 type Value = isize;
 
 #[derive(Debug, Copy, Clone)]
-pub(crate) enum Input {
+pub(crate) enum Param {
     Register(Register),
     Value(Value),
 }
-impl From<&str> for Input {
+impl From<&str> for Param {
     fn from(s: &str) -> Self {
         if let Ok(number) = s.parse() {
             Value(number)
@@ -21,23 +22,26 @@ impl From<&str> for Input {
 
 #[derive(Debug)]
 pub(crate) enum Op {
-    Cpy(Input, Register),
+    Cpy(Param, Register),
     Inc(Register),
     Dec(Register),
-    Jnz(Input, Input),
-    // The ops below are for day 23 only. This is the toggle command
+    Jnz(Param, Param),
+    // The two ops below are for day 23 only. This is the toggle command
     Tgl(Register),     // toggle
-    Nop(Input, Input), // no-op used to store the previous ops parameters
+    Nop(Param, Param), // no-op used to store the previous ops parameters
+    // The op below is for day 25 only
+    Out(Param), // Transmit the next clock signal value
 }
 impl From<String> for Op {
     fn from(s: String) -> Self {
         let p: Vec<_> = s.split_ascii_whitespace().collect();
         match p[0] {
-            "cpy" => Cpy(Input::from(p[1]), p[2].to_char()),
+            "cpy" => Cpy(Param::from(p[1]), p[2].to_char()),
             "inc" => Inc(p[1].to_char()),
             "dec" => Dec(p[1].to_char()),
-            "jnz" => Jnz(Input::from(p[1]), Input::from(p[2])),
+            "jnz" => Jnz(Param::from(p[1]), Param::from(p[2])),
             "tgl" => Tgl(p[1].to_char()),
+            "out" => Out(Param::from(p[1])),
             _ => panic!("Invalid op {}", s),
         }
     }
@@ -77,25 +81,16 @@ impl From<Vec<String>> for Computer {
 impl Computer {
     pub(crate) fn run(&mut self) -> isize {
         let mut instr_ptr = 0;
+        let mut prev_output = None;
+        let mut visited_states = HashSet::new();
         while let Some(op) = self.code.get(instr_ptr) {
             match op {
-                Cpy(i, y) => {
-                    self.register[y.to_idx()] = match i {
-                        Input::Register(x) => self.register[x.to_idx()],
-                        Input::Value(v) => *v,
-                    }
-                }
+                Cpy(i, r) => self.register[r.to_idx()] = self.get_value(i),
                 Inc(r) => self.register[r.to_idx()] += 1,
                 Dec(r) => self.register[r.to_idx()] -= 1,
-                Jnz(i, v) => {
-                    if 0 != match i {
-                        Input::Register(r) => self.register[r.to_idx()],
-                        Input::Value(v) => *v,
-                    } {
-                        let offset = match v {
-                            Input::Register(r) => self.register[r.to_idx()],
-                            Input::Value(v) => *v,
-                        };
+                Jnz(i, p) => {
+                    if 0 != self.get_value(i) {
+                        let offset = self.get_value(p);
                         let ip = instr_ptr as isize + offset;
                         if ip < 0 {
                             // still out of bounds, but valid for a usize
@@ -118,19 +113,41 @@ impl Computer {
                                 Register(r) => *op = Cpy(*i, *r),
                                 Value(_) => *op = Nop(*i, *v),
                             },
-                            Cpy(i, r) => *op = Jnz(*i, Input::Register(*r)),
+                            Cpy(i, r) => *op = Jnz(*i, Param::Register(*r)),
                             Nop(i, v) => *op = Jnz(*i, *v),
                             Inc(r) => *op = Dec(*r),
                             Dec(r) | Tgl(r) => *op = Inc(*r),
+                            // Day 25 "Out" does not need to be handled for the day 23-only "Tgl"
+                            Out(_) => {}
                         }
                         // println!("new op = {:?}", op);
                     } // else nothing happens if out of bounds
                 }
                 Nop(_, _) => {} // Just skip this no-op
+                Out(p) => {
+                    let curr_output = self.get_value(p);
+                    match (curr_output, prev_output) {
+                        (0, None) | (0, Some(1)) | (1, Some(0)) => prev_output = Some(curr_output),
+                        // Not a sequence of 0, 1, 0, 1, 0, 1, …
+                        (_, _) => return -1, // denotes error
+                    }
+                    // Copy the computer's registers into a set to see if we're in an infinite loop,
+                    // and stop if we are
+                    if !visited_states.insert(format!("{:?}", self.register)) {
+                        return 1; // denotes success
+                    }
+                }
             }
             instr_ptr += 1;
         }
         self.register['a'.to_idx()]
+    }
+
+    fn get_value(&self, p: &Param) -> Value {
+        match p {
+            Param::Register(r) => self.register[r.to_idx()],
+            Param::Value(v) => *v,
+        }
     }
     pub(crate) fn set_register(&mut self, r: Register, v: Value) {
         self.register[r.to_idx()] = v;
