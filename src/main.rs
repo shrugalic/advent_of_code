@@ -1,3 +1,5 @@
+mod assembunny;
+
 mod day01;
 use crate::day01::{day01_part1, day01_part2};
 fn day01() {

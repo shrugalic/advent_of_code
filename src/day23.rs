@@ -1,4 +1,4 @@
-use crate::day12::Computer;
+use crate::assembunny::Computer;
 use line_reader::read_file_to_lines;
 
 pub(crate) fn day23_part1() -> isize {
