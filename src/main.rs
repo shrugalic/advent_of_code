@@ -153,10 +153,18 @@ fn day22() {
 }
 
 mod day23;
+#[allow(unused)]
 use crate::day23::{day23_part1, day23_part2};
 fn day23() {
     assert_eq!(12_330, day23_part1());
     // assert_eq!(479_008_890, day23_part2()); // Slow at 4 min 17s
+}
+
+mod day24;
+use crate::day24::{day24_part1, day24_part2};
+fn day24() {
+    assert_eq!(474, day24_part1());
+    assert_eq!(696, day24_part2()); // Slow at 4 min 17s
 }
 
 fn main() {
@@ -183,4 +191,5 @@ fn main() {
     day21();
     day22();
     day23();
+    day24();
 }
