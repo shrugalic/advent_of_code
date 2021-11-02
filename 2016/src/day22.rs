@@ -248,9 +248,6 @@ impl ToString for Stats {
     }
 }
 impl Stats {
-    fn new(used: FileSize, available: FileSize) -> Self {
-        Stats { used, available }
-    }
     fn is_empty(&self) -> bool {
         self.used == 0
     }
