@@ -258,6 +258,10 @@ impl Stats {
         !self.is_empty() && self.would_fit_in(other)
             || !other.is_empty() && other.would_fit_in(self)
     }
+    #[cfg(test)]
+    fn new(used: FileSize, available: FileSize) -> Self {
+        Stats { used, available }
+    }
 }
 impl Debug for Stats {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
