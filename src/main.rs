@@ -175,6 +175,11 @@ fn day25() {
     assert_eq!(175, day25_part1());
 }
 
+#[test]
+fn all() {
+    main()
+}
+
 fn main() {
     day01();
     day02();
