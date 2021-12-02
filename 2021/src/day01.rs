@@ -1,11 +1,11 @@
 use line_reader::read_file_to_lines;
 
-pub(crate) fn day1_part1() -> usize {
+pub(crate) fn day01_part1() -> usize {
     let depths = parse(read_file_to_lines("input/day01.txt"));
     count_increasing_depths(&depths)
 }
 
-pub(crate) fn day1_part2() -> usize {
+pub(crate) fn day01_part2() -> usize {
     let depths = parse(read_file_to_lines("input/day01.txt"));
     count_increasing_3_depth_averages(&depths)
 }
@@ -60,11 +60,11 @@ mod tests {
 
     #[test]
     fn part1() {
-        assert_eq!(day1_part1(), 1475);
+        assert_eq!(day01_part1(), 1475);
     }
 
     #[test]
     fn part2() {
-        assert_eq!(day1_part2(), 1516);
+        assert_eq!(day01_part2(), 1516);
     }
 }
