@@ -1,2 +1,2 @@
-# advent_of_code
-My attempts to solve some years/days of https://adventofcode.com
+# Advent of Code
+My attempts to solve the [Advent of Code](https://adventofcode.com) puzzles
