@@ -19,13 +19,8 @@ fn count_increasing_depths(depths: &[usize]) -> usize {
 }
 
 fn count_increasing_3_depth_averages(depths: &[usize]) -> usize {
-    depths
-        .windows(3)
-        .map(|w| w.iter().sum())
-        .collect::<Vec<usize>>()
-        .windows(2)
-        .filter(|w| w[0] < w[1])
-        .count()
+    // w[0] + w[1] + w[2] < w[1] + w[2] + w[3] can be simplified to w[0] < w[3]
+    depths.windows(4).filter(|w| w[0] < w[3]).count()
 }
 
 #[cfg(test)]
@@ -48,13 +43,11 @@ mod tests {
     #[test]
     fn test_count_increasing_depths() {
         let depths = parse(read_str_to_lines(EXAMPLE));
-
         assert_eq!(7, count_increasing_depths(&depths));
     }
     #[test]
     fn test_count_increasing_3_depth_averages() {
         let depths = parse(read_str_to_lines(EXAMPLE));
-
         assert_eq!(5, count_increasing_3_depth_averages(&depths));
     }
 
