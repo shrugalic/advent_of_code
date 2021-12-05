@@ -1,5 +1,4 @@
 use line_reader::read_file_to_lines;
-use std::cmp::Ordering;
 use std::collections::HashMap;
 
 pub(crate) fn day05_part1() -> usize {
@@ -21,7 +20,7 @@ fn count_overlaps(lines: Vec<Line>, include_diagonals: bool) -> usize {
     for line in lines.into_iter() {
         if line.is_horizontal() || line.is_vertical() || include_diagonals {
             for point in line {
-                *overlaps.entry(point).or_insert(0) += 1;
+                *overlaps.entry(point).or_default() += 1;
             }
         }
     }
@@ -79,27 +78,14 @@ impl Iterator for Line {
     type Item = Point;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(prev) = self.it {
-            if prev == self.end {
-                self.it = None
-            } else {
-                self.it = Some(
-                    match (self.start.x.cmp(&self.end.x), self.start.y.cmp(&self.end.y)) {
-                        (Ordering::Less, Ordering::Less) => prev.offset_by(1, 1),
-                        (Ordering::Less, Ordering::Equal) => prev.offset_by(1, 0),
-                        (Ordering::Less, Ordering::Greater) => prev.offset_by(1, -1),
-                        (Ordering::Equal, Ordering::Less) => prev.offset_by(0, 1),
-                        (Ordering::Equal, Ordering::Equal) => unreachable!(),
-                        (Ordering::Equal, Ordering::Greater) => prev.offset_by(0, -1),
-                        (Ordering::Greater, Ordering::Less) => prev.offset_by(-1, 1),
-                        (Ordering::Greater, Ordering::Equal) => prev.offset_by(-1, 0),
-                        (Ordering::Greater, Ordering::Greater) => prev.offset_by(-1, -1),
-                    },
-                );
-            }
-        } else {
-            self.it = Some(self.start);
-        }
+        self.it = match self.it {
+            None => Some(self.start),
+            Some(prev) if prev == self.end => None,
+            Some(prev) => Some(prev.offset_by(
+                (self.end.x - self.start.x).signum(),
+                (self.end.y - self.start.y).signum(),
+            )),
+        };
         self.it
     }
 }
