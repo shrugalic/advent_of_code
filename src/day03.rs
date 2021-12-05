@@ -1,6 +1,6 @@
 const INPUT: &str = include_str!("../input/day03.txt");
 
-pub(crate) fn day03_part1() -> usize {
+pub(crate) fn day03_part1() -> u32 {
     let numbers = parse(INPUT);
     gamma_times_epsilon(numbers)
 }
@@ -10,59 +10,52 @@ pub(crate) fn day03_part2() -> u32 {
     reduce_numbers(numbers)
 }
 
-fn gamma_times_epsilon(numbers: Vec<Vec<u32>>) -> usize {
-    let mut gamma = 0;
-    let mut epsilon = 0;
-    for i in 0..numbers[0].len() {
+fn gamma_times_epsilon(numbers: Vec<Vec<bool>>) -> u32 {
+    let len = numbers[0].len();
+    let mut gamma = Vec::with_capacity(len);
+    for i in 0..len {
         let (ones, zeroes) = count_ones_and_zeroes_at_index(&numbers, i);
-        gamma <<= 1;
-        epsilon <<= 1;
-        if ones >= zeroes {
-            gamma += 1;
-        } else {
-            epsilon += 1;
-        }
+        gamma.push(ones >= zeroes);
     }
+    let gamma = to_decimal(&gamma);
+    let epsilon = (1 << len) - 1 - gamma; // complement of gamma
     gamma * epsilon
 }
 
-fn count_ones_and_zeroes_at_index(numbers: &[Vec<u32>], i: usize) -> (usize, usize) {
-    let mut ones = 0;
-    let mut zeroes = 0;
-    for number in numbers.iter() {
-        if number[i] == 1 {
-            ones += 1;
-        } else {
-            zeroes += 1;
-        }
-    }
+fn count_ones_and_zeroes_at_index(numbers: &[Vec<bool>], i: usize) -> (usize, usize) {
+    let ones = numbers.iter().filter(|bits| bits[i]).count();
+    let zeroes = numbers.len() - ones;
     (ones, zeroes)
 }
 
-fn reduce_numbers(numbers: Vec<Vec<u32>>) -> u32 {
-    let og_rating = reduce(numbers.clone(), |o, z| if o >= z { 1 } else { 0 });
-    let cs_rating = reduce(numbers, |o, z| if o >= z { 0 } else { 1 });
+fn reduce_numbers(numbers: Vec<Vec<bool>>) -> u32 {
+    let og_rating = reduce(numbers.clone(), |ones, zeroes| ones >= zeroes);
+    let cs_rating = reduce(numbers, |ones, zeroes| ones < zeroes);
     og_rating * cs_rating
 }
 
-fn reduce(mut numbers: Vec<Vec<u32>>, wanted_filter: fn(usize, usize) -> u32) -> u32 {
+type Filter = fn(usize, usize) -> bool;
+fn reduce(mut numbers: Vec<Vec<bool>>, wanted: Filter) -> u32 {
     let mut i = 0;
     while numbers.len() > 1 {
         let (ones, zeroes) = count_ones_and_zeroes_at_index(&numbers, i);
-        numbers = numbers
-            .into_iter()
-            .filter(|n| n[i] == wanted_filter(ones, zeroes))
-            .collect();
+        numbers.retain(|bits| bits[i] == wanted(ones, zeroes));
         i += 1;
     }
-    numbers[0].iter().fold(0, |a, &i| (a << 1) + i)
+    to_decimal(&numbers[0])
 }
 
-fn parse(input: &str) -> Vec<Vec<u32>> {
+fn to_decimal(bits: &[bool]) -> u32 {
+    bits.iter()
+        .map(|&is_one| if is_one { 1 } else { 0 })
+        .fold(0, |a, i| (a << 1) + i)
+}
+
+fn parse(input: &str) -> Vec<Vec<bool>> {
     input
         .trim()
         .lines()
-        .map(|s| s.chars().filter_map(|c| c.to_digit(2)).collect::<Vec<_>>())
+        .map(|s| s.chars().map(|c| c == '1').collect::<Vec<_>>())
         .collect()
 }
 
