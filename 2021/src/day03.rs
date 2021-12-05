@@ -1,12 +1,12 @@
-use line_reader::read_file_to_lines;
+const INPUT: &str = include_str!("../input/day03.txt");
 
 pub(crate) fn day03_part1() -> usize {
-    let numbers = parse(read_file_to_lines("input/day03.txt"));
+    let numbers = parse(INPUT);
     gamma_times_epsilon(numbers)
 }
 
 pub(crate) fn day03_part2() -> u32 {
-    let numbers = parse(read_file_to_lines("input/day03.txt"));
+    let numbers = parse(INPUT);
     reduce_numbers(numbers)
 }
 
@@ -58,9 +58,10 @@ fn reduce(mut numbers: Vec<Vec<u32>>, wanted_filter: fn(usize, usize) -> u32) ->
     numbers[0].iter().fold(0, |a, &i| (a << 1) + i)
 }
 
-fn parse(input: Vec<String>) -> Vec<Vec<u32>> {
+fn parse(input: &str) -> Vec<Vec<u32>> {
     input
-        .into_iter()
+        .trim()
+        .lines()
         .map(|s| s.chars().filter_map(|c| c.to_digit(2)).collect::<Vec<_>>())
         .collect()
 }
@@ -68,7 +69,6 @@ fn parse(input: Vec<String>) -> Vec<Vec<u32>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
 
     const EXAMPLE: &str = "\
 00100
@@ -86,13 +86,13 @@ mod tests {
 
     #[test]
     fn example1() {
-        let numbers = parse(read_str_to_lines(EXAMPLE));
+        let numbers = parse(EXAMPLE);
         assert_eq!(22 * 9, gamma_times_epsilon(numbers));
     }
 
     #[test]
     fn example2() {
-        let numbers = parse(read_str_to_lines(EXAMPLE));
+        let numbers = parse(EXAMPLE);
         assert_eq!(23 * 10, reduce_numbers(numbers));
     }
 
