@@ -1,13 +1,14 @@
-use line_reader::read_file_to_lines;
 use std::collections::HashSet;
 
+const INPUT: &str = include_str!("../input/day04.txt");
+
 pub(crate) fn day04_part1() -> usize {
-    let mut bingo = Bingo::from(read_file_to_lines("input/day04.txt"));
+    let mut bingo = Bingo::from(INPUT);
     bingo.score_of_winning_board()
 }
 
 pub(crate) fn day04_part2() -> usize {
-    let mut bingo = Bingo::from(read_file_to_lines("input/day04.txt"));
+    let mut bingo = Bingo::from(INPUT);
     bingo.score_of_losing_board()
 }
 
@@ -15,12 +16,13 @@ struct Bingo {
     drawn_numbers: Vec<u8>,
     boards: Vec<Board>,
 }
-impl From<Vec<String>> for Bingo {
-    fn from(input: Vec<String>) -> Self {
+impl From<&str> for Bingo {
+    fn from(input: &str) -> Self {
+        let lines: Vec<_> = input.trim().lines().collect();
         Bingo {
-            drawn_numbers: input[0].split(',').filter_map(|s| s.parse().ok()).collect(),
-            boards: input[2..]
-                .split(String::is_empty)
+            drawn_numbers: lines[0].split(',').filter_map(|s| s.parse().ok()).collect(),
+            boards: lines[2..]
+                .split(|s| s.is_empty())
                 .map(Board::from)
                 .collect(),
         }
@@ -59,8 +61,8 @@ impl Bingo {
 struct Board {
     board: Vec<Vec<(u8, bool)>>,
 }
-impl From<&[String]> for Board {
-    fn from(lines: &[String]) -> Self {
+impl From<&[&str]> for Board {
+    fn from(lines: &[&str]) -> Self {
         Board {
             board: lines
                 .iter()
@@ -108,7 +110,6 @@ impl Board {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
 
     const EXAMPLE: &str = "\
 7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
@@ -133,13 +134,13 @@ mod tests {
 
     #[test]
     fn part1_example() {
-        let mut bingo = Bingo::from(read_str_to_lines(EXAMPLE));
+        let mut bingo = Bingo::from(EXAMPLE);
         assert_eq!(188 * 24, bingo.score_of_winning_board());
     }
 
     #[test]
     fn part2_example() {
-        let mut bingo = Bingo::from(read_str_to_lines(EXAMPLE));
+        let mut bingo = Bingo::from(EXAMPLE);
         assert_eq!(148 * 13, bingo.score_of_losing_board());
     }
 

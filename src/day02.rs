@@ -1,7 +1,7 @@
-use line_reader::read_file_to_lines;
+const INPUT: &str = include_str!("../input/day02.txt");
 
 pub(crate) fn day02_part1() -> usize {
-    let commands = parse(read_file_to_lines("input/day02.txt"));
+    let commands = parse(INPUT);
     follow_part1_commands(commands)
 }
 
@@ -17,7 +17,7 @@ fn follow_part1_commands(commands: Vec<Command>) -> usize {
     pos.horizontal * pos.depth
 }
 pub(crate) fn day02_part2() -> usize {
-    let commands = parse(read_file_to_lines("input/day02.txt"));
+    let commands = parse(INPUT);
     follow_part2_commands(commands)
 }
 
@@ -41,8 +41,8 @@ enum Command {
     Down(usize),
     Up(usize),
 }
-impl From<String> for Command {
-    fn from(s: String) -> Self {
+impl From<&str> for Command {
+    fn from(s: &str) -> Self {
         let (command, value) = s.split_once(' ').unwrap();
         let value = value.parse().unwrap();
         match command {
@@ -61,14 +61,13 @@ struct Pos {
     aim: usize,
 }
 
-fn parse(input: Vec<String>) -> Vec<Command> {
-    input.into_iter().map(Command::from).collect()
+fn parse(input: &str) -> Vec<Command> {
+    input.trim().lines().map(Command::from).collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
 
     const EXAMPLE: &str = "\
 forward 5
@@ -80,13 +79,13 @@ forward 2";
 
     #[test]
     fn example1() {
-        let commands = parse(read_str_to_lines(EXAMPLE));
+        let commands = parse(EXAMPLE);
         assert_eq!(150, follow_part1_commands(commands));
     }
 
     #[test]
     fn example2() {
-        let commands = parse(read_str_to_lines(EXAMPLE));
+        let commands = parse(EXAMPLE);
         assert_eq!(900, follow_part2_commands(commands));
     }
 

@@ -1,18 +1,19 @@
-use line_reader::read_file_to_lines;
 use std::collections::HashMap;
 
+const INPUT: &str = include_str!("../input/day05.txt");
+
 pub(crate) fn day05_part1() -> usize {
-    let lines = parse(read_file_to_lines("input/day05.txt"));
+    let lines = parse(INPUT);
     count_overlaps(lines, false)
 }
 
 pub(crate) fn day05_part2() -> usize {
-    let lines = parse(read_file_to_lines("input/day05.txt"));
+    let lines = parse(INPUT);
     count_overlaps(lines, true)
 }
 
-fn parse(input: Vec<String>) -> Vec<Line> {
-    input.into_iter().map(Line::from).collect()
+fn parse(input: &str) -> Vec<Line> {
+    input.trim().lines().map(Line::from).collect()
 }
 
 fn count_overlaps(lines: Vec<Line>, include_diagonals: bool) -> usize {
@@ -56,8 +57,8 @@ struct Line {
     /// The current Point during iteration
     it: Option<Point>,
 }
-impl From<String> for Line {
-    fn from(s: String) -> Self {
+impl From<&str> for Line {
+    fn from(s: &str) -> Self {
         let (start, end) = s.split_once(" -> ").unwrap();
         Line {
             start: Point::from(start),
@@ -93,7 +94,6 @@ impl Iterator for Line {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
 
     const EXAMPLE: &str = "\
 0,9 -> 5,9
@@ -109,12 +109,12 @@ mod tests {
 
     #[test]
     fn part1_example() {
-        let lines = parse(read_str_to_lines(EXAMPLE));
+        let lines = parse(EXAMPLE);
         assert_eq!(5, count_overlaps(lines, false));
     }
     #[test]
     fn part2_example() {
-        let lines = parse(read_str_to_lines(EXAMPLE));
+        let lines = parse(EXAMPLE);
         assert_eq!(12, count_overlaps(lines, true));
     }
 

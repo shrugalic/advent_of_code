@@ -1,17 +1,21 @@
-use line_reader::read_file_to_lines;
+const INPUT: &str = include_str!("../input/day01.txt");
 
 pub(crate) fn day01_part1() -> usize {
-    let depths = parse(read_file_to_lines("input/day01.txt"));
+    let depths = parse(INPUT);
     count_increasing_depths(&depths)
 }
 
 pub(crate) fn day01_part2() -> usize {
-    let depths = parse(read_file_to_lines("input/day01.txt"));
+    let depths = parse(INPUT);
     count_increasing_3_depth_averages(&depths)
 }
 
-fn parse(input: Vec<String>) -> Vec<usize> {
-    input.into_iter().filter_map(|s| s.parse().ok()).collect()
+fn parse(input: &str) -> Vec<usize> {
+    input
+        .trim()
+        .lines()
+        .filter_map(|s| s.parse().ok())
+        .collect()
 }
 
 fn count_increasing_depths(depths: &[usize]) -> usize {
@@ -26,7 +30,6 @@ fn count_increasing_3_depth_averages(depths: &[usize]) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
 
     const EXAMPLE: &str = "\
 199
@@ -42,12 +45,12 @@ mod tests {
 
     #[test]
     fn test_count_increasing_depths() {
-        let depths = parse(read_str_to_lines(EXAMPLE));
+        let depths = parse(EXAMPLE);
         assert_eq!(7, count_increasing_depths(&depths));
     }
     #[test]
     fn test_count_increasing_3_depth_averages() {
-        let depths = parse(read_str_to_lines(EXAMPLE));
+        let depths = parse(EXAMPLE);
         assert_eq!(5, count_increasing_3_depth_averages(&depths));
     }
 
