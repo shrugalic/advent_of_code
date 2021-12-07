@@ -46,6 +46,7 @@ mod tests {
         assert_eq!(26, multiply(parse(EXAMPLE), 18));
         assert_eq!(5934, multiply(parse(EXAMPLE), 80));
     }
+
     #[test]
     fn part2_example() {
         let timers = parse(EXAMPLE);

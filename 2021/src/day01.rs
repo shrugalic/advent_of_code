@@ -48,6 +48,7 @@ mod tests {
         let depths = parse(EXAMPLE);
         assert_eq!(7, count_increasing_depths(&depths));
     }
+
     #[test]
     fn test_count_increasing_3_depth_averages() {
         let depths = parse(EXAMPLE);

@@ -112,6 +112,7 @@ mod tests {
         let lines = parse(EXAMPLE);
         assert_eq!(5, count_overlaps(lines, false));
     }
+
     #[test]
     fn part2_example() {
         let lines = parse(EXAMPLE);
