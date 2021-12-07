@@ -1,3 +1,5 @@
+use std::mem::swap;
+
 const INPUT: &str = include_str!("../input/day07.txt");
 
 pub(crate) fn day07_part1() -> usize {
@@ -11,11 +13,29 @@ pub(crate) fn day07_part2() -> usize {
 }
 
 fn minimal_fuel_to_align(positions: Vec<isize>, increasing_cost: bool) -> usize {
-    (positions.iter().min().cloned().unwrap()..=positions.iter().max().cloned().unwrap())
-        .into_iter()
-        .map(|center| fuel_to_align_to(center, &positions, increasing_cost))
-        .min()
-        .unwrap()
+    // Start at the average position
+    let mut center = positions.iter().sum::<isize>() / positions.len() as isize;
+    let mut prev_cost = fuel_to_align_to(center, &positions, increasing_cost);
+
+    // Determine the direction of decreasing fuel cost. Try going right
+    let mut dir = 1;
+    center += dir;
+    let mut cost = fuel_to_align_to(center, &positions, increasing_cost);
+
+    // If going right increased the fuel cost, go left instead
+    if cost > prev_cost {
+        swap(&mut prev_cost, &mut cost);
+        dir = -1;
+        center += dir;
+    };
+
+    // Find the minimum
+    while cost < prev_cost {
+        center += dir;
+        prev_cost = cost;
+        cost = fuel_to_align_to(center, &positions, increasing_cost);
+    }
+    prev_cost
 }
 
 fn fuel_to_align_to(center: isize, positions: &[isize], increasing_cost: bool) -> usize {
