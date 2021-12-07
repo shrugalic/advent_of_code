@@ -1,0 +1,70 @@
+const INPUT: &str = include_str!("../input/day07.txt");
+
+pub(crate) fn day07_part1() -> usize {
+    let input = parse(INPUT);
+    minimal_fuel_to_align(input, false)
+}
+
+pub(crate) fn day07_part2() -> usize {
+    let positions = parse(INPUT);
+    minimal_fuel_to_align(positions, true)
+}
+
+fn minimal_fuel_to_align(positions: Vec<isize>, increasing_cost: bool) -> usize {
+    (positions.iter().min().cloned().unwrap()..=positions.iter().max().cloned().unwrap())
+        .into_iter()
+        .map(|center| fuel_to_align_to(center, &positions, increasing_cost))
+        .min()
+        .unwrap()
+}
+
+fn fuel_to_align_to(center: isize, positions: &[isize], increasing_cost: bool) -> usize {
+    positions
+        .iter()
+        .map(|pos| {
+            let distance = (center - pos).abs() as usize;
+            if increasing_cost {
+                distance * (distance + 1) / 2
+            } else {
+                distance
+            }
+        })
+        .sum()
+}
+
+fn parse(input: &str) -> Vec<isize> {
+    input
+        .trim()
+        .split(',')
+        .filter_map(|n| n.parse().ok())
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const EXAMPLE: &str = "\
+16,1,2,0,4,2,7,1,2,14";
+
+    #[test]
+    fn part1_example() {
+        assert_eq!(37, minimal_fuel_to_align(parse(EXAMPLE), false));
+    }
+
+    #[test]
+    fn part2_example() {
+        let input = parse(EXAMPLE);
+        assert_eq!(168, minimal_fuel_to_align(input, true));
+    }
+
+    #[test]
+    fn part1() {
+        assert_eq!(day07_part1(), 348_996);
+    }
+
+    #[test]
+    fn part2() {
+        assert_eq!(day07_part2(), 98_231_647);
+    }
+}
