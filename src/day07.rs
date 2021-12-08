@@ -64,27 +64,27 @@ fn parse(input: &str) -> Vec<isize> {
 mod tests {
     use super::*;
 
-    const EXAMPLE: &str = "\
-16,1,2,0,4,2,7,1,2,14";
+    const EXAMPLE: &str = "16,1,2,0,4,2,7,1,2,14";
 
     #[test]
     fn part1_example() {
-        assert_eq!(37, minimal_fuel_to_align(parse(EXAMPLE), false));
+        let positions = parse(EXAMPLE);
+        assert_eq!(37, minimal_fuel_to_align(positions, false));
     }
 
     #[test]
     fn part2_example() {
-        let input = parse(EXAMPLE);
-        assert_eq!(168, minimal_fuel_to_align(input, true));
+        let positions = parse(EXAMPLE);
+        assert_eq!(168, minimal_fuel_to_align(positions, true));
     }
 
     #[test]
     fn part1() {
-        assert_eq!(day07_part1(), 348_996);
+        assert_eq!(348_996, day07_part1());
     }
 
     #[test]
     fn part2() {
-        assert_eq!(day07_part2(), 98_231_647);
+        assert_eq!(98_231_647, day07_part2());
     }
 }
