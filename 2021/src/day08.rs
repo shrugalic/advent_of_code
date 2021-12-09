@@ -56,6 +56,9 @@ fn determine_mapping(inputs: CharSets) -> Vec<HashSet<char>> {
     let len_5_inputs = inputs_of_len(5, &inputs); // 5-segment lengths 2, 3 or 5
     let len_6_inputs = inputs_of_len(6, &inputs); // 6-segment lengths 0, 6 and 9
 
+    // 3 is the 5-segment input that contains the same segments as 1
+    sets[3] = len_5_inputs.containing_segments_of(&sets[1]);
+
     // adg = intersection of the 5-segment digits 2, 3 and 5:
     let adg = intersecting_segments(&len_5_inputs);
 
@@ -67,9 +70,6 @@ fn determine_mapping(inputs: CharSets) -> Vec<HashSet<char>> {
 
     // zero = the 6-segment-input without d (6 and 9 both have a segment d)
     sets[0] = len_6_inputs.not_containing_segment(&d);
-
-    // three = segments adg + segments of 1 (cf)
-    sets[3] = adg.into_iter().chain(sets[1].iter().cloned()).collect();
 
     // b = 4 - 3
     let b = sets[4].difference(&sets[3]).next().unwrap();
@@ -94,6 +94,9 @@ fn determine_mapping(inputs: CharSets) -> Vec<HashSet<char>> {
 trait CharSetOps {
     fn containing_a_segment(&self, wanted: &char) -> CharSet {
         self.matching(&|set: &CharSet| set.contains(wanted))
+    }
+    fn containing_segments_of(&self, other: &CharSet) -> CharSet {
+        self.matching(&|this: &CharSet| other.iter().all(|segment| this.contains(segment)))
     }
     fn containing_both(&self, a: &char, b: &char) -> CharSet {
         self.matching(&|set: &CharSet| set.contains(a) && set.contains(b))
