@@ -20,6 +20,10 @@ type Pair = (Element, Element);
 
 #[derive(Debug)]
 struct Polymer {
+    // Store counts of element pairs, instead of storing the full polymer (which can get long).
+    // The polymer "NNCB" would be stored as pairs { "NN" = 1, "NC" = 1, "CB" = 1 } and last = 'B'.
+    // Char frequencies are the sum of counts of each pair's first char, plus 1 for the last char:
+    // 'N' = 2, 'C' = 1, 'B' = 1
     pairs: HashMap<Pair, usize>,
     last: Element,
     rules: HashMap<Pair, Element>,
@@ -28,9 +32,18 @@ impl Polymer {
     fn grow(mut self, step_count: usize) -> Self {
         for _i in 0..step_count {
             // println!("{}. {}", _i, self);
-            self.step();
+            self.insert_element_between_each_pair();
         }
         self
+    }
+    fn insert_element_between_each_pair(&mut self) {
+        let mut pairs = HashMap::new();
+        for (pair, count) in self.pairs.drain() {
+            let elem = self.rules.get(&pair).unwrap();
+            *pairs.entry((pair.0, *elem)).or_default() += count;
+            *pairs.entry((*elem, pair.1)).or_default() += count;
+        }
+        self.pairs = pairs;
     }
     fn diff_between_most_and_least_frequent_element(&self) -> usize {
         let mut freq: HashMap<Element, usize> = HashMap::new();
@@ -39,15 +52,6 @@ impl Polymer {
         }
         *freq.entry(self.last).or_default() += 1;
         freq.values().max().unwrap() - freq.values().min().unwrap()
-    }
-    fn step(&mut self) {
-        let mut pairs = HashMap::new();
-        for (pair, count) in self.pairs.drain() {
-            let elem = self.rules.get(&pair).unwrap();
-            *pairs.entry((pair.0, *elem)).or_default() += count;
-            *pairs.entry((*elem, pair.1)).or_default() += count;
-        }
-        self.pairs = pairs;
     }
 }
 impl From<&str> for Polymer {
@@ -59,15 +63,12 @@ impl From<&str> for Polymer {
         for pair in template.as_bytes().windows(2) {
             *pairs.entry((pair[0] as char, pair[1] as char)).or_default() += 1;
         }
-        let last = *template.as_bytes().last().unwrap() as char;
+        let last = template.chars().last().unwrap();
 
         for connection in rule_lines.lines() {
             let (from, to) = connection.split_once(" -> ").unwrap();
-            let from = from.as_bytes();
-            rules.insert(
-                (from[0] as char, from[1] as char),
-                *to.as_bytes().first().unwrap() as char,
-            );
+            let from: Vec<char> = from.chars().collect();
+            rules.insert((from[0], from[1]), to.chars().next().unwrap());
         }
 
         Polymer { pairs, last, rules }
@@ -75,19 +76,19 @@ impl From<&str> for Polymer {
 }
 impl Display for Polymer {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let pts = |pair: &Pair| format!("{}{}", pair.0, pair.1);
+        let format = |pair: &Pair| format!("{}{}", pair.0, pair.1);
         write!(
             f,
             "Element pairs:\n{}\nLast element:\n- {}\nRules:\n{}\n",
             self.pairs
                 .iter()
-                .map(|(pair, count)| format!("- {}: {}", pts(pair), count))
+                .map(|(pair, count)| format!("- {}: {}", format(pair), count))
                 .collect::<Vec<_>>()
                 .join("\n"),
             self.last,
             self.rules
                 .iter()
-                .map(|(pair, to)| format!("- {} -> {}", pts(pair), *to))
+                .map(|(pair, to)| format!("- {} -> {}", format(pair), *to))
                 .collect::<Vec<_>>()
                 .join("\n")
         )
