@@ -89,6 +89,13 @@ fn day13() {
     assert_eq!("PERCGJPB", day13_part2());
 }
 
+use crate::day14::{day14_part1, day14_part2};
+mod day14;
+fn day14() {
+    assert_eq!(2068, day14_part1());
+    assert_eq!(2_158_894_777_814, day14_part2());
+}
+
 fn main() {
     day01();
     day02();
@@ -103,4 +110,5 @@ fn main() {
     day11();
     day12();
     day13();
+    day14();
 }
