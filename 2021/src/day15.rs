@@ -24,10 +24,10 @@ struct State {
     end: Pos,
 }
 impl State {
-    fn new(x: usize, y: usize, end: Pos) -> Self {
+    fn new(end: Pos) -> Self {
         State {
             risk_level_sum: 0,
-            pos: (x, y),
+            pos: (0, 0),
             end,
         }
     }
@@ -60,10 +60,9 @@ struct Cavern {
 impl Cavern {
     fn risk_level_sum_of_lowest_risk_path(&mut self) -> usize {
         let mut candidates = BinaryHeap::new();
-        candidates.push(Reverse(State::new(0, 0, self.end())));
+        candidates.push(Reverse(State::new(self.end())));
         let mut visited = HashSet::new();
         while let Some(Reverse(curr)) = candidates.pop() {
-            // println!("{:?} {:?}", curr, candidates);
             if curr.reached_end() {
                 return curr.risk_level_sum;
             }
@@ -80,25 +79,15 @@ impl Cavern {
         let w = self.grid[0].len();
         let h = self.grid.len();
         const FACTOR: usize = 5;
+
         let mut grid = vec![vec![0; w * FACTOR]; h * FACTOR];
-        for dy in 0..FACTOR {
-            let by = dy * h;
-            for dx in 0..FACTOR {
-                let bx = dx * w;
+        for tile_y in 0..FACTOR {
+            let base_y = tile_y * h;
+            for tile_x in 0..FACTOR {
+                let base_x = tile_x * w;
                 for (y, row) in self.grid.iter().enumerate() {
-                    for (x, level) in row.iter().enumerate() {
-                        let gy = by + y;
-                        let gx = bx + x;
-                        grid[gy][gx] = if dx > 0 {
-                            grid[gy][(dx - 1) * w + x] + 1
-                        } else if dy > 0 {
-                            grid[(dy - 1) * h + y][gx] + 1
-                        } else {
-                            *level
-                        };
-                        if grid[gy][gx] > 9 {
-                            grid[gy][gx] = 1;
-                        }
+                    for (x, risk) in row.iter().enumerate() {
+                        grid[base_y + y][base_x + x] = (risk + (tile_x + tile_y) as u8 - 1) % 9 + 1;
                     }
                 }
             }

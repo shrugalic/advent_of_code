@@ -99,8 +99,8 @@ fn day14() {
 use crate::day15::{day15_part1, day15_part2};
 mod day15;
 fn day15() {
-    assert_eq!(2068, day15_part1());
-    assert_eq!(2_158_894_777_815, day15_part2());
+    assert_eq!(745, day15_part1());
+    assert_eq!(3002, day15_part2());
 }
 
 fn main() {
