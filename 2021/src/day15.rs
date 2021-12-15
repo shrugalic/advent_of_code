@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashSet};
 use std::fmt::{Display, Formatter};
 
@@ -17,17 +17,17 @@ pub(crate) fn day15_part2() -> usize {
 type RiskLevel = u8;
 type Pos = (usize, usize);
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
 struct State {
+    risk_level_sum: usize,
     pos: Pos,
-    sum: usize,
     end: Pos,
 }
 impl State {
     fn new(x: usize, y: usize, end: Pos) -> Self {
         State {
+            risk_level_sum: 0,
             pos: (x, y),
-            sum: 0,
             end,
         }
     }
@@ -36,44 +36,21 @@ impl State {
     }
     fn moved_to(&self, pos: Pos, risk: RiskLevel) -> Self {
         State {
+            risk_level_sum: self.risk_level_sum + risk as usize,
             pos,
-            sum: self.sum + risk as usize,
             end: self.end,
         }
     }
     fn neighbors(&self) -> Vec<(usize, usize)> {
-        [
-            (-1, 0),
-            (0, -1),
-            // (0, 0) center
-            (0, 1),
-            (1, 0),
-        ]
-        .into_iter()
-        .map(|(dx, dy)| (self.pos.0 as isize + dx, self.pos.1 as isize + dy))
-        .filter(|(x, y)| self.contains(x, y))
-        .map(|(x, y)| (x as usize, y as usize))
-        .collect()
+        [(-1, 0), (0, -1), (0, 1), (1, 0)]
+            .into_iter()
+            .map(|(dx, dy)| (self.pos.0 as isize + dx, self.pos.1 as isize + dy))
+            .filter(|(x, y)| self.contains(x, y))
+            .map(|(x, y)| (x as usize, y as usize))
+            .collect()
     }
     fn contains(&self, x: &isize, y: &isize) -> bool {
         (0..=self.end.0 as isize).contains(x) && (0..=self.end.1 as isize).contains(y)
-    }
-    fn distance(&self) -> usize {
-        (self.end.0 as isize - self.pos.0 as isize).abs() as usize
-            + (self.end.1 as isize - self.pos.1 as isize).abs() as usize
-    }
-}
-impl Ord for State {
-    fn cmp(&self, other: &Self) -> Ordering {
-        match self.sum.cmp(&other.sum) {
-            Ordering::Equal => self.distance().cmp(&other.distance()).reverse(),
-            order => order.reverse(),
-        }
-    }
-}
-impl PartialOrd for State {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
     }
 }
 
@@ -83,17 +60,17 @@ struct Cavern {
 impl Cavern {
     fn risk_level_sum_of_lowest_risk_path(&mut self) -> usize {
         let mut candidates = BinaryHeap::new();
-        candidates.push(State::new(0, 0, self.end()));
+        candidates.push(Reverse(State::new(0, 0, self.end())));
         let mut visited = HashSet::new();
-        while let Some(curr) = candidates.pop() {
+        while let Some(Reverse(curr)) = candidates.pop() {
             // println!("{:?} {:?}", curr, candidates);
             if curr.reached_end() {
-                return curr.sum;
+                return curr.risk_level_sum;
             }
             for next_pos in curr.neighbors() {
                 if visited.insert(next_pos) {
                     let risk = self.risk_level(next_pos);
-                    candidates.push(curr.moved_to(next_pos, risk))
+                    candidates.push(Reverse(curr.moved_to(next_pos, risk)))
                 }
             }
         }
