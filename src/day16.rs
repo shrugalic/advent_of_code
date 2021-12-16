@@ -13,75 +13,44 @@ pub(crate) fn day16_part2() -> usize {
 type BitDigit = u8;
 type HexDigit = u8;
 
-#[derive(Debug, PartialEq)]
-enum Operation {
+#[derive(Debug, PartialEq, Clone)]
+enum TypeId {
     Sum,
     Product,
     Minimum,
     Maximum,
+    Literal,
     GreaterThan,
     LessThan,
     EqualTo,
 }
-impl From<u8> for Operation {
+impl From<u8> for TypeId {
     fn from(v: u8) -> Self {
         match v {
-            0 => Operation::Sum,
-            1 => Operation::Product,
-            2 => Operation::Minimum,
-            3 => Operation::Maximum,
-            5 => Operation::GreaterThan,
-            6 => Operation::LessThan,
-            7 => Operation::EqualTo,
+            0 => TypeId::Sum,
+            1 => TypeId::Product,
+            2 => TypeId::Minimum,
+            3 => TypeId::Maximum,
+            4 => TypeId::Literal,
+            5 => TypeId::GreaterThan,
+            6 => TypeId::LessThan,
+            7 => TypeId::EqualTo,
             _ => unreachable!(),
         }
     }
 }
-impl Operation {
+impl TypeId {
     fn apply_to(&self, packets: &[Packet]) -> usize {
+        let bool_to_num = |b| if b { 1 } else { 0 };
         match self {
-            Operation::Sum => packets.iter().map(|p| p.value as usize).sum(),
-            Operation::Product => packets.iter().map(|p| p.value as usize).product(),
-            Operation::Minimum => packets.iter().map(|p| p.value as usize).min().unwrap(),
-            Operation::Maximum => packets.iter().map(|p| p.value as usize).max().unwrap(),
-            Operation::GreaterThan => {
-                assert_eq!(2, packets.len());
-                if packets[0].value > packets[1].value {
-                    1
-                } else {
-                    0
-                }
-            }
-            Operation::LessThan => {
-                assert_eq!(2, packets.len());
-                if packets[0].value < packets[1].value {
-                    1
-                } else {
-                    0
-                }
-            }
-            Operation::EqualTo => {
-                assert_eq!(2, packets.len());
-                if packets[0].value == packets[1].value {
-                    1
-                } else {
-                    0
-                }
-            }
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-enum TypeId {
-    Literal,
-    Operator(u8),
-}
-impl From<u8> for TypeId {
-    fn from(v: u8) -> Self {
-        match v {
-            4 => TypeId::Literal,
-            _ => TypeId::Operator(v),
+            TypeId::Sum => packets.iter().map(|p| p.value).sum(),
+            TypeId::Product => packets.iter().map(|p| p.value).product(),
+            TypeId::Minimum => packets.iter().map(|p| p.value).min().unwrap(),
+            TypeId::Maximum => packets.iter().map(|p| p.value).max().unwrap(),
+            TypeId::GreaterThan => bool_to_num(packets[0].value > packets[1].value),
+            TypeId::LessThan => bool_to_num(packets[0].value < packets[1].value),
+            TypeId::EqualTo => bool_to_num(packets[0].value == packets[1].value),
+            TypeId::Literal => unreachable!(),
         }
     }
 }
@@ -166,7 +135,7 @@ fn parse_packets(bits: &[u8]) -> Vec<Packet> {
                 len: pos,
             }]
         }
-        TypeId::Operator(op) => {
+        _ /* Operator */ => {
             let mut packets = vec![];
 
             let len_type = LengthTypeId::from(bits[pos]);
@@ -186,11 +155,7 @@ fn parse_packets(bits: &[u8]) -> Vec<Packet> {
                         pos += sub_packets[0].len;
                         all_sub_packets.append(&mut sub_packets);
                     }
-                    let value = if op < 5 {
-                        Operation::from(op).apply_to(&first_only)
-                    } else {
-                        Operation::from(op).apply_to(&first_only[..2])
-                    };
+                    let value = type_id.apply_to(&first_only);
                     packets.append(&mut all_sub_packets);
                     let packet = Packet {
                         version,
@@ -209,11 +174,7 @@ fn parse_packets(bits: &[u8]) -> Vec<Packet> {
                         pos += sub_packets[0].len;
                         all_sub_packets.append(&mut sub_packets);
                     }
-                    let value = if op < 5 {
-                        Operation::from(op).apply_to(&first_only)
-                    } else {
-                        Operation::from(op).apply_to(&first_only[..2])
-                    };
+                    let value = type_id.apply_to(&first_only);
                     packets.append(&mut all_sub_packets);
                     let packet = Packet {
                         version,
@@ -312,7 +273,7 @@ mod tests {
             packets[0],
             Packet {
                 version: 1,
-                type_id: TypeId::Operator(6),
+                type_id: TypeId::LessThan,
                 value: 1,
                 len: (3 + 3 + 1 + 15) + (11 + 16) // 49
             }
@@ -347,7 +308,7 @@ mod tests {
             packets[0],
             Packet {
                 version: 7,
-                type_id: TypeId::Operator(3),
+                type_id: TypeId::Maximum,
                 value: 3,
                 len: (3 + 3 + 1 + 11) + (3 * 11)
             }
@@ -391,7 +352,7 @@ mod tests {
             packets[0],
             Packet {
                 version: 4,
-                type_id: TypeId::Operator(2),
+                type_id: TypeId::Minimum,
                 value: 15,
                 len: (3 + 3 + 1 + 11) + 51
             }
@@ -400,7 +361,7 @@ mod tests {
             packets[1],
             Packet {
                 version: 1,
-                type_id: TypeId::Operator(2),
+                type_id: TypeId::Minimum,
                 value: 15,
                 len: (3 + 3 + 1 + 11) + 33 // 51
             }
@@ -409,7 +370,7 @@ mod tests {
             packets[2],
             Packet {
                 version: 5,
-                type_id: TypeId::Operator(2),
+                type_id: TypeId::Minimum,
                 value: 15,
                 len: (6 + 1 + 15) + 11 // 33
             }
@@ -435,7 +396,7 @@ mod tests {
             packets[0],
             Packet {
                 version: 3,
-                type_id: TypeId::Operator(0),
+                type_id: TypeId::Sum,
                 value: 21 + 25, // 46
                 len: (3 + 3 + 1 + 11) + 44 + 40
             }
@@ -444,7 +405,7 @@ mod tests {
             packets[1],
             Packet {
                 version: 0,
-                type_id: TypeId::Operator(0),
+                type_id: TypeId::Sum,
                 value: 10 + 11,                  // 21
                 len: (3 + 3 + 1 + 15) + 11 + 11  // 44
             }
@@ -471,7 +432,7 @@ mod tests {
             packets[4],
             Packet {
                 version: 1,
-                type_id: TypeId::Operator(0),
+                type_id: TypeId::Sum,
                 value: 12 + 13,                  // 25
                 len: (3 + 3 + 1 + 11) + 11 + 11  // 40
             }
@@ -506,7 +467,7 @@ mod tests {
             packets[0],
             Packet {
                 version: 6,
-                type_id: TypeId::Operator(0),
+                type_id: TypeId::Sum,
                 value: 21 + 25, // 46
                 len: (3 + 3 + 1 + 15) + 44 + 40
             }
@@ -515,7 +476,7 @@ mod tests {
             packets[1],
             Packet {
                 version: 0,
-                type_id: TypeId::Operator(0),
+                type_id: TypeId::Sum,
                 value: 10 + 11,                  // 21
                 len: (3 + 3 + 1 + 15) + 11 + 11  // 44
             }
@@ -542,7 +503,7 @@ mod tests {
             packets[4],
             Packet {
                 version: 4,
-                type_id: TypeId::Operator(0),
+                type_id: TypeId::Sum,
                 value: 12 + 13,                  // 25
                 len: (3 + 3 + 1 + 11) + 11 + 11  // 40
             }
