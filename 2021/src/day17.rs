@@ -11,37 +11,11 @@ pub(crate) fn day17_part2() -> usize {
     Probe::from(INPUT).trajectory_count()
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
-struct Pair {
-    x: isize,
-    y: isize,
-}
-impl Pair {
-    fn new(x: isize, y: isize) -> Self {
-        Self { x, y }
-    }
-    fn is_past(&self, target_area: &RangeInclusive<Pair>) -> bool {
-        self.x > target_area.end().x || self.y < target_area.start().y
-    }
-    fn is_within(&self, target_area: &RangeInclusive<Pair>) -> bool {
-        (target_area.start().x..=target_area.end().x).contains(&self.x)
-            && (target_area.start().y..=target_area.end().y).contains(&self.y)
-    }
-    fn cannot_reach(&self, target_area: &RangeInclusive<Pair>, vel: &Pair) -> bool {
-        vel.x == 0 && self.x < target_area.start().x
-    }
-}
-impl AddAssign for Pair {
-    fn add_assign(&mut self, rhs: Self) {
-        self.x += rhs.x;
-        self.y += rhs.y;
-    }
-}
-
 #[derive(Debug, PartialEq)]
 struct Probe {
     target_area: RangeInclusive<Pair>,
 }
+
 impl Probe {
     fn highest_point(&self) -> isize {
         self.target_trajectory().0
@@ -50,33 +24,29 @@ impl Probe {
         self.target_trajectory().1
     }
     fn target_trajectory(&self) -> (isize, usize) {
-        let mut highest_ys = vec![];
+        let mut max_ys = vec![];
+        let mut target_velocity_count = 0;
 
         let y_velocity_range = self.y_velocity_range();
-        let mut initial_velocities = vec![];
-
         for x in self.x_velocity_range() {
             for y in y_velocity_range.clone() {
                 if let Some(max_y) = self.simulate_trajectory(x, y) {
-                    highest_ys.push(max_y);
-                    initial_velocities.push(Pair::new(x, y));
+                    max_ys.push(max_y);
+                    target_velocity_count += 1;
                 }
             }
         }
-        (*highest_ys.iter().max().unwrap(), initial_velocities.len())
+        (*max_ys.iter().max().unwrap(), target_velocity_count)
     }
-
     fn simulate_trajectory(&self, x: isize, y: isize) -> Option<isize> {
         let mut position = Pair::new(0, 0);
         let mut velocity = Pair::new(x, y);
 
         let mut max_y = isize::MIN;
         while !(position.is_past(&self.target_area)
-            || position.cannot_reach(&self.target_area, &velocity))
+            || velocity.cannot_reach(&self.target_area, &position))
         {
-            if position.y > max_y {
-                max_y = position.y;
-            }
+            max_y = max(max_y, position.y);
             position += velocity;
             velocity.x = max(velocity.x - 1, 0);
             velocity.y -= 1;
@@ -102,11 +72,9 @@ impl Probe {
 
         min_x..=max_x
     }
-
     fn reachable(x: isize) -> isize {
         x * (x + 1) / 2
     }
-
     fn y_velocity_range(&self) -> RangeInclusive<isize> {
         // Similarly to the x velocity range, the minimal y-velocity is bound by the
         // lower border of the target area, which would be reached in one step in this case.
@@ -148,11 +116,39 @@ impl From<&str> for Probe {
     }
 }
 
+#[derive(Debug, PartialEq, Copy, Clone)]
+struct Pair {
+    x: isize,
+    y: isize,
+}
+impl Pair {
+    fn new(x: isize, y: isize) -> Self {
+        Self { x, y }
+    }
+    fn is_past(&self, target_area: &RangeInclusive<Pair>) -> bool {
+        self.x > target_area.end().x || self.y < target_area.start().y
+    }
+    fn is_within(&self, target_area: &RangeInclusive<Pair>) -> bool {
+        (target_area.start().x..=target_area.end().x).contains(&self.x)
+            && (target_area.start().y..=target_area.end().y).contains(&self.y)
+    }
+    fn cannot_reach(&self, target_area: &RangeInclusive<Pair>, position: &Pair) -> bool {
+        self.x == 0 && position.x < target_area.start().x
+    }
+}
+impl AddAssign for Pair {
+    fn add_assign(&mut self, rhs: Self) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     const EXAMPLE: &str = "target area: x=20..30, y=-10..-5";
+
     #[test]
     fn part1_example() {
         assert_eq!(45, Probe::from(EXAMPLE).highest_point());
