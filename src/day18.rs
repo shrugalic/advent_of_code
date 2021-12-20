@@ -50,6 +50,12 @@ enum Element {
     Open,  // Open
     Close, // Close
     Num(Value),
+    Pair { left: Value, right: Value },
+}
+impl Element {
+    fn pair(left: Value, right: Value) -> Self {
+        Pair { left, right }
+    }
 }
 impl From<char> for Element {
     fn from(c: char) -> Self {
@@ -61,7 +67,7 @@ impl From<char> for Element {
     }
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 struct SnailfishNumber {
     elements: Vec<Element>,
 }
@@ -75,23 +81,31 @@ impl Display for SnailfishNumber {
                 [Close, ..] => s.push_str("],"),
                 [Num(val), Close, ..] => s.push_str(&val.to_string()),
                 [Num(val), ..] => s.push_str(&format!("{},", val)),
+                [Pair { left, right }, Close] => s.push_str(&format!("[{},{}]", left, right)),
+                [Pair { left, right }, ..] => s.push_str(&format!("[{},{}],", left, right)),
                 _ => unreachable!(),
             }
         }
-        s.push(']');
+        if let Some(Pair { left, right }) = self.elements.last() {
+            if self.elements.len() == 1 {
+                s.push_str(&format!("[{},{}]", left, right));
+            }
+        } else {
+            s.push(']');
+        }
         write!(f, "{}", s)
     }
 }
-impl Debug for SnailfishNumber {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
-    }
-}
+// impl Debug for SnailfishNumber {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+//         write!(f, "{}", self.to_string())
+//     }
+// }
 impl SnailfishNumber {
     #[cfg(test)]
     fn pair(left: Value, right: Value) -> Self {
         Self {
-            elements: vec![Open, Num(left), Num(right), Close],
+            elements: vec![Pair { left, right }],
         }
     }
     fn reduce(mut self) -> Self {
@@ -115,72 +129,96 @@ impl SnailfishNumber {
     }
     fn explode(mut self) -> Self {
         if let Some((i, left, right)) = self.find_pair() {
-            self.replace_pair_with_0(i);
+            self.elements[i] = Num(0);
             self.propagate_left(i - 1, left);
-            self.propagate_right(i + 1, right)
+            self.propagate_right(i + 1, right);
         }
-        self
+        self.consolidate_pairs()
     }
+    /// finds a pair that is nested within 4+ others
     fn find_pair(&self) -> Option<(usize, Value, Value)> {
         let mut open = 0;
-        for (i, w) in self.elements.windows(3).enumerate() {
-            match (open, w) {
+        for (i, e) in self.elements.iter().enumerate() {
+            match (open, e) {
                 // Open range 4.. works fine, but IntelliJ still warns about it
-                (4..=usize::MAX, [Open, Num(left), Num(right), ..]) => {
-                    return Some((i, *left, *right))
-                }
-                (_, [Open, ..]) => open += 1,
-                (_, [Close, ..]) => open -= 1,
+                (4..=usize::MAX, Pair { left, right }) => return Some((i, *left, *right)),
+                (_, Open) => open += 1,
+                (_, Close) => open -= 1,
                 (_, _) => (),
             }
         }
         None
     }
-    fn replace_pair_with_0(&mut self, i: usize) {
-        // [ left right ]
-        // i i+1  i+2   i+3
-        self.remove(i + 3); // ]
-        self.remove(i + 2); // right
-        self.elements[i + 1] = Num(0); // left
-        self.remove(i); // [
-    }
-    fn propagate_left(&mut self, mut l: usize, left: Value) {
-        while l > 0 {
-            if let Some(Num(val)) = self.elements.get_mut(l) {
-                *val += left;
-                break;
-            }
-            l = l.saturating_sub(1);
+    fn propagate_left(&mut self, i: usize, to_left: Value) {
+        let skip = self.elements.len() - 1 - i;
+        if let Some(old) = self
+            .elements
+            .iter_mut()
+            .rev()
+            .skip(skip)
+            .find_map(|e| match e {
+                Num(num) => Some(num),
+                Pair { left: _, right } => Some(right),
+                _ => None,
+            })
+        {
+            *old += to_left;
         }
     }
-    fn propagate_right(&mut self, mut r: usize, right: Value) {
-        while r < self.elements.len() {
-            if let Some(Num(val)) = self.elements.get_mut(r) {
-                *val += right;
-                break;
-            }
-            r += 1;
+    fn propagate_right(&mut self, i: usize, to_right: Value) {
+        if let Some(old) = self.elements.iter_mut().skip(i).find_map(|e| match e {
+            Num(num) => Some(num),
+            Pair { left, right: _ } => Some(left),
+            _ => None,
+        }) {
+            *old += to_right;
         }
     }
     fn split(mut self) -> Self {
-        if let Some((i, val)) = self.elements.iter().enumerate().find_map(|(i, e)| match e {
-            // The largest encountered value is 48. But IntelliJ warns
-            // about open range 10.., even though it works fine
-            Num(val @ 10..=usize::MAX) => Some((i, *val)),
-            _ => None,
+        let split_to_pair = |v: Value| Element::pair(v / 2, (v + 1) / 2);
+        // Look for Num and Pair, only the first one matters, whichever it is
+        if let Some(i) = self.elements.iter().enumerate().position(|(_, e)| match e {
+            Num(n) => *n >= 10,
+            Pair { left, right } => *left >= 10 || *right >= 10,
+            _ => false,
         }) {
-            // println!("Found value {} to split @ {}", val, i);
-            self.remove(i);
-            self.elements.insert(i, Close);
-            self.elements.insert(i, Num((val + 1) / 2));
-            self.elements.insert(i, Num(val / 2));
-            self.elements.insert(i, Open);
+            match self.elements[i] {
+                // Large value in a Num is easy, just replace it with a pair
+                Num(val) => self.elements[i] = split_to_pair(val),
+                // Otherwise it will be part of a pair, that's more complicated
+                Pair { left, right } => {
+                    self.elements.insert(i + 1, Close);
+                    if left >= 10 {
+                        self.elements.insert(i + 1, Num(right));
+                        self.elements[i] = split_to_pair(left);
+                    } else {
+                        assert!(right >= 10);
+                        self.elements[i] = split_to_pair(right);
+                        self.elements.insert(i, Num(left));
+                    }
+                    self.elements.insert(i, Open);
+                }
+                _ => {}
+            };
         }
         self
     }
     fn magnitude(mut self) -> usize {
         self = self.reduce();
-        // let mut elements = self.elements.clone();
+
+        while let Some(e) = self.elements.iter_mut().find(|e| matches!(e, Pair { .. })) {
+            if let Pair { left, right } = e {
+                *e = Num(3 * *left + 2 * *right);
+                self = self.consolidate_pairs();
+            }
+        }
+        match self.elements[..] {
+            [Num(magnitude)] => magnitude,
+            [Open, Num(left), Num(right), Close] => 3 * left + 2 * right,
+            _ => unreachable!("leftover {:?} or {}", self, self),
+        }
+    }
+    fn consolidate_pairs(mut self) -> Self {
         while let Some((i, left, right)) =
             self.elements
                 .windows(4)
@@ -193,14 +231,9 @@ impl SnailfishNumber {
             self.remove(i);
             self.remove(i);
             self.remove(i);
-            self.remove(i);
-            self.elements.insert(i, Num(3 * left + 2 * right));
+            self.elements[i] = Pair { left, right };
         }
-        if let Num(magnitude) = self.elements[0] {
-            magnitude
-        } else {
-            unreachable!()
-        }
+        self
     }
 }
 impl Add for SnailfishNumber {
@@ -218,13 +251,13 @@ impl Add for SnailfishNumber {
 }
 impl From<&str> for SnailfishNumber {
     fn from(line: &str) -> Self {
-        let elements = line
+        let elements: Vec<Element> = line
             .trim()
             .chars()
             .filter(|c| c != &',')
             .map(Element::from)
             .collect();
-        SnailfishNumber { elements }
+        SnailfishNumber { elements }.consolidate_pairs()
     }
 }
 
@@ -260,7 +293,7 @@ mod tests {
     fn test_pair_of_two_regular_numbers() {
         let line = "[1,2]";
         let number = SnailfishNumber::from(line);
-        let elements = vec![Open, Num(1), Num(2), Close];
+        let elements = vec![Pair { left: 1, right: 2 }];
         assert_eq!(number, SnailfishNumber { elements });
         assert_eq!(number, SnailfishNumber::pair(1, 2));
         assert_eq!(number.to_string(), line);
@@ -276,25 +309,52 @@ mod tests {
     #[test]
     fn test_pair_of_pair_and_number() {
         let line = "[[1,2],3]";
-        assert_eq!(SnailfishNumber::from(line).to_string(), line);
+        let number = SnailfishNumber::from(line);
+        assert_eq!(line, number.to_string());
+        assert_eq!(
+            number,
+            SnailfishNumber {
+                elements: vec![Open, Pair { left: 1, right: 2 }, Num(3), Close]
+            }
+        );
     }
 
     #[test]
     fn test_pair_of_number_and_pair() {
         let line = "[9,[8,7]]";
-        assert_eq!(SnailfishNumber::from(line).to_string(), line);
+        let number = SnailfishNumber::from(line);
+        assert_eq!(line, number.to_string());
+        assert_eq!(
+            number,
+            SnailfishNumber {
+                elements: vec![Open, Num(9), Pair { left: 8, right: 7 }, Close]
+            }
+        );
     }
 
     #[test]
     fn test_pair_of_pairs() {
         let line = "[[1,9],[8,5]]";
-        assert_eq!(SnailfishNumber::from(line).to_string(), line);
+        let number = SnailfishNumber::from(line);
+        assert_eq!(number.to_string(), line);
+        assert_eq!(
+            number,
+            SnailfishNumber {
+                elements: vec![
+                    Open,
+                    Pair { left: 1, right: 9 },
+                    Pair { left: 8, right: 5 },
+                    Close
+                ]
+            }
+        );
     }
 
     #[test]
     fn test_pair_of_nested_1() {
         let line = "[[[[1,2],[3,4]],[[5,6],[7,8]]],9]";
-        assert_eq!(SnailfishNumber::from(line).to_string(), line);
+        let number = SnailfishNumber::from(line);
+        assert_eq!(number.to_string(), line);
     }
 
     #[test]
@@ -309,6 +369,13 @@ mod tests {
         assert_eq!(SnailfishNumber::from(line).to_string(), line);
     }
 
+    #[test]
+    fn test_find_pair() {
+        assert_eq!(
+            SnailfishNumber::from("[[[[[9,8],1],2],3],4]").find_pair(),
+            Some((4, 9, 8))
+        );
+    }
     #[test]
     fn test_explode() {
         assert_eq!(
@@ -336,6 +403,22 @@ mod tests {
     #[test]
     fn test_split() {
         assert_eq!(
+            SnailfishNumber {
+                elements: vec![Open, Num(10), Pair { left: 2, right: 3 }, Close]
+            }
+            .split(),
+            // [10,[2,3]]
+            SnailfishNumber::from("[[5,5],[2,3]]")
+        );
+        assert_eq!(
+            SnailfishNumber {
+                elements: vec![Open, Pair { left: 2, right: 3 }, Num(11), Close]
+            }
+            .split(),
+            //[[2,3],11]
+            SnailfishNumber::from("[[2,3],[5,6]]")
+        );
+        assert_eq!(
             SnailfishNumber::pair(9, 1).split(),
             SnailfishNumber::from("[9,1]")
         );
@@ -344,8 +427,8 @@ mod tests {
             SnailfishNumber::from("[[5,5],1]")
         );
         assert_eq!(
-            SnailfishNumber::pair(11, 1).split(),
-            SnailfishNumber::from("[[5,6],1]")
+            SnailfishNumber::pair(1, 11).split(),
+            SnailfishNumber::from("[1,[5,6]]")
         );
     }
 
