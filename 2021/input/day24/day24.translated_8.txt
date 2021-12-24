@@ -1,0 +1,121 @@
+// initially, z = 0, this will simplify the first block considerably
+w = next_input // a number from 1 to 9
+x = ((z % 26) + 15) != w
+y = (25 * x) + 1
+z *= y
+y = (w + 15) * x
+z += y
+
+w = next_input
+x = ((z % 26) + 15) != w
+y = (25 * x) + 1
+z *= y
+y = (w + 10) * x
+z += y
+
+w = next_input
+x = ((z % 26) + 12) != w
+y = (25 * x) + 1
+z *= y
+y = (w + 2) * x
+z += y
+
+w = next_input
+x = ((z % 26) + 13) != w
+y = (25 * x) + 1
+z *= y
+y = (w + 16) * x
+z += y
+
+w = next_input
+x = z % 26
+z /= 26
+x += -12
+x = (x != w)
+y = (25 * x) + 1
+z *= y
+y = (w + 12) * x
+z += y
+
+w = next_input
+x = ((z % 26) + 10) != w
+y = (25 * x) + 1
+z *= y
+y = (w + 11) * x
+z += y
+
+w = next_input
+x = z % 26
+z /= 26
+x += -9
+x = (x != w)
+y = (25 * x) + 1
+z *= y
+y = (w + 5) * x
+z += y
+
+w = next_input
+x = ((z % 26) + 14) != w
+y = (25 * x) + 1
+z *= y
+y = (w + 16) * x
+z += y
+
+w = next_input
+x = ((z % 26) + 13) != w
+y = (25 * x) + 1
+z *= y
+y = (w + 6) * x
+z += y
+
+w = next_input
+x = z % 26
+z /= 26
+x += -14
+x = (x != w)
+y = (25 * x) + 1
+z *= y
+y = (w + 15) * x
+z += y
+
+w = next_input
+x = z % 26
+z /= 26
+x += -11
+x = (x != w)
+y = (25 * x) + 1
+z *= y
+y = (w + 3) * x
+z += y
+
+w = next_input
+x = z % 26
+z /= 26
+x += -2
+x = (x != w)
+y = (25 * x) + 1
+z *= y
+y = (w + 12) * x
+z += y
+
+w = next_input
+x = z % 26
+z /= 26
+x += -16
+x = (x != w)
+y = (25 * x) + 1
+z *= y
+y = (w + 10) * x
+z += y
+
+w = next_input
+x = z % 26
+z /= 26
+x += -14
+x = (x != w)
+y = (25 * x) + 1
+z *= y
+y = (w + 13) * x
+z += y
+
+// valid numbers end with a 0 in z
