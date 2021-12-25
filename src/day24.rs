@@ -41,16 +41,12 @@ fn run_program_natively(inputs: &[Value]) -> Value {
     z += w + 10;
 
     w = inputs[2];
-    if (z % 26) + 12 != w {
-        z *= 26;
-        z += w + 2;
-    }
+    z *= 26;
+    z += w + 2;
 
     w = inputs[3];
-    if (z % 26) + 13 != w {
-        z *= 26;
-        z += w + 16;
-    }
+    z *= 26;
+    z += w + 16;
 
     w = inputs[4];
     x = z % 26;
@@ -61,10 +57,8 @@ fn run_program_natively(inputs: &[Value]) -> Value {
     }
 
     w = inputs[5];
-    if (z % 26) + 10 != w {
-        z *= 26;
-        z += w + 11;
-    }
+    z *= 26;
+    z += w + 11;
 
     w = inputs[6];
     x = z % 26;
@@ -75,16 +69,12 @@ fn run_program_natively(inputs: &[Value]) -> Value {
     }
 
     w = inputs[7];
-    if (z % 26) + 14 != w {
-        z *= 26;
-        z += w + 16;
-    }
+    z *= 26;
+    z += w + 16;
 
     w = inputs[8];
-    if (z % 26) + 13 != w {
-        z *= 26;
-        z += w + 6;
-    }
+    z *= 26;
+    z += w + 6;
 
     w = inputs[9];
     x = z % 26;
