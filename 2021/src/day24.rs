@@ -33,86 +33,75 @@ pub(crate) fn day24_part2() -> usize {
 fn run_program_natively(inputs: &[Value]) -> Value {
     let (mut w, mut x, mut z); // = (0, 0, 0, 0);
 
-    w = inputs[0];
-    z = w + 15;
-
-    w = inputs[1];
-    z *= 26;
-    z += w + 10;
-
-    w = inputs[2];
-    z *= 26;
-    z += w + 2;
-
-    w = inputs[3];
-    z *= 26;
-    z += w + 16;
+    z = inputs[0] + 15;
+    z *= 26; // 1 multiple of 26
+    z += inputs[1] + 10;
+    z *= 26; // 2
+    z += inputs[2] + 2;
+    z *= 26; // 3
+    z += inputs[3] + 16;
 
     w = inputs[4];
     x = z % 26;
-    z /= 26;
+    z /= 26; // 2
     if x - 12 != w {
-        z *= 26;
+        z *= 26; // 3
         z += w + 12;
     }
 
-    w = inputs[5];
-    z *= 26;
-    z += w + 11;
+    z *= 26; // 3 or 4
+    z += inputs[5] + 11;
 
     w = inputs[6];
     x = z % 26;
-    z /= 26;
+    z /= 26; // 2 or 3
     if x - 9 != w {
-        z *= 26;
+        z *= 26; // 3 or 4
         z += w + 5;
     }
 
-    w = inputs[7];
-    z *= 26;
-    z += w + 16;
-
-    w = inputs[8];
-    z *= 26;
-    z += w + 6;
+    z *= 26; // 3 or 4 or 5
+    z += inputs[7] + 16;
+    z *= 26; // 4 or 5 or 6
+    z += inputs[8] + 6;
 
     w = inputs[9];
     x = z % 26;
-    z /= 26;
+    z /= 26; // 3 or 4 or 5
     if x - 14 != w {
-        z *= 26;
+        z *= 26; // 4 or 5 or 6
         z += w + 15;
     }
 
     w = inputs[10];
     x = z % 26;
-    z /= 26;
+    z /= 26; // 3 or 4 or 5
     if x - 11 != w {
-        z *= 26;
+        z *= 26; // 4 or 5 or 6
         z += w + 3;
     }
 
     w = inputs[11];
     x = z % 26;
-    z /= 26;
+    z /= 26; // 3 or 4 or 5
     if x - 2 != w {
-        z *= 26;
+        z *= 26; // 4 or 5 or 6
         z += w + 12;
     }
 
     w = inputs[12];
     x = z % 26;
-    z /= 26;
+    z /= 26; // 3 or 4 or 5
     if x - 16 != w {
-        z *= 26;
+        z *= 26; // 4 or 5 or 6
         z += w + 10;
     }
 
     w = inputs[13];
     x = z % 26;
-    z /= 26;
+    z /= 26; // 3 or 4 or 5
     if x - 14 != w {
-        z *= 26;
+        z *= 26; // 4 or 5 or 6
         z += w + 13;
     }
 
