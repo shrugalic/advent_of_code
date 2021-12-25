@@ -40,11 +40,13 @@ fn run_program_natively(inputs: &[Value]) -> Value {
     z += inputs[2] + 2;
     z *= 26; // 3
     z += inputs[3] + 16;
+    // 288'747 is the smallest possible z here, with all 1 inputs ((((1+15)*26+1+10)*26+1+2)*26+1+16)
+    // 434'979 is the largest possible z here, with all 9 inputs ((((9+15)*26+9+10)*26+9+2)*26+9+16)
 
     w = inputs[4];
     x = z % 26;
     z /= 26; // 2
-    if x - 12 != w {
+    if x != w + 12 {
         z *= 26; // 3
         z += w + 12;
     }
@@ -55,7 +57,7 @@ fn run_program_natively(inputs: &[Value]) -> Value {
     w = inputs[6];
     x = z % 26;
     z /= 26; // 2 or 3
-    if x - 9 != w {
+    if x != w + 9 {
         z *= 26; // 3 or 4
         z += w + 5;
     }
@@ -68,7 +70,7 @@ fn run_program_natively(inputs: &[Value]) -> Value {
     w = inputs[9];
     x = z % 26;
     z /= 26; // 3 or 4 or 5
-    if x - 14 != w {
+    if x != w + 14 {
         z *= 26; // 4 or 5 or 6
         z += w + 15;
     }
@@ -76,7 +78,7 @@ fn run_program_natively(inputs: &[Value]) -> Value {
     w = inputs[10];
     x = z % 26;
     z /= 26; // 3 or 4 or 5
-    if x - 11 != w {
+    if x != w + 11 {
         z *= 26; // 4 or 5 or 6
         z += w + 3;
     }
@@ -84,7 +86,7 @@ fn run_program_natively(inputs: &[Value]) -> Value {
     w = inputs[11];
     x = z % 26;
     z /= 26; // 3 or 4 or 5
-    if x - 2 != w {
+    if x != w + 2 {
         z *= 26; // 4 or 5 or 6
         z += w + 12;
     }
@@ -92,7 +94,7 @@ fn run_program_natively(inputs: &[Value]) -> Value {
     w = inputs[12];
     x = z % 26;
     z /= 26; // 3 or 4 or 5
-    if x - 16 != w {
+    if x != w + 16 {
         z *= 26; // 4 or 5 or 6
         z += w + 10;
     }
@@ -100,7 +102,14 @@ fn run_program_natively(inputs: &[Value]) -> Value {
     w = inputs[13];
     x = z % 26;
     z /= 26; // 3 or 4 or 5
-    if x - 14 != w {
+    if x != w + 14 {
+        // x can be between 0 and 25, so x - 14 is between -14 and 11. w is between 1 and 9
+        // With w = 1 an x of 15 would skip this conditional and leave z smaller
+        // With w = 9 an x of 23 would skip this conditional and leave z smaller
+        // 26 reminds me of the ascii alphabet, the 15th char would be 'o' and 23rd 'x'
+        // abcdefghijklmnopqrstuvxwyz
+        // 12345678901234567890123456
+        // 00000000011111111112222222
         z *= 26; // 4 or 5 or 6
         z += w + 13;
     }
