@@ -31,119 +31,99 @@ pub(crate) fn day24_part2() -> usize {
 }
 
 fn run_program_natively(inputs: &[Value]) -> Value {
-    let (mut w, mut x, mut y, mut z); // = (0, 0, 0, 0);
+    let (mut w, mut x, mut z); // = (0, 0, 0, 0);
 
     w = inputs[0];
     z = w + 15;
 
     w = inputs[1];
     z *= 26;
-    y = w + 10;
-    z += y;
+    z += w + 10;
 
     w = inputs[2];
     if (z % 26) + 12 != w {
         z *= 26;
-        y = w + 2;
-        z += y;
+        z += w + 2;
     }
 
     w = inputs[3];
     if (z % 26) + 13 != w {
         z *= 26;
-        y = w + 16;
-        z += y;
+        z += w + 16;
     }
 
     w = inputs[4];
     x = z % 26;
     z /= 26;
-    x -= 12;
-    if x != w {
+    if x - 12 != w {
         z *= 26;
-        y = w + 12;
-        z += y;
+        z += w + 12;
     }
 
     w = inputs[5];
     if (z % 26) + 10 != w {
         z *= 26;
-        y = w + 11;
-        z += y;
+        z += w + 11;
     }
 
     w = inputs[6];
     x = z % 26;
     z /= 26;
-    x -= 9;
-    if x != w {
+    if x - 9 != w {
         z *= 26;
-        y = w + 5;
-        z += y;
+        z += w + 5;
     }
 
     w = inputs[7];
     if (z % 26) + 14 != w {
         z *= 26;
-        y = w + 16;
-        z += y;
+        z += w + 16;
     }
 
     w = inputs[8];
     if (z % 26) + 13 != w {
         z *= 26;
-        y = w + 6;
-        z += y;
+        z += w + 6;
     }
 
     w = inputs[9];
     x = z % 26;
     z /= 26;
-    x -= 14;
-    if x != w {
+    if x - 14 != w {
         z *= 26;
-        y = w + 15;
-        z += y;
+        z += w + 15;
     }
 
     w = inputs[10];
     x = z % 26;
     z /= 26;
-    x -= 11;
-    if x != w {
+    if x - 11 != w {
         z *= 26;
-        y = w + 3;
-        z += y;
+        z += w + 3;
     }
 
     w = inputs[11];
     x = z % 26;
     z /= 26;
-    x -= 2;
-    if x != w {
+    if x - 2 != w {
         z *= 26;
-        y = w + 12;
-        z += y;
+        z += w + 12;
     }
 
     w = inputs[12];
     x = z % 26;
     z /= 26;
-    x -= 16;
-    if x != w {
+    if x - 16 != w {
         z *= 26;
-        y = w + 10;
-        z += y;
+        z += w + 10;
     }
 
     w = inputs[13];
     x = z % 26;
     z /= 26;
-    x -= 14;
-    if x != w {
+    if x - 14 != w {
         z *= 26;
-        y = w + 13;
-        z += y;
+        z += w + 13;
     }
 
     z
@@ -510,7 +490,7 @@ mod w 2",
         let mut model_number = 99_999_999_999_999;
 
         // Slow! 200k 5.5s, 300k 8.4s, 400k 11s, 500k 13s, 1m in 27s
-        let tries = 0; //1_000_000_usize;
+        let tries = 1_000_000_usize;
         let mut i = 0;
 
         let mut is_valid = false;
