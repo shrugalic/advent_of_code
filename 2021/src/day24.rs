@@ -1,6 +1,272 @@
 type Value = isize;
 
 pub(crate) fn day24_part1() -> usize {
+    find_max_model_number()
+}
+
+pub(crate) fn day24_part2() -> usize {
+    find_min_model_number()
+}
+
+fn to_input(number: usize, length: usize) -> Vec<usize> {
+    format!("{:0digits$}", number, digits = length)
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+fn find_max_model_number() -> usize {
+    // number of digits to test
+    const LENGTHS: [usize; 7] = [5, 7, 10, 11, 12, 13, 14];
+    let mut best = [
+        99999,
+        9_999_999,
+        9_999_999_999,
+        99_999_999_999,
+        999_999_999_999,
+        9_999_999_999_999,
+        99_999_999_999_999,
+    ];
+    let mut curr_idx = 0;
+    let mut min_num = 0;
+    let mut max_num: usize = best[curr_idx];
+    let mut i = 0;
+    loop {
+        i += 1;
+        let mut len: usize = LENGTHS[curr_idx];
+        // println!(
+        //     "{}: {} digits, min {} max {}",
+        //     curr_idx, len, min_num, max_num
+        // );
+        if let Some(new_max) = test_last_digits(
+            len,
+            max_num,
+            min_num,
+            max_num,
+            |num, min, max| num > min,
+            decrease,
+        ) {
+            if curr_idx == 6 {
+                return new_max;
+            }
+
+            assert!(new_max < best[curr_idx]);
+            best[curr_idx] = new_max;
+
+            curr_idx += 1;
+            let multiplier = 10usize.pow((LENGTHS[curr_idx] - LENGTHS[curr_idx - 1]) as u32);
+            min_num = new_max * multiplier;
+            max_num = (new_max + 1) * multiplier - 1;
+            assert!(max_num < best[curr_idx]);
+        } else {
+            curr_idx -= 1;
+            max_num = best[curr_idx] - 1;
+            min_num = if curr_idx == 0 {
+                0
+            } else {
+                max_num - 10usize.pow((LENGTHS[curr_idx] - LENGTHS[curr_idx - 1]) as u32)
+            };
+        }
+    }
+}
+fn find_min_model_number() -> usize {
+    // number of digits to test
+    const LENGTHS: [usize; 7] = [5, 7, 10, 11, 12, 13, 14];
+    let mut best = [
+        11111,
+        1111111,
+        1111111111,
+        11111111111,
+        111111111111,
+        1111111111111,
+        11111111111111,
+    ];
+    let mut curr_idx = 0;
+    let mut min_num = best[curr_idx];
+    let mut max_num: usize = 99999;
+    let mut i = 0;
+    loop {
+        i += 1;
+        // if i == 20 {
+        //     panic!();
+        // }
+        let mut len: usize = LENGTHS[curr_idx];
+        // println!(
+        //     "{}: {} digits, min {} max {}",
+        //     curr_idx, len, min_num, max_num
+        // );
+        if let Some(new_min) = test_last_digits(
+            len,
+            min_num,
+            min_num,
+            max_num,
+            |num, min, max| num < max,
+            increase,
+        ) {
+            if curr_idx == 6 {
+                return new_min;
+            }
+
+            assert!(new_min > best[curr_idx]);
+            best[curr_idx] = new_min;
+
+            curr_idx += 1;
+            let multiplier = 10usize.pow((LENGTHS[curr_idx] - LENGTHS[curr_idx - 1]) as u32);
+            min_num = new_min * multiplier;
+            max_num = (new_min + 1) * multiplier - 1;
+            increase(&mut min_num, LENGTHS[curr_idx]);
+            assert!(max_num > best[curr_idx]);
+        } else {
+            curr_idx -= 1;
+            min_num = best[curr_idx];
+            increase(&mut min_num, LENGTHS[curr_idx]);
+            max_num = if curr_idx == 0 {
+                99999
+            } else {
+                min_num + 10usize.pow((LENGTHS[curr_idx] - LENGTHS[curr_idx - 1]) as u32)
+            };
+            // panic!(
+            //     "idx {} len {}\nmin {}\nmax {}",
+            //     curr_idx, LENGTHS[curr_idx], min_num, max_num
+            // )
+        }
+    }
+}
+
+fn increase(number: &mut usize, digit_count: usize) {
+    *number += 1;
+    while to_input(*number, digit_count).iter().any(|n| *n == 0) {
+        *number += 1;
+    }
+}
+
+fn decrease(number: &mut usize, digit_count: usize) {
+    *number -= 1;
+    while to_input(*number, digit_count).iter().any(|n| *n == 0) {
+        *number -= 1;
+    }
+}
+
+fn test_last_digits(
+    digit_count: usize,
+    init: usize,
+    min: usize,
+    max: usize,
+    loop_cond: fn(usize, usize, usize) -> bool,
+    step: fn(&mut usize, usize),
+) -> Option<usize> {
+    let mut num = init;
+
+    while loop_cond(num, min, max) {
+        let inputs: Vec<usize> = to_input(num, digit_count);
+
+        let mut z = 0;
+        z = inputs[0] + 15;
+        z *= 26;
+        z += inputs[1] + 10;
+        z *= 26;
+        z += inputs[2] + 2;
+        z *= 26;
+        z += inputs[3] + 16;
+        let mut w = inputs[4];
+        let mut x = z % 26;
+        z /= 26;
+        if x != w + 12 {
+            step(&mut num, digit_count);
+            continue;
+        } else {
+            if digit_count == 5 {
+                return Some(num);
+            }
+        }
+
+        z *= 26; // 3 or 4
+        z += inputs[5] + 11;
+
+        w = inputs[6];
+        x = z % 26;
+        z /= 26; // 2 or 3
+        if x != w + 9 {
+            step(&mut num, digit_count);
+            continue;
+        } else {
+            if digit_count == 7 {
+                return Some(num);
+            }
+        }
+
+        z *= 26; // 3 or 4 or 5
+        z += inputs[7] + 16;
+        z *= 26; // 4 or 5 or 6
+        z += inputs[8] + 6;
+
+        w = inputs[9];
+        x = z % 26;
+        z /= 26; // 3 or 4 or 5
+        if x != w + 14 {
+            step(&mut num, digit_count);
+            continue;
+        } else {
+            if digit_count == 10 {
+                return Some(num);
+            }
+        }
+
+        w = inputs[10];
+        x = z % 26;
+        z /= 26; // 3 or 4 or 5
+        if x != w + 11 {
+            step(&mut num, digit_count);
+            continue;
+        } else {
+            if digit_count == 11 {
+                return Some(num);
+            }
+        }
+
+        w = inputs[11];
+        x = z % 26;
+        z /= 26; // 3 or 4 or 5
+        if x != w + 2 {
+            step(&mut num, digit_count);
+            continue;
+        } else {
+            if digit_count == 12 {
+                return Some(num);
+            }
+        }
+
+        w = inputs[12];
+        x = z % 26;
+        z /= 26; // 3 or 4 or 5
+        if x != w + 16 {
+            step(&mut num, digit_count);
+            continue;
+        } else {
+            if digit_count == 13 {
+                return Some(num);
+            }
+        }
+
+        w = inputs[13];
+        x = z % 26;
+        z /= 26; // 3 or 4 or 5
+        if x != w + 14 {
+            // z *= 26; // 4 or 5 or 6
+            // z += w + 13;
+            // println!("failed z {}", z);
+            step(&mut num, digit_count);
+            continue;
+        } else {
+            if digit_count == 14 {
+                return Some(num);
+            }
+        }
+    }
+    return None;
+}
+
+pub(crate) fn day24_part1_native() -> usize {
     let mut model_number = 99_999_999_999_999;
 
     // Still slow, 80s for 10M!
@@ -24,10 +290,6 @@ pub(crate) fn day24_part1() -> usize {
         println!("{}", z);
     }
     model_number
-}
-
-pub(crate) fn day24_part2() -> usize {
-    0 // TODO
 }
 
 fn run_program_natively(inputs: &[Value]) -> Value {
@@ -459,16 +721,18 @@ mod w 2",
         assert_eq!(0, results['z'.to_var_idx()]);
     }
 
+    // slow 22s on M1 Air
     #[test]
     fn part1() {
-        assert_eq!(1, day24_part1());
+        // 99959794919939 is too high
+        assert_eq!(89_959_794_919_939, day24_part1());
     }
 
-    #[test]
+    // #[test]
     fn print_translated_program() {
         let alu = ALU::from(INPUT);
         let instructions = alu.translate_program();
-        // println!("{}", instructions.join("\n"));
+        println!("{}", instructions.join("\n"));
     }
 
     #[test]
@@ -501,8 +765,9 @@ mod w 2",
         }
     }
 
+    // slow 15s on M1 Air
     #[test]
     fn part2() {
-        assert_eq!(1, day24_part2());
+        assert_eq!(17_115_131_916_112, day24_part2());
     }
 }
