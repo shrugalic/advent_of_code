@@ -9,65 +9,120 @@ pub(crate) fn day24_part2() -> usize {
 }
 
 fn find_max_model_number() -> usize {
-    // The minimum number of meaningful digits is 5
-    const MIN_DIGITS: usize = 5;
-    // Other meaningful total digits counts are 7, 10, 11, 12, 13 and 14. 2 digits more than 5 are 7,
-    // 3 more digits than 7 are 10, and the rest are 1 more digit than their respective previous count.
-    const ADDITIONAL_DIGITS: [usize; 7] = [0, 2, 3, 1, 1, 1, 1];
+    // Meaningful total digit counts are 5, 7, 10, 11, 12, 13 and 14. We store only the difference:
+    // 2 digits more than 5 digits are a total of 7 digits, 3 more than 7 are 10,
+    // and the rest are 1 more digit than their respective previous count.
+    const DIGIT_COUNT_DIFFS: [usize; 7] = [5, 2, 3, 1, 1, 1, 1];
     // For the base amount of 5 digits, these are the minimum and maximum numbers
     let mut min = 11111;
     let mut max = 99999;
-    // This extra_idx controls how many extra (and total) digits we are testing
+
+    // This index controls how many extra (and total) digits we are testing
     let mut index = 0;
 
-    let extras = |idx| ADDITIONAL_DIGITS.into_iter().take(idx + 1).sum::<usize>();
-    let total = |idx| MIN_DIGITS + extras(idx);
+    let total_digit_count = |idx| DIGIT_COUNT_DIFFS.into_iter().take(idx + 1).sum::<usize>();
 
     loop {
-        let len: usize = total(index);
-        println!(
-            "{}: 5 + {} = {} total digits, min {} max {}",
-            index,
-            extras(index),
-            total(index),
-            min,
-            max
-        );
-        if let Some(new_max) =
-            test_last_digits(len, max, min, max, |num, min, _| num > min, decrease)
+        let len: usize = total_digit_count(index);
+        // println!(
+        //     "{}: {:2} total digits, min {:<14} max {:<14} initial",
+        //     index,
+        //     total_digit_count(index),
+        //     min,
+        //     max
+        // );
+        if let Some(best) = test_last_digits(len, max, min, max, |num, min, _| num >= min, decrease)
         {
             // If we found a result, we might be done
-            if index + 1 == ADDITIONAL_DIGITS.len() {
-                return new_max;
+            if index == DIGIT_COUNT_DIFFS.len() - 1 {
+                return best;
             }
             // Otherwise add more digits
             index += 1;
-            max = new_max;
-            min = new_max;
-            for _ in 0..ADDITIONAL_DIGITS[index] {
-                max = max * 10 + 9;
+            max = best;
+            min = best;
+
+            max *= 10_usize.pow(DIGIT_COUNT_DIFFS[index] as u32);
+            max += 10_usize.pow(DIGIT_COUNT_DIFFS[index] as u32) - 1;
+            for _ in 0..DIGIT_COUNT_DIFFS[index] {
                 min = min * 10 + 1;
             }
         } else {
             // Else we need to backtrack: go back to fewer digits, and try again
 
             // Previous max and min
-            max /= 10_usize.pow(ADDITIONAL_DIGITS[index] as u32);
-            min /= 10_usize.pow(ADDITIONAL_DIGITS[index] as u32);
+            max /= 10_usize.pow(DIGIT_COUNT_DIFFS[index] as u32);
+            min /= 10_usize.pow(DIGIT_COUNT_DIFFS[index] as u32);
+
+            if index > 0 {
+                index -= 1;
+            }
 
             // Calculate new min
-            if index == 0 {
-                min = 11111;
-            } else {
+            min /= 10_usize.pow(DIGIT_COUNT_DIFFS[index] as u32);
+            for _ in 0..DIGIT_COUNT_DIFFS[index] {
+                min = min * 10 + 1;
+            }
+
+            // Calculate new max by decreasing the old one
+            max = decrease(max, total_digit_count(index));
+        }
+    }
+}
+
+fn find_min_model_number() -> usize {
+    // Meaningful total digit counts are 5, 7, 10, 11, 12, 13 and 14. We store only the difference:
+    // 2 digits more than 5 digits are a total of 7 digits, 3 more than 7 are 10,
+    // and the rest are 1 more digit than their respective previous count.
+    const DIGIT_COUNT_DIFFS: [usize; 7] = [5, 2, 3, 1, 1, 1, 1];
+    // For the base amount of 5 digits, these are the minimum and maximum numbers
+    let mut min = 11111;
+    let mut max = 99999;
+
+    // This index controls how many extra (and total) digits we are testing
+    let mut index = 0;
+
+    let total_digit_count = |idx| DIGIT_COUNT_DIFFS.into_iter().take(idx + 1).sum::<usize>();
+    // println!(
+    //     "{}: {:2} total digits, min {:<14} max {:<14} initial",
+    //     index,
+    //     total_digit_count(index),
+    //     min,
+    //     max
+    // );
+    loop {
+        let len: usize = total_digit_count(index);
+        if let Some(best) = test_last_digits(len, min, min, max, |num, _, max| num <= max, increase)
+        {
+            // If we found a result, we might be done
+            if index == DIGIT_COUNT_DIFFS.len() - 1 {
+                return best;
+            }
+            // Otherwise add more digits
+            index += 1;
+            max = best;
+            min = best;
+            for _ in 0..DIGIT_COUNT_DIFFS[index] {
+                max = max * 10 + 9;
+                min = min * 10 + 1;
+            }
+        } else {
+            // Else we need to backtrack: go back to fewer digits, and try again
+            // Previous max and min
+            max /= 10_usize.pow(DIGIT_COUNT_DIFFS[index] as u32);
+            min /= 10_usize.pow(DIGIT_COUNT_DIFFS[index] as u32);
+
+            if index > 0 {
                 index -= 1;
-                min /= 10_usize.pow(ADDITIONAL_DIGITS[index] as u32);
-                for _ in 0..ADDITIONAL_DIGITS[index] {
-                    min = min * 10 + 1;
-                }
             }
 
             // Calculate new max
-            decrease(&mut max, total(index));
+            max /= 10_usize.pow(DIGIT_COUNT_DIFFS[index] as u32);
+            max *= 10_usize.pow(DIGIT_COUNT_DIFFS[index] as u32);
+            max += 10_usize.pow(DIGIT_COUNT_DIFFS[index] as u32) - 1;
+
+            // Calculate new min by increasing the old one
+            min = increase(min, total_digit_count(index));
         }
     }
 }
@@ -78,87 +133,35 @@ fn to_input(num: usize, len: usize) -> Vec<usize> {
         .map(|c| c.to_digit(10).unwrap() as usize)
         .collect()
 }
-fn find_min_model_number() -> usize {
-    // number of digits to test
-    const LENGTHS: [usize; 7] = [5, 7, 10, 11, 12, 13, 14];
-    let mut best = [
-        11111,
-        1111111,
-        1111111111,
-        11111111111,
-        111111111111,
-        1111111111111,
-        11111111111111,
-    ];
-    let mut curr_idx = 0;
-    let mut min_num = best[curr_idx];
-    let mut max_num: usize = 99999;
-    loop {
-        let len: usize = LENGTHS[curr_idx];
-        // println!(
-        //     "{}: {} digits, min {} max {}",
-        //     curr_idx, len, min_num, max_num
-        // );
-        if let Some(new_min) = test_last_digits(
-            len,
-            min_num,
-            min_num,
-            max_num,
-            |num, _min, max| num < max,
-            increase,
-        ) {
-            if curr_idx == 6 {
-                return new_min;
-            }
 
-            assert!(new_min > best[curr_idx]);
-            best[curr_idx] = new_min;
-
-            curr_idx += 1;
-            let multiplier = 10usize.pow((LENGTHS[curr_idx] - LENGTHS[curr_idx - 1]) as u32);
-            min_num = new_min * multiplier;
-            max_num = (new_min + 1) * multiplier - 1;
-            increase(&mut min_num, LENGTHS[curr_idx]);
-            assert!(max_num > best[curr_idx]);
-        } else {
-            curr_idx -= 1;
-            min_num = best[curr_idx];
-            increase(&mut min_num, LENGTHS[curr_idx]);
-            max_num = if curr_idx == 0 {
-                99999
-            } else {
-                min_num + 10usize.pow((LENGTHS[curr_idx] - LENGTHS[curr_idx - 1]) as u32)
-            };
-        }
+fn increase(mut num: usize, len: usize) -> usize {
+    num += 1;
+    while to_input(num, len).iter().any(|n| *n == 0) {
+        num += 1;
     }
+    num
 }
 
-fn increase(number: &mut usize, digit_count: usize) {
-    *number += 1;
-    while to_input(*number, digit_count).iter().any(|n| *n == 0) {
-        *number += 1;
+fn decrease(mut num: usize, len: usize) -> usize {
+    num -= 1;
+    while to_input(num, len).iter().any(|n| *n == 0) {
+        num -= 1;
     }
-}
-
-fn decrease(number: &mut usize, digit_count: usize) {
-    *number -= 1;
-    while to_input(*number, digit_count).iter().any(|n| *n == 0) {
-        *number -= 1;
-    }
+    num
 }
 
 fn test_last_digits(
-    digit_count: usize,
-    init: usize,
+    len: usize,
+    initial: usize,
     min: usize,
     max: usize,
-    loop_cond: fn(usize, usize, usize) -> bool,
-    step: fn(&mut usize, usize),
+    cond: fn(usize, usize, usize) -> bool,
+    step: fn(usize, usize) -> usize,
 ) -> Option<usize> {
-    let mut num = init;
+    let mut num = initial;
 
-    while loop_cond(num, min, max) {
-        let inputs: Vec<usize> = to_input(num, digit_count);
+    while cond(num, min, max) {
+        let inputs: Vec<usize> = to_input(num, len);
 
         let mut z = inputs[0] + 15;
         z *= 26;
@@ -171,9 +174,9 @@ fn test_last_digits(
         let mut x = z % 26;
         z /= 26;
         if x != w + 12 {
-            step(&mut num, digit_count);
+            num = step(num, len);
             continue;
-        } else if digit_count == 5 {
+        } else if len == 5 {
             return Some(num);
         }
 
@@ -184,9 +187,9 @@ fn test_last_digits(
         x = z % 26;
         z /= 26;
         if x != w + 9 {
-            step(&mut num, digit_count);
+            num = step(num, len);
             continue;
-        } else if digit_count == 7 {
+        } else if len == 7 {
             return Some(num);
         }
 
@@ -199,9 +202,9 @@ fn test_last_digits(
         x = z % 26;
         z /= 26;
         if x != w + 14 {
-            step(&mut num, digit_count);
+            num = step(num, len);
             continue;
-        } else if digit_count == 10 {
+        } else if len == 10 {
             return Some(num);
         }
 
@@ -209,9 +212,9 @@ fn test_last_digits(
         x = z % 26;
         z /= 26;
         if x != w + 11 {
-            step(&mut num, digit_count);
+            num = step(num, len);
             continue;
-        } else if digit_count == 11 {
+        } else if len == 11 {
             return Some(num);
         }
 
@@ -219,9 +222,9 @@ fn test_last_digits(
         x = z % 26;
         z /= 26;
         if x != w + 2 {
-            step(&mut num, digit_count);
+            num = step(num, len);
             continue;
-        } else if digit_count == 12 {
+        } else if len == 12 {
             return Some(num);
         }
 
@@ -229,9 +232,9 @@ fn test_last_digits(
         x = z % 26;
         z /= 26;
         if x != w + 16 {
-            step(&mut num, digit_count);
+            num = step(num, len);
             continue;
-        } else if digit_count == 13 {
+        } else if len == 13 {
             return Some(num);
         }
 
@@ -242,9 +245,9 @@ fn test_last_digits(
             // z *= 26;
             // z += w + 13;
             // println!("failed z {}", z);
-            step(&mut num, digit_count);
+            num = step(num, len);
             continue;
-        } else if digit_count == 14 {
+        } else if len == 14 {
             return Some(num);
         }
     }
@@ -606,7 +609,6 @@ mod w 2",
         println!("{}", instructions.join("\n"));
     }
 
-    // Slow: 15s on M1 Air, 16s on iMac i9-i9900K
     #[test]
     fn part2() {
         assert_eq!(17_115_131_916_112, day24_part2());
