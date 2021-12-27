@@ -1,7 +1,3 @@
-use std::ops::RangeInclusive;
-
-type Value = isize;
-
 pub(crate) fn day24_part1() -> usize {
     find_max_model_number()
 }
@@ -11,7 +7,6 @@ pub(crate) fn day24_part2() -> usize {
 }
 
 fn find_max_model_number() -> usize {
-    let initial = |_min, max| max;
     let new_min = |mut min, diff, _len| -> usize {
         min /= 10_usize.pow(diff as u32);
         for _ in 0..diff {
@@ -20,25 +15,22 @@ fn find_max_model_number() -> usize {
         min
     };
     let new_max = |max, _diff, len| -> usize { dec(max, len) };
-    find_model_number(initial, new_min, new_max, dec)
+    find_model_number(new_min, new_max, false)
 }
 
 fn find_min_model_number() -> usize {
-    let initial = |min, _max| min;
     let new_min = |min, _diff, len| -> usize { inc(min, len) };
     let new_max = |max, diff, _len| -> usize {
         let multiplier = 10_usize.pow(diff as u32);
         max / multiplier * multiplier + multiplier - 1
     };
-
-    find_model_number(initial, new_min, new_max, inc)
+    find_model_number(new_min, new_max, true)
 }
 
 fn find_model_number(
-    initial: fn(usize, usize) -> usize,
     new_min: fn(usize, usize, usize) -> usize,
     new_max: fn(usize, usize, usize) -> usize,
-    step_func: fn(usize, usize) -> usize,
+    ascending: bool,
 ) -> usize {
     // Meaningful total digit counts are 5, 7, 10, 11, 12, 13 and 14. We store only the difference:
     // 2 digits more than 5 digits are a total of 7 digits, 3 more than 7 are 10,
@@ -62,7 +54,12 @@ fn find_model_number(
     // );
     loop {
         let len: usize = total_digit_count(index);
-        if let Some(best) = test_digits(len, initial(min, max), min..=max, step_func) {
+        let result = if ascending {
+            test_digits(len, Ascending::range(min, max, len))
+        } else {
+            test_digits(len, Descending::range(min, max, len))
+        };
+        if let Some(best) = result {
             // If we found a result, we might be done
             if index == DIGIT_COUNT_DIFFS.len() - 1 {
                 return best;
@@ -108,6 +105,90 @@ fn find_model_number(
     }
 }
 
+fn test_digits(len: usize, numbers: impl Iterator<Item = usize>) -> Option<usize> {
+    for num in numbers {
+        let inputs: Vec<usize> = to_input(num, len);
+
+        let mut z = inputs[0] + 15;
+        z *= 26;
+        z += inputs[1] + 10;
+        z *= 26;
+        z += inputs[2] + 2;
+        z *= 26;
+        z += inputs[3] + 16;
+        let mut w = inputs[4];
+        let mut x = z % 26;
+        z /= 26;
+        if x != w + 12 {
+            continue;
+        } else if len == 5 {
+            return Some(num);
+        }
+
+        z *= 26;
+        z += inputs[5] + 11;
+
+        w = inputs[6];
+        x = z % 26;
+        z /= 26;
+        if x != w + 9 {
+            continue;
+        } else if len == 7 {
+            return Some(num);
+        }
+
+        z *= 26;
+        z += inputs[7] + 16;
+        z *= 26;
+        z += inputs[8] + 6;
+
+        w = inputs[9];
+        x = z % 26;
+        z /= 26;
+        if x != w + 14 {
+            continue;
+        } else if len == 10 {
+            return Some(num);
+        }
+
+        w = inputs[10];
+        x = z % 26;
+        z /= 26;
+        if x != w + 11 {
+            continue;
+        } else if len == 11 {
+            return Some(num);
+        }
+
+        w = inputs[11];
+        x = z % 26;
+        z /= 26;
+        if x != w + 2 {
+            continue;
+        } else if len == 12 {
+            return Some(num);
+        }
+
+        w = inputs[12];
+        x = z % 26;
+        z /= 26;
+        if x != w + 16 {
+            continue;
+        } else if len == 13 {
+            return Some(num);
+        }
+
+        w = inputs[13];
+        x = z % 26;
+        if x != w + 14 {
+            continue;
+        } else if len == 14 {
+            return Some(num);
+        }
+    }
+    None
+}
+
 fn to_input(num: usize, len: usize) -> Vec<usize> {
     format!("{:0digits$}", num, digits = len)
         .chars()
@@ -131,116 +212,53 @@ fn dec(mut num: usize, len: usize) -> usize {
     num
 }
 
-fn test_digits(
+struct Ascending {
+    min: usize,
+    max: usize,
     len: usize,
-    initial: usize,
-    range: RangeInclusive<usize>,
-    step_func: fn(usize, usize) -> usize,
-) -> Option<usize> {
-    let mut num = initial;
-    while range.contains(&num) {
-        let inputs: Vec<usize> = to_input(num, len);
-
-        let mut z = inputs[0] + 15;
-        z *= 26;
-        z += inputs[1] + 10;
-        z *= 26;
-        z += inputs[2] + 2;
-        z *= 26;
-        z += inputs[3] + 16;
-        let mut w = inputs[4];
-        let mut x = z % 26;
-        z /= 26;
-        if x != w + 12 {
-            num = step_func(num, len);
-            continue;
-        } else if len == 5 {
-            return Some(num);
-        }
-
-        z *= 26;
-        z += inputs[5] + 11;
-
-        w = inputs[6];
-        x = z % 26;
-        z /= 26;
-        if x != w + 9 {
-            num = step_func(num, len);
-            continue;
-        } else if len == 7 {
-            return Some(num);
-        }
-
-        z *= 26;
-        z += inputs[7] + 16;
-        z *= 26;
-        z += inputs[8] + 6;
-
-        w = inputs[9];
-        x = z % 26;
-        z /= 26;
-        if x != w + 14 {
-            num = step_func(num, len);
-            continue;
-        } else if len == 10 {
-            return Some(num);
-        }
-
-        w = inputs[10];
-        x = z % 26;
-        z /= 26;
-        if x != w + 11 {
-            num = step_func(num, len);
-            continue;
-        } else if len == 11 {
-            return Some(num);
-        }
-
-        w = inputs[11];
-        x = z % 26;
-        z /= 26;
-        if x != w + 2 {
-            num = step_func(num, len);
-            continue;
-        } else if len == 12 {
-            return Some(num);
-        }
-
-        w = inputs[12];
-        x = z % 26;
-        z /= 26;
-        if x != w + 16 {
-            num = step_func(num, len);
-            continue;
-        } else if len == 13 {
-            return Some(num);
-        }
-
-        w = inputs[13];
-        x = z % 26;
-        // z /= 26;
-        if x != w + 14 {
-            // z *= 26;
-            // z += w + 13;
-            // println!("failed z {}", z);
-            num = step_func(num, len);
-            continue;
-        } else if len == 14 {
-            return Some(num);
-        }
+    num: Option<usize>, // The current number during iteration
+}
+impl Ascending {
+    fn range(min: usize, max: usize, len: usize) -> Self {
+        let num = None;
+        Ascending { min, max, len, num }
     }
-    None
+}
+impl Iterator for Ascending {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.num = match self.num {
+            None => Some(self.min),
+            Some(prev) if prev >= self.max => None,
+            Some(prev) => Some(inc(prev, self.len)),
+        };
+        self.num
+    }
 }
 
-trait NumberToInput {
-    fn to_input(&self) -> Vec<Value>;
+struct Descending {
+    min: usize,
+    max: usize,
+    len: usize,
+    num: Option<usize>, // The current number during iteration
 }
-impl NumberToInput for usize {
-    fn to_input(&self) -> Vec<Value> {
-        format!("{:014}", self)
-            .chars()
-            .map(|c| c.to_digit(10).unwrap() as Value)
-            .collect()
+impl Descending {
+    fn range(min: usize, max: usize, len: usize) -> Self {
+        let num = None;
+        Descending { min, max, len, num }
+    }
+}
+impl Iterator for Descending {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.num = match self.num {
+            None => Some(self.max),
+            Some(prev) if prev <= self.min => None,
+            Some(prev) => Some(dec(prev, self.len)),
+        };
+        self.num
     }
 }
 
@@ -389,6 +407,19 @@ mod tests {
             let program = input.trim().lines().map(Instruction::from).collect();
             let variables = vec![Value::default(); 4];
             Alu { program, variables }
+        }
+    }
+
+    type Value = isize;
+    trait NumberToInput {
+        fn to_input(&self) -> Vec<Value>;
+    }
+    impl NumberToInput for usize {
+        fn to_input(&self) -> Vec<Value> {
+            format!("{:014}", self)
+                .chars()
+                .map(|c| c.to_digit(10).unwrap() as Value)
+                .collect()
         }
     }
 
