@@ -30,10 +30,8 @@ fn find_max_model_number() -> usize {
     let mut curr_idx = 0;
     let mut min_num = 0;
     let mut max_num: usize = best[curr_idx];
-    let mut i = 0;
     loop {
-        i += 1;
-        let mut len: usize = LENGTHS[curr_idx];
+        let len: usize = LENGTHS[curr_idx];
         // println!(
         //     "{}: {} digits, min {} max {}",
         //     curr_idx, len, min_num, max_num
@@ -43,7 +41,7 @@ fn find_max_model_number() -> usize {
             max_num,
             min_num,
             max_num,
-            |num, min, max| num > min,
+            |num, min, _max| num > min,
             decrease,
         ) {
             if curr_idx == 6 {
@@ -84,13 +82,8 @@ fn find_min_model_number() -> usize {
     let mut curr_idx = 0;
     let mut min_num = best[curr_idx];
     let mut max_num: usize = 99999;
-    let mut i = 0;
     loop {
-        i += 1;
-        // if i == 20 {
-        //     panic!();
-        // }
-        let mut len: usize = LENGTHS[curr_idx];
+        let len: usize = LENGTHS[curr_idx];
         // println!(
         //     "{}: {} digits, min {} max {}",
         //     curr_idx, len, min_num, max_num
@@ -100,7 +93,7 @@ fn find_min_model_number() -> usize {
             min_num,
             min_num,
             max_num,
-            |num, min, max| num < max,
+            |num, _min, max| num < max,
             increase,
         ) {
             if curr_idx == 6 {
@@ -125,10 +118,6 @@ fn find_min_model_number() -> usize {
             } else {
                 min_num + 10usize.pow((LENGTHS[curr_idx] - LENGTHS[curr_idx - 1]) as u32)
             };
-            // panic!(
-            //     "idx {} len {}\nmin {}\nmax {}",
-            //     curr_idx, LENGTHS[curr_idx], min_num, max_num
-            // )
         }
     }
 }
@@ -160,8 +149,7 @@ fn test_last_digits(
     while loop_cond(num, min, max) {
         let inputs: Vec<usize> = to_input(num, digit_count);
 
-        let mut z = 0;
-        z = inputs[0] + 15;
+        let mut z = inputs[0] + 15;
         z *= 26;
         z += inputs[1] + 10;
         z *= 26;
@@ -174,209 +162,82 @@ fn test_last_digits(
         if x != w + 12 {
             step(&mut num, digit_count);
             continue;
-        } else {
-            if digit_count == 5 {
-                return Some(num);
-            }
+        } else if digit_count == 5 {
+            return Some(num);
         }
 
-        z *= 26; // 3 or 4
+        z *= 26;
         z += inputs[5] + 11;
 
         w = inputs[6];
         x = z % 26;
-        z /= 26; // 2 or 3
+        z /= 26;
         if x != w + 9 {
             step(&mut num, digit_count);
             continue;
-        } else {
-            if digit_count == 7 {
-                return Some(num);
-            }
+        } else if digit_count == 7 {
+            return Some(num);
         }
 
-        z *= 26; // 3 or 4 or 5
+        z *= 26;
         z += inputs[7] + 16;
-        z *= 26; // 4 or 5 or 6
+        z *= 26;
         z += inputs[8] + 6;
 
         w = inputs[9];
         x = z % 26;
-        z /= 26; // 3 or 4 or 5
+        z /= 26;
         if x != w + 14 {
             step(&mut num, digit_count);
             continue;
-        } else {
-            if digit_count == 10 {
-                return Some(num);
-            }
+        } else if digit_count == 10 {
+            return Some(num);
         }
 
         w = inputs[10];
         x = z % 26;
-        z /= 26; // 3 or 4 or 5
+        z /= 26;
         if x != w + 11 {
             step(&mut num, digit_count);
             continue;
-        } else {
-            if digit_count == 11 {
-                return Some(num);
-            }
+        } else if digit_count == 11 {
+            return Some(num);
         }
 
         w = inputs[11];
         x = z % 26;
-        z /= 26; // 3 or 4 or 5
+        z /= 26;
         if x != w + 2 {
             step(&mut num, digit_count);
             continue;
-        } else {
-            if digit_count == 12 {
-                return Some(num);
-            }
+        } else if digit_count == 12 {
+            return Some(num);
         }
 
         w = inputs[12];
         x = z % 26;
-        z /= 26; // 3 or 4 or 5
+        z /= 26;
         if x != w + 16 {
             step(&mut num, digit_count);
             continue;
-        } else {
-            if digit_count == 13 {
-                return Some(num);
-            }
+        } else if digit_count == 13 {
+            return Some(num);
         }
 
         w = inputs[13];
         x = z % 26;
-        z /= 26; // 3 or 4 or 5
+        // z /= 26;
         if x != w + 14 {
-            // z *= 26; // 4 or 5 or 6
+            // z *= 26;
             // z += w + 13;
             // println!("failed z {}", z);
             step(&mut num, digit_count);
             continue;
-        } else {
-            if digit_count == 14 {
-                return Some(num);
-            }
+        } else if digit_count == 14 {
+            return Some(num);
         }
     }
-    return None;
-}
-
-pub(crate) fn day24_part1_native() -> usize {
-    let mut model_number = 99_999_999_999_999;
-
-    // Still slow, 80s for 10M!
-
-    let tries = 0; // 10_000_000_usize;
-    let mut i = 0;
-
-    let mut z = -1;
-    while z != 0 {
-        model_number -= 1;
-        while model_number.to_input().iter().any(|n| *n == 0) {
-            model_number -= 1;
-        }
-
-        i += 1;
-        if i >= tries {
-            break;
-        }
-        let inputs = &model_number.to_input();
-        z = run_program_natively(inputs);
-        println!("{}", z);
-    }
-    model_number
-}
-
-fn run_program_natively(inputs: &[Value]) -> Value {
-    let (mut w, mut x, mut z); // = (0, 0, 0, 0);
-
-    z = inputs[0] + 15;
-    z *= 26; // 1 multiple of 26
-    z += inputs[1] + 10;
-    z *= 26; // 2
-    z += inputs[2] + 2;
-    z *= 26; // 3
-    z += inputs[3] + 16;
-    // 288'747 is the smallest possible z here, with all 1 inputs ((((1+15)*26+1+10)*26+1+2)*26+1+16)
-    // 434'979 is the largest possible z here, with all 9 inputs ((((9+15)*26+9+10)*26+9+2)*26+9+16)
-
-    w = inputs[4];
-    x = z % 26;
-    z /= 26; // 2
-    if x != w + 12 {
-        z *= 26; // 3
-        z += w + 12;
-    }
-
-    z *= 26; // 3 or 4
-    z += inputs[5] + 11;
-
-    w = inputs[6];
-    x = z % 26;
-    z /= 26; // 2 or 3
-    if x != w + 9 {
-        z *= 26; // 3 or 4
-        z += w + 5;
-    }
-
-    z *= 26; // 3 or 4 or 5
-    z += inputs[7] + 16;
-    z *= 26; // 4 or 5 or 6
-    z += inputs[8] + 6;
-
-    w = inputs[9];
-    x = z % 26;
-    z /= 26; // 3 or 4 or 5
-    if x != w + 14 {
-        z *= 26; // 4 or 5 or 6
-        z += w + 15;
-    }
-
-    w = inputs[10];
-    x = z % 26;
-    z /= 26; // 3 or 4 or 5
-    if x != w + 11 {
-        z *= 26; // 4 or 5 or 6
-        z += w + 3;
-    }
-
-    w = inputs[11];
-    x = z % 26;
-    z /= 26; // 3 or 4 or 5
-    if x != w + 2 {
-        z *= 26; // 4 or 5 or 6
-        z += w + 12;
-    }
-
-    w = inputs[12];
-    x = z % 26;
-    z /= 26; // 3 or 4 or 5
-    if x != w + 16 {
-        z *= 26; // 4 or 5 or 6
-        z += w + 10;
-    }
-
-    w = inputs[13];
-    x = z % 26;
-    z /= 26; // 3 or 4 or 5
-    if x != w + 14 {
-        // x can be between 0 and 25, so x - 14 is between -14 and 11. w is between 1 and 9
-        // With w = 1 an x of 15 would skip this conditional and leave z smaller
-        // With w = 9 an x of 23 would skip this conditional and leave z smaller
-        // 26 reminds me of the ascii alphabet, the 15th char would be 'o' and 23rd 'x'
-        // abcdefghijklmnopqrstuvxwyz
-        // 12345678901234567890123456
-        // 00000000011111111112222222
-        z *= 26; // 4 or 5 or 6
-        z += w + 13;
-    }
-
-    z
+    None
 }
 
 trait NumberToInput {
@@ -400,7 +261,7 @@ mod tests {
 
     const INPUT: &str = include_str!("../input/day24.txt");
 
-    impl ALU {
+    impl Alu {
         fn translate_program(&self) -> Vec<String> {
             let mut translations = vec![];
             let instructions: Vec<_> = self
@@ -527,15 +388,15 @@ mod tests {
         }
     }
     #[derive(Debug)]
-    struct ALU {
+    struct Alu {
         variables: Vec<Value>,
         program: Vec<Instruction>,
     }
-    impl From<&str> for ALU {
+    impl From<&str> for Alu {
         fn from(input: &str) -> Self {
             let program = input.trim().lines().map(Instruction::from).collect();
             let variables = vec![Value::default(); 4];
-            ALU { program, variables }
+            Alu { program, variables }
         }
     }
 
@@ -656,7 +517,7 @@ mod tests {
 
     #[test]
     fn part1_example_negate() {
-        let mut alu = ALU::from(
+        let mut alu = Alu::from(
             "\
 inp x
 mul x -1",
@@ -667,7 +528,7 @@ mul x -1",
 
     #[test]
     fn part1_example_check_three_times_larger() {
-        let mut alu = ALU::from(
+        let mut alu = Alu::from(
             "\
 inp z
 inp x
@@ -685,7 +546,7 @@ eql z x",
 
     #[test]
     fn part1_example_binary_conversion() {
-        let mut alu = ALU::from(
+        let mut alu = Alu::from(
             "\
 inp w
 add z w
@@ -721,51 +582,20 @@ mod w 2",
         assert_eq!(0, results['z'.to_var_idx()]);
     }
 
-    // slow 22s on M1 Air
+    // Slow: 22s on M1 Air, 24s on iMac i9-i9900K
     #[test]
     fn part1() {
-        // 99959794919939 is too high
         assert_eq!(89_959_794_919_939, day24_part1());
     }
 
-    // #[test]
+    #[test]
     fn print_translated_program() {
-        let alu = ALU::from(INPUT);
+        let alu = Alu::from(INPUT);
         let instructions = alu.translate_program();
         println!("{}", instructions.join("\n"));
     }
 
-    #[test]
-    fn verify_native_program_has_same_results_as_interpreted() {
-        let mut alu = ALU::from(INPUT);
-
-        let mut model_number = 99_999_999_999_999;
-
-        // Slow! 200k 5.5s, 300k 8.4s, 400k 11s, 500k 13s, 1m in 27s
-        let tries = 1_000_000_usize;
-        let mut i = 0;
-
-        let mut is_valid = false;
-        while !is_valid {
-            model_number -= 1;
-            while model_number.to_input().iter().any(|n| *n == 0) {
-                model_number -= 1;
-            }
-            alu.reset_variables();
-
-            i += 1;
-            if i >= tries {
-                break;
-            }
-            let inputs = &model_number.to_input();
-            let results = alu.run_program_with(inputs);
-            let z = results['z'.to_var_idx()];
-            assert_eq!(z, run_program_natively(inputs));
-            is_valid = 0 == z;
-        }
-    }
-
-    // slow 15s on M1 Air
+    // Slow: 15s on M1 Air, 16s on iMac i9-i9900K
     #[test]
     fn part2() {
         assert_eq!(17_115_131_916_112, day24_part2());
