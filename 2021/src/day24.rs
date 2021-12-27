@@ -8,64 +8,75 @@ pub(crate) fn day24_part2() -> usize {
     find_min_model_number()
 }
 
-fn to_input(number: usize, length: usize) -> Vec<usize> {
-    format!("{:0digits$}", number, digits = length)
+fn find_max_model_number() -> usize {
+    // The minimum number of meaningful digits is 5
+    const MIN_DIGITS: usize = 5;
+    // Other meaningful total digits counts are 7, 10, 11, 12, 13 and 14. 2 digits more than 5 are 7,
+    // 3 more digits than 7 are 10, and the rest are 1 more digit than their respective previous count.
+    const ADDITIONAL_DIGITS: [usize; 7] = [0, 2, 3, 1, 1, 1, 1];
+    // For the base amount of 5 digits, these are the minimum and maximum numbers
+    let mut min = 11111;
+    let mut max = 99999;
+    // This extra_idx controls how many extra (and total) digits we are testing
+    let mut index = 0;
+
+    let extras = |idx| ADDITIONAL_DIGITS.into_iter().take(idx + 1).sum::<usize>();
+    let total = |idx| MIN_DIGITS + extras(idx);
+
+    loop {
+        let len: usize = total(index);
+        println!(
+            "{}: 5 + {} = {} total digits, min {} max {}",
+            index,
+            extras(index),
+            total(index),
+            min,
+            max
+        );
+        if let Some(new_max) =
+            test_last_digits(len, max, min, max, |num, min, _| num > min, decrease)
+        {
+            // If we found a result, we might be done
+            if index + 1 == ADDITIONAL_DIGITS.len() {
+                return new_max;
+            }
+            // Otherwise add more digits
+            index += 1;
+            max = new_max;
+            min = new_max;
+            for _ in 0..ADDITIONAL_DIGITS[index] {
+                max = max * 10 + 9;
+                min = min * 10 + 1;
+            }
+        } else {
+            // Else we need to backtrack: go back to fewer digits, and try again
+
+            // Previous max and min
+            max /= 10_usize.pow(ADDITIONAL_DIGITS[index] as u32);
+            min /= 10_usize.pow(ADDITIONAL_DIGITS[index] as u32);
+
+            // Calculate new min
+            if index == 0 {
+                min = 11111;
+            } else {
+                index -= 1;
+                min /= 10_usize.pow(ADDITIONAL_DIGITS[index] as u32);
+                for _ in 0..ADDITIONAL_DIGITS[index] {
+                    min = min * 10 + 1;
+                }
+            }
+
+            // Calculate new max
+            decrease(&mut max, total(index));
+        }
+    }
+}
+
+fn to_input(num: usize, len: usize) -> Vec<usize> {
+    format!("{:0digits$}", num, digits = len)
         .chars()
         .map(|c| c.to_digit(10).unwrap() as usize)
         .collect()
-}
-
-fn find_max_model_number() -> usize {
-    // number of digits to test
-    const LENGTHS: [usize; 7] = [5, 7, 10, 11, 12, 13, 14];
-    let mut best = [
-        99999,
-        9_999_999,
-        9_999_999_999,
-        99_999_999_999,
-        999_999_999_999,
-        9_999_999_999_999,
-        99_999_999_999_999,
-    ];
-    let mut curr_idx = 0;
-    let mut min_num = 0;
-    let mut max_num: usize = best[curr_idx];
-    loop {
-        let len: usize = LENGTHS[curr_idx];
-        // println!(
-        //     "{}: {} digits, min {} max {}",
-        //     curr_idx, len, min_num, max_num
-        // );
-        if let Some(new_max) = test_last_digits(
-            len,
-            max_num,
-            min_num,
-            max_num,
-            |num, min, _max| num > min,
-            decrease,
-        ) {
-            if curr_idx == 6 {
-                return new_max;
-            }
-
-            assert!(new_max < best[curr_idx]);
-            best[curr_idx] = new_max;
-
-            curr_idx += 1;
-            let multiplier = 10usize.pow((LENGTHS[curr_idx] - LENGTHS[curr_idx - 1]) as u32);
-            min_num = new_max * multiplier;
-            max_num = (new_max + 1) * multiplier - 1;
-            assert!(max_num < best[curr_idx]);
-        } else {
-            curr_idx -= 1;
-            max_num = best[curr_idx] - 1;
-            min_num = if curr_idx == 0 {
-                0
-            } else {
-                max_num - 10usize.pow((LENGTHS[curr_idx] - LENGTHS[curr_idx - 1]) as u32)
-            };
-        }
-    }
 }
 fn find_min_model_number() -> usize {
     // number of digits to test
