@@ -195,7 +195,7 @@ fn main() {
     day20();
     day21();
     day22();
-    // day23(); // TODO finish
+    day23();
     day24();
     day25();
 }

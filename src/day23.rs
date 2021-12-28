@@ -5,13 +5,14 @@ use std::iter;
 use Amphipod::*;
 
 const INPUT: &str = include_str!("../input/day23.txt");
+const INPUT2: &str = include_str!("../input/day23_2.txt");
 
 pub(crate) fn day23_part1() -> usize {
     Burrow::from(INPUT).part1()
 }
 
 pub(crate) fn day23_part2() -> usize {
-    Burrow::from(INPUT).part2()
+    Burrow::from(INPUT2).part2()
 }
 
 impl Burrow {
@@ -51,7 +52,7 @@ impl Burrow {
                 }
             }
             i += 1;
-            if i > 1_000 {
+            if i > 100_000 {
                 println!(
                     "reached limit, # candidates {}, # seen {}\n{}",
                     candidates.len(),
@@ -636,7 +637,16 @@ mod tests {
 #############
 #...........#
 ###B#C#B#D###
-  #A#D#C#A#
+  #A#D#C#A#  
+  #########";
+
+    const EXAMPLE2: &str = "\
+#############
+#...........#
+###B#C#B#D###
+  #D#C#B#A#  
+  #D#B#A#C#  
+  #A#D#C#A#  
   #########";
 
     #[test]
@@ -846,16 +856,56 @@ mod tests {
     #[test]
     fn part1() {
         // 16089 is too high
-        assert_eq!(1, day23_part1());
+        assert_eq!(16059, day23_part1());
     }
 
-    // #[test]
-    // fn part2_example() {
-    //     assert_eq!(1, Burrow::from(EXAMPLE).part2());
-    // }
-    //
-    // #[test]
-    // fn part2() {
-    //     assert_eq!(1, day23_part2());
-    // }
+    #[test]
+    fn part2_example() {
+        assert_eq!(44169, Burrow::from(EXAMPLE2).part2());
+    }
+
+    #[test]
+    fn part2() {
+        assert_eq!(1, day23_part2());
+    }
 }
+
+// Part 1 manually solved
+//
+// #############
+// #...........#
+// ###D#D#C#C###
+//   #B#A#B#A#
+//   #########
+//
+// #############
+// #...B...C...# 200 + 50
+// ###D#D#.#C###
+//   #B#A#.#A#
+//   #########
+//
+// #############
+// #...B.......# 700
+// ###D#D#C#.###
+//   #B#A#C#A#
+//   #########
+//
+// #############
+// #...B.....AA# 11 + 7000
+// ###D#.#C#.###
+//   #B#.#C#D#
+//   #########
+//
+// #############
+// #.........AA# 30 + 8000
+// ###.#.#C#D###
+//   #B#B#C#D#
+//   #########
+//
+// #############
+// #.........AA# 50 + 18
+// ###A#B#C#D###
+//   #A#B#C#D#
+//   #########
+//
+// 16059
