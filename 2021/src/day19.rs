@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet, VecDeque};
-use FirstAxis::*;
 
 const INPUT: &str = include_str!("../input/day19.txt");
 
@@ -25,15 +24,14 @@ impl From<&str> for System {
     }
 }
 impl System {
-    fn beacon_count(mut self) -> usize {
-        self.beacon_count2().0
+    fn beacon_count(self) -> usize {
+        self.align_beacons().0
     }
-    fn max_manhattan_distance(mut self) -> usize {
-        self.beacon_count2().1
+    fn max_manhattan_distance(self) -> usize {
+        self.align_beacons().1
     }
-    fn beacon_count2(mut self) -> (usize, usize) {
-        let count = self.scanners.len();
-        let mut distances_to_scanner0 = vec![[0, 0, 0]; count];
+    fn align_beacons(mut self) -> (usize, usize) {
+        let mut distances_to_ref = vec![[0, 0, 0]; self.scanners.len()];
 
         // The first scanner saves as the reference for position and orientation
         let reference = self.scanners.remove(0);
@@ -46,242 +44,21 @@ impl System {
         while let Some(reference) = aligned.pop_front() {
             let mut still_unaligned = vec![];
             while let Some(mut scanner) = unaligned.pop() {
-                // if !tried.insert((reference.id, scanner.id)) {
-                //     continue;
-                // }
-                println!(
-                    "Trying to align {} to reference {}",
-                    scanner.id, reference.id
-                );
+                // println!(
+                //     "Trying to align {} to reference {}",
+                //     scanner.id, reference.id
+                // );
 
-                /*
-                if unique_beacons.len() == 65 && scanner.id == 2 {
-                    let mut all: Vec<_> = aligned
-                        .iter()
-                        .flat_map(|s| s.beacons.iter())
-                        .cloned()
-                        .collect();
-                    all.extend(&mut reference.beacons.clone().into_iter());
-                    let all_len = all.len();
-                    let all_set = all.into_iter().collect::<HashSet<_>>();
-                    let all_set_len = all_set.len();
-                    println!("unique {}/{}", all_set_len, all_len);
-                    let all: Vec<_> = all_set.into_iter().collect();
-                    if let Some((orientation, translation)) = scanner.find_alignment_with(&all) {
-                        //
-                        println!("found something")
-                    } else {
-                        println!("did not find anything")
-                    }
-                }
-                 */
-
-                if let Some((orientation, translation)) =
-                    scanner.find_alignment_with(&reference.beacons)
-                {
-                    let aligned_beacons = scanner.aligned_beacons(&orientation);
-                    let translated_beacons =
-                        Scanner::translate_beacons(&aligned_beacons, translation);
-                    let new_beacons: HashSet<Vector> = translated_beacons.iter().cloned().collect();
-                    let ref_beacons: HashSet<Vector> = reference.beacons.iter().cloned().collect();
-                    let common: Vec<_> = ref_beacons.intersection(&new_beacons).collect();
-                    if common.len() == 12 {
-                        scanner.beacons = translated_beacons;
-                        distances_to_scanner0[scanner.id] = translation;
-
-                        /*
-                        if scanner.id == 1 && reference.id == 0 {
-                            println!("------- checking 1 and 0 ------");
-                            let expected: Vec<Vector> = vec![
-                                [-618, -824, -621],
-                                [-537, -823, -458],
-                                [-447, -329, 318],
-                                [404, -588, -901],
-                                [544, -627, -890],
-                                [528, -643, 409],
-                                [-661, -816, -575],
-                                [390, -675, -793],
-                                [423, -701, 434],
-                                [-345, -311, 381],
-                                [459, -707, 401],
-                                [-485, -357, 347],
-                            ];
-                            assert!(expected.iter().all(|pos| common.contains(&pos)));
-                        }
-                        if scanner.id == 3 && reference.id == 1 {
-                            println!("------- checking 3 and 1 ------");
-                            let expected: Vec<Vector> = vec![
-                                [432, -2009, 850],
-                                [408, -1815, 803],
-                                [396, -1931, -563],
-                                [568, -2007, -577],
-                                [-518, -1681, -600],
-                                [-601, -1648, -643],
-                                [497, -1838, -617],
-                                [-499, -1607, -770],
-                                // the following are already in 4-1
-                                [-739, -1745, 668],
-                                [534, -1912, 768],
-                                [-687, -1600, 576],
-                                [-635, -1737, 486],
-                            ];
-                            assert!(expected.iter().all(|pos| common.contains(&pos)));
-                        }
-                        if scanner.id == 4 && reference.id == 1 {
-                            println!("------- checking 4 and 1 ------");
-                            let expected: Vec<Vector> = vec![
-                                [459, -707, 401],
-                                [-739, -1745, 668],
-                                [-485, -357, 347],
-                                [432, -2009, 850],
-                                [528, -643, 409],
-                                [423, -701, 434],
-                                [-345, -311, 381],
-                                [408, -1815, 803],
-                                [534, -1912, 768],
-                                [-687, -1600, 576],
-                                [-447, -329, 318],
-                                [-635, -1737, 486],
-                            ];
-                            assert!(expected.iter().all(|pos| common.contains(&pos)));
-                        }
-                        */
-
-                        let prev_len = unique_beacons.len();
-                        let new_len = new_beacons.len();
-                        for beacon in new_beacons {
-                            if !unique_beacons.insert(beacon) {
-                                //
-                            }
-                        }
-                        println!(
-                            "Inserted {}/{} beacons for a total of {}",
-                            unique_beacons.len() - prev_len,
-                            new_len,
-                            unique_beacons.len()
-                        );
-
-                        /*
-                        if unique_beacons.len() == 65 {
-                            let all: Vec<Vector> = vec![
-                                [-892, 524, 684],
-                                [-876, 649, 763],
-                                [-838, 591, 734],
-                                [-789, 900, -551],
-                                [-739, -1745, 668],
-                                [-706, -3180, -659],
-                                [-697, -3072, -689],
-                                [-689, 845, -530],
-                                [-687, -1600, 576],
-                                [-661, -816, -575],
-                                [-654, -3158, -753],
-                                [-635, -1737, 486],
-                                [-631, -672, 1502],
-                                [-624, -1620, 1868],
-                                [-620, -3212, 371],
-                                [-618, -824, -621],
-                                [-612, -1695, 1788],
-                                [-601, -1648, -643],
-                                [-584, 868, -557],
-                                [-537, -823, -458],
-                                [-532, -1715, 1894],
-                                [-518, -1681, -600],
-                                [-499, -1607, -770],
-                                [-485, -357, 347],
-                                [-470, -3283, 303],
-                                [-456, -621, 1527],
-                                [-447, -329, 318],
-                                [-430, -3130, 366],
-                                [-413, -627, 1469],
-                                [-345, -311, 381],
-                                [-36, -1284, 1171],
-                                [-27, -1108, -65],
-                                [7, -33, -71],
-                                [12, -2351, -103],
-                                [26, -1119, 1091],
-                                [346, -2985, 342],
-                                [366, -3059, 397],
-                                [377, -2827, 367],
-                                [390, -675, -793],
-                                [396, -1931, -563],
-                                [404, -588, -901],
-                                [408, -1815, 803],
-                                [423, -701, 434],
-                                [432, -2009, 850],
-                                [443, 580, 662],
-                                [455, 729, 728],
-                                [456, -540, 1869],
-                                [459, -707, 401],
-                                [465, -695, 1988],
-                                [474, 580, 667],
-                                [496, -1584, 1900],
-                                [497, -1838, -617],
-                                [527, -524, 1933],
-                                [528, -643, 409],
-                                [534, -1912, 768],
-                                [544, -627, -890],
-                                [553, 345, -567],
-                                [564, 392, -477],
-                                [568, -2007, -577],
-                                [605, -1665, 1952],
-                                [612, -1593, 1893],
-                                [630, 319, -379],
-                                [686, -3108, -505],
-                                [776, -3184, -501],
-                                [846, -3110, -434],
-                                [1135, -1161, 1235],
-                                [1243, -1093, 1063],
-                                [1660, -552, 429],
-                                [1693, -557, 386],
-                                [1735, -437, 1738],
-                                [1749, -1800, 1813],
-                                [1772, -405, 1572],
-                                [1776, -675, 371],
-                                [1779, -442, 1789],
-                                [1780, -1548, 337],
-                                [1786, -1538, 337],
-                                [1847, -1591, 415],
-                                [1889, -1729, 1762],
-                                [1994, -1805, 1792],
-                            ];
-                            let missing: Vec<_> = all
-                                .into_iter()
-                                .filter(|v| !unique_beacons.contains(v))
-                                .collect();
-                            println!("missing {:?}", missing);
-
-                            // these are the unique scanner 2 beacons that aren't shared
-                            // let missing = vec![
-                            //     [1135, -1161, 1235],
-                            //     [1243, -1093, 1063],
-                            //     [1660, -552, 429],
-                            //     [1693, -557, 386],
-                            //     [1735, -437, 1738],
-                            //     [1749, -1800, 1813],
-                            //     [1772, -405, 1572],
-                            //     [1776, -675, 371],
-                            //     [1779, -442, 1789],
-                            //     [1780, -1548, 337],
-                            //     [1786, -1538, 337],
-                            //     [1847, -1591, 415],
-                            //     [1889, -1729, 1762],
-                            //     [1994, -1805, 1792]
-                            // ];
-                        }
-                         */
-
-                        aligned.push_back(scanner);
-                        println!("{}/{} aligned", aligned.len() + 1, count); // +1 is for reference
-                    } else {
-                        println!("--------- only {} intersecting beacons", common.len());
-                        still_unaligned.push(scanner);
-                    }
+                if let Some(offset) = scanner.align_with(&reference.beacons) {
+                    unique_beacons.extend(scanner.beacons.clone());
+                    distances_to_ref[scanner.id] = offset;
+                    aligned.push_back(scanner);
+                    // +1 is for reference scanner 0, which is aligned by definition
+                    // println!("{}/{} aligned", aligned.len() + 1, self.scanners.len());
                 } else {
-                    // println!("this does happen and should not"); // TODO
                     still_unaligned.push(scanner);
                 }
             }
-
             unaligned.append(&mut still_unaligned);
             // At this point, there should be some scanners aligned to the current reference.
             // Those that are still unaligned have too few overlapping beacons.
@@ -293,14 +70,12 @@ impl System {
             }
         }
 
-        println!("distances to scanner 0: {:?}", distances_to_scanner0);
-        let distances_between_scanners: Vec<_> = Scanner::diffs_between(&distances_to_scanner0)
+        // println!("distances to ref scanner 0: {:?}", distances_to_ref);
+        let distances_between_scanners = Scanner::offsets_between(&distances_to_ref)
             .into_iter()
-            .map(|(d, _)| d)
-            .collect();
-        println!("distances {:?}", distances_between_scanners);
+            .map(|(d, _)| d);
+        // println!("distances {:?}", distances_between_scanners);
         let max_manhattan_distance = distances_between_scanners
-            .into_iter()
             .map(|[a, b, c]| (a.abs() + b.abs() + c.abs()) as usize)
             .max()
             .unwrap();
@@ -328,85 +103,31 @@ impl From<&str> for Scanner {
             .parse()
             .unwrap();
         let beacons: Vec<_> = lines.map(to_position).collect();
-        println!("Scanner {} has {} beacons", id, beacons.len());
+        // println!("Scanner {} has {} beacons", id, beacons.len());
         Scanner { id, beacons }
     }
 }
 
 impl Scanner {
-    fn find_alignment_with(&self, ref_beacons: &[Vector]) -> Option<(Orientation, Vector)> {
-        for orientation in &Orientation::all() {
-            let own_beacons = self.aligned_beacons(orientation);
-            if let Some(translations) = Scanner::shared_beacons(&own_beacons, ref_beacons) {
-                if let Some((translation, count)) = translations.iter().max_by_key(|(_, c)| *c) {
-                    if *count >= 12 {
-                        println!("translation for {} diffs found {:?}", count, translation);
-                        return Some((*orientation, *translation));
-                    } else {
-                        panic!("all over the place translations {:?}", translations);
-                    }
+    fn align_with(&mut self, ref_beacons: &[Vector]) -> Option<Vector> {
+        for orientation in Orientation::all() {
+            let mut offset_frequencies: HashMap<Vector, usize> = HashMap::new();
+            let aligned_beacons = self.aligned_beacons(&orientation);
+            for own_beacon in &aligned_beacons {
+                for ref_beacon in ref_beacons {
+                    let offset = Scanner::offset_between(ref_beacon, own_beacon);
+                    *offset_frequencies.entry(offset).or_default() += 1;
                 }
+            }
+            if let Some((offset, _)) = offset_frequencies
+                .into_iter()
+                .find(|(_, count)| *count >= 12)
+            {
+                self.beacons = Scanner::translate_beacons(&aligned_beacons, offset);
+                return Some(offset);
             }
         }
         None
-    }
-    fn shared_beacons(
-        own_beacons: &[Vector],
-        ref_beacons: &[Vector],
-    ) -> Option<HashMap<Vector, usize>> {
-        // To align two scanners, we collect the diffs between each scanner's beacon positions,
-        // and look for overlap. While beacon positions are relative to the scanner's position,
-        // the diff between individual beacon position is absolute, and if two scanners share
-        // beacons, they'll also share diffs
-        let mut ref_map = Scanner::diffs_between(ref_beacons);
-        let mut other_map = Scanner::diffs_between(own_beacons);
-        // Apparently HashSet.keys() don't have an .intersection(…) function, hence this collect
-        let shared_diffs: HashSet<_> = ref_map
-            .keys()
-            .cloned()
-            .collect::<HashSet<Vector>>()
-            .intersection(&other_map.keys().cloned().collect::<HashSet<Vector>>())
-            .cloned()
-            .collect();
-
-        if shared_diffs.len() < 12 {
-            // There must be at least 12 shared points.
-            // 12 shared points have 11+10+9+8+7+6+5+4+3+2+1 = 66 shared connections TODO?
-            None
-        } else {
-            // println!("intersection count {}", shared_diffs.len());
-            let mut translations: HashMap<Vector, usize> = HashMap::new();
-            for distance in shared_diffs {
-                let own = ref_map.remove(&distance).unwrap();
-                let other = other_map.remove(&distance).unwrap();
-
-                assert_eq!(own.len(), 2);
-                assert_eq!(other.len(), 2);
-                let mut translation = Scanner::diff_between(&own[0], &other[0]);
-                if translation == Scanner::diff_between(&own[1], &other[1]) {
-                    assert_ne!(
-                        Scanner::diff_between(&own[0], &other[1]),
-                        Scanner::diff_between(&own[1], &other[0])
-                    )
-                } else {
-                    translation = Scanner::diff_between(&own[0], &other[1]);
-                    if translation != Scanner::diff_between(&own[1], &other[0]) {
-                        unreachable!("maybe?")
-                    }
-                }
-                // println!(
-                //     "own {:?} other {:?} own diff {:?} other diff {:?} translation {:?}",
-                //     own,
-                //     other,
-                //     Scanner::diff_between(&own[1], &own[0]),
-                //     Scanner::diff_between(&other[1], &other[0]),
-                //     translation
-                // );
-
-                *translations.entry(translation).or_default() += 1;
-            }
-            Some(translations)
-        }
     }
     fn aligned_beacons(&self, orientation: &Orientation) -> Vec<Vector> {
         self.beacons
@@ -414,20 +135,20 @@ impl Scanner {
             .map(|pos| orientation.align(*pos))
             .collect()
     }
-    fn translate_beacons(beacons: &[Vector], trans: Vector) -> Vec<Vector> {
+    fn translate_beacons(beacons: &[Vector], offset: Vector) -> Vec<Vector> {
         beacons
             .iter()
-            .map(|pos| [pos[0] + trans[0], pos[1] + trans[1], pos[2] + trans[2]])
+            .map(|pos| [pos[0] + offset[0], pos[1] + offset[1], pos[2] + offset[2]])
             .collect()
     }
-    fn diff_between(a: &Vector, b: &Vector) -> Vector {
+    fn offset_between(a: &Vector, b: &Vector) -> Vector {
         [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
     }
-    fn diffs_between(beacons: &[Vector]) -> HashMap<Vector, Vec<Vector>> {
+    fn offsets_between(beacons: &[Vector]) -> HashMap<Vector, Vec<Vector>> {
         let mut distances: HashMap<Vector, Vec<Vector>> = HashMap::new();
         for (i, a) in beacons.iter().enumerate().take(beacons.len() - 1) {
             for b in beacons.iter().skip(i + 1) {
-                let diff = Scanner::diff_between(a, b);
+                let diff = Scanner::offset_between(a, b);
                 let positions = distances.entry(diff).or_default();
                 positions.push(*a);
                 positions.push(*b);
@@ -439,72 +160,11 @@ impl Scanner {
     }
 }
 #[derive(Debug, Copy, Clone)]
-enum FirstAxis {
-    X,
-    Y,
-    Z,
-}
-// #[derive(Debug, Copy, Clone)]
-// struct Orientation {
-//     first: FirstAxis,  // The order of the x, y and z coordinates
-//     multi: [isize; 3], // Multiplier of coordinates x, y and z
-// }
-// impl Orientation {
-//     fn align(&self, mut pos: Vector) -> Vector {
-//         match self.first {
-//             X => {}
-//             Y => pos.rotate_left(1),
-//             Z => pos.rotate_right(1),
-//         }
-//         (0..3).for_each(|i| pos[i] *= self.multi[i]);
-//         pos
-//     }
-//     fn all() -> Vec<Orientation> {
-//         let mut orientations = vec![];
-//         for x in [1, -1] {
-//             for y in [1, -1] {
-//                 for z in [1, -1] {
-//                     let multi = [x, y, z];
-//                     for first in [X, Y, Z] {
-//                         orientations.push(Orientation { first, multi })
-//                     }
-//                 }
-//             }
-//         }
-//         orientations
-//     }
-// }
-#[derive(Debug, Copy, Clone)]
 struct Orientation {
     index: [usize; 3], // The order of the x, y and z coordinates
     multi: [isize; 3], // Multiplier of x, y and z coordinates
 }
 impl Orientation {
-    // fn all() -> Vec<Orientation> {
-    //     let mut orientations = vec![];
-    //     for x in [1, -1] {
-    //         for y in [1, -1] {
-    //             for z in [1, -1] {
-    //                 let multi = [x, y, z];
-    //                 for index in [
-    //                     [0, 1, 2],
-    //                     [0, 2, 1],
-    //                     [1, 0, 2],
-    //                     [1, 2, 0],
-    //                     [2, 0, 1],
-    //                     [2, 1, 0],
-    //                 ] {
-    //                     orientations.push(Orientation { index, multi })
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     println!(
-    //         "{} unique orientations",
-    //         orientations.iter().cloned().collect::<HashSet<_>>().len()
-    //     );
-    //     orientations
-    // }
     fn new(index: [usize; 3], multi: [isize; 3]) -> Self {
         Orientation { index, multi }
     }
@@ -621,7 +281,7 @@ mod tests {
 
     #[test]
     fn part2() {
-        assert_eq!(1, day19_part2());
+        assert_eq!(10965, day19_part2());
     }
 
     const EXAMPLE: &str = "\
