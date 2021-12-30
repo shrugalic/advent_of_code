@@ -1,5 +1,5 @@
 use std::cmp::{max, min};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ops::RangeInclusive;
 
 const INPUT: &str = include_str!("../input/day22.txt");
@@ -30,6 +30,73 @@ impl ReactorCore {
             }
         }
         cubes.values().filter(|on| **on).count()
+    }
+    // Neal Wu solution takes ~90s
+    fn turned_on_cubes_anywhere_2(&self) -> usize {
+        let mut xs = HashSet::new();
+        let mut ys = HashSet::new();
+        let mut zs = HashSet::new();
+        for (_, cuboid) in &self.instructions {
+            xs.insert(*cuboid.ranges[0].start());
+            xs.insert(*cuboid.ranges[0].end() + 1);
+            ys.insert(*cuboid.ranges[1].start());
+            ys.insert(*cuboid.ranges[1].end() + 1);
+            zs.insert(*cuboid.ranges[2].start());
+            zs.insert(*cuboid.ranges[2].end() + 1);
+        }
+        let mut xs: Vec<_> = xs.into_iter().collect();
+        let mut ys: Vec<_> = ys.into_iter().collect();
+        let mut zs: Vec<_> = zs.into_iter().collect();
+        xs.sort_unstable();
+        ys.sort_unstable();
+        zs.sort_unstable();
+        // println!("{} Xs: {:?}", xs.len(), xs);
+        // println!("{} Ys: {:?}", ys.len(), ys);
+        // println!("{} Zs: {:?}", zs.len(), zs);
+        let mut cuboids = vec![vec![vec![false; zs.len()]; ys.len()]; xs.len()];
+
+        let get_index = |coords: &[Coord], wanted: Coord| coords.binary_search(&wanted).unwrap();
+        for (on, cuboid) in &self.instructions {
+            let x_start = get_index(&xs, *cuboid.ranges[0].start());
+            let x_end = get_index(&xs, *cuboid.ranges[0].end() + 1);
+            let y_start = get_index(&ys, *cuboid.ranges[1].start());
+            let y_end = get_index(&ys, *cuboid.ranges[1].end() + 1);
+            let z_start = get_index(&zs, *cuboid.ranges[2].start());
+            let z_end = get_index(&zs, *cuboid.ranges[2].end() + 1);
+
+            // println!("instruction {} {:?}", on, cuboid);
+            // for x in x_start..x_end {
+            //     for y in y_start..y_end {
+            //         for z in z_start..z_end {
+            //             // println!("{} {} {} = {}", x, y, z, on);
+            //             cuboids[x][y][z] = *on;
+            //         }
+            //     }
+            // }
+            for area in cuboids.iter_mut().skip(x_start).take(x_end - x_start) {
+                for row in area.iter_mut().skip(y_start).take(y_end - y_start) {
+                    for value in row.iter_mut().skip(z_start).take(z_end - z_start) {
+                        // println!("{} {} {} = {}", x, y, z, on);
+                        *value = *on;
+                    }
+                }
+            }
+        }
+
+        let mut count = 0_usize;
+        for (i, x) in xs.windows(2).enumerate() {
+            for (j, y) in ys.windows(2).enumerate() {
+                for (k, z) in zs.windows(2).enumerate() {
+                    // println!("{} {} {} = {}", i, j, k, cuboids[i][j][k]);
+                    if cuboids[i][j][k] {
+                        count += (x[1] - x[0]) as usize
+                            * (y[1] - y[0]) as usize
+                            * (z[1] - z[0]) as usize;
+                    }
+                }
+            }
+        }
+        count
     }
     fn turned_on_cubes_anywhere(&self) -> usize {
         let mut counts: HashMap<Cuboid, isize> = HashMap::new();
