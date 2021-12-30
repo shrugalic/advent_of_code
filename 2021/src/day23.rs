@@ -1,25 +1,27 @@
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap};
 use std::fmt::{Debug, Display, Formatter};
+use std::ops::Range;
 use Amphipod::*;
+use Tile::*;
 
 const INPUT: &str = include_str!("../input/day23.txt");
 const INPUT2: &str = include_str!("../input/day23_2.txt");
 
 pub(crate) fn day23_part1() -> usize {
-    Burrow::from(INPUT).part1()
+    Burrow::from(INPUT).solve()
 }
 
 pub(crate) fn day23_part2() -> usize {
-    Burrow::from(INPUT2).part2()
+    Burrow::from(INPUT2).solve()
 }
-type Move = (Energy, Positions);
-impl Burrow {
-    fn part1(&mut self) -> Energy {
-        let mut candidates = BinaryHeap::new();
-        candidates.push(Reverse((0, self.initial_positions)));
 
-        let mut best: HashMap<Positions, Energy> = HashMap::new();
+impl Burrow {
+    fn solve(self) -> Energy {
+        let mut candidates = BinaryHeap::new();
+        candidates.push(Reverse((0, self)));
+
+        let mut best: HashMap<Burrow, Energy> = HashMap::new();
 
         while let Some(Reverse((energy, current))) = candidates.pop() {
             // 1. check if goal reached
@@ -40,499 +42,261 @@ impl Burrow {
                         continue;
                     }
                 }
-                best.insert(next, energy + cost);
+                best.insert(next.clone(), energy + cost);
                 candidates.push(Reverse((energy + cost, next)));
             }
         }
         unreachable!()
     }
-    fn part2(&self) -> usize {
-        0
-    }
 }
-#[derive(Debug)]
+
+#[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Hash)]
 struct Burrow {
-    initial_positions: Positions,
+    grid: Grid,
 }
 impl From<&str> for Burrow {
     fn from(input: &str) -> Self {
-        let mut lines = input.lines().skip(1);
-        let h: Vec<_> = lines
-            .next()
-            .unwrap()
-            .chars()
-            .skip(1)
-            .take(11)
-            .map(|c| {
-                if let Ok(pod) = Amphipod::try_from(c) {
-                    Hallway::new(pod)
-                } else {
-                    Hallway::default()
-                }
-            })
-            .collect();
-        let room: Vec<_> = lines
-            .take(2)
-            .flat_map(|s| {
-                s.replace('#', "")
-                    .replace(' ', "")
-                    .chars()
-                    .map(|c| Amphipod::try_from(c).ok())
-                    .collect::<Vec<Option<Amphipod>>>()
-            })
-            .collect();
         Burrow {
-            initial_positions: Positions {
-                hallway: [h[0], h[1], h[3], h[5], h[7], h[9], h[10]],
-                rooms: [
-                    Room {
-                        top: room[0],
-                        bottom: room[4],
-                    },
-                    Room {
-                        top: room[1],
-                        bottom: room[5],
-                    },
-                    Room {
-                        top: room[2],
-                        bottom: room[6],
-                    },
-                    Room {
-                        top: room[3],
-                        bottom: room[7],
-                    },
-                ],
-            },
+            grid: input
+                .trim()
+                .lines()
+                .map(|line| line.chars().map(Tile::from).collect())
+                .collect(),
         }
     }
 }
-
-const TARGET_ROOMS: [Room; 4] = [
-    Room {
-        top: Some(Amber),
-        bottom: Some(Amber),
-    },
-    Room {
-        top: Some(Bronze),
-        bottom: Some(Bronze),
-    },
-    Room {
-        top: Some(Copper),
-        bottom: Some(Copper),
-    },
-    Room {
-        top: Some(Desert),
-        bottom: Some(Desert),
-    },
-];
-
-type Energy = usize;
-
-#[derive(Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Hash)]
-struct Positions {
-    hallway: [Hallway; 7],
-    rooms: [Room; 4],
-}
-impl Display for Positions {
+impl Display for Burrow {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        // #############
-        // #...........#
-        // ###B#C#B#D###
-        //   #A#D#C#A#
-        //   #########
-        let h = &self.hallway;
-        let hallway = format!(
-            "#{}{}.{}.{}.{}.{}{}#",
-            h[0], h[1], h[2], h[3], h[4], h[5], h[6]
-        );
-        let r: Vec<char> = self.rooms.iter().map(|r| r.top.to_char()).collect();
-        let rooms_top = format!("###{}#{}#{}#{}###", r[0], r[1], r[2], r[3]);
-        let r: Vec<char> = self.rooms.iter().map(|r| r.bottom.to_char()).collect();
-        let rooms_bottom = format!("  #{}#{}#{}#{}#  ", r[0], r[1], r[2], r[3]);
         write!(
             f,
-            "#############\n{}\n{}\n{}\n  #########  ",
-            hallway, rooms_top, rooms_bottom
+            "{}",
+            self.grid
+                .iter()
+                .map(|row| row.iter().map(|tile| tile.to_char()).collect::<String>())
+                .collect::<Vec<_>>()
+                .join("\n")
         )
     }
 }
-impl Positions {
-    fn is_finished(&self) -> bool {
-        self.rooms == TARGET_ROOMS
+
+type Energy = usize;
+type Grid = Vec<Vec<Tile>>;
+type Move = (Energy, Burrow);
+type X = usize;
+type Y = usize;
+
+#[derive(Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Hash)]
+enum Tile {
+    Wall,
+    Empty,
+    Occupied(Amphipod),
+    Outside,
+}
+impl From<char> for Tile {
+    fn from(c: char) -> Self {
+        match c {
+            '#' => Wall,
+            '.' => Empty,
+            ' ' => Outside,
+            _ => Occupied(Amphipod::from(c)),
+        }
     }
-    fn get_next_possible_moves(
-        &self,
-        energy: Energy,
-        best: &HashMap<Positions, Energy>,
-    ) -> Vec<Move> {
-        // - Amphipods will never stop on the space immediately outside any room. They can move into
-        //   that space so long as they immediately continue moving. (Specifically, this refers to the
-        //   four open spaces in the hallway that are directly above an amphipod starting position.)
-        //   -> These spaces don't appear in our graph
-
-        // - Amphipods will never move from the hallway into a room unless that room is their destination
-        //   room and that room contains no amphipods which do not also have that room as their own
-        //   destination. If an amphipod's starting room is not its destination room, it can stay in
-        //   that room until it leaves the room. (For example, an Amber amphipod will not move from
-        //   the hallway into the right three rooms, and will only move into the leftmost room if
-        //   that room is empty or if it only contains other Amber amphipods.)
-
-        // - Once an amphipod stops moving in the hallway, it will stay in that spot until it can move
-        //   into a room. (That is, once any amphipod starts moving, any other amphipods currently in
-        //   the hallway are locked in place and will not move again until they can move fully into a room.)
-
-        let mut next_moves = vec![];
-
-        let hallway = self.occupied_hallways();
-        let room_tops = self.occupied_room_tops();
-        let room_bottoms = self.occupied_room_bottoms();
-
-        // println!("{}", self);
-        // println!("pods_in_hallway {:?}", hallway);
-        // println!("pods_on_room_tops {:?}", room_tops);
-        // println!("pods_in_room_bottoms {:?}", room_bottoms);
-
-        for from in &hallway {
-            // println!("hallway from {}", from);
-            for to in self.reachable_room_tops_left_of(*from) {
-                // println!("reachable_room_tops_left_of: to = {}", to);
-                next_moves.push(self.move_from_hallway_to_room_top(*from, to));
-            }
-            for to in self.reachable_room_tops_right_of(*from) {
-                // println!("reachable_room_tops_right_of: to = {}", to);
-                next_moves.push(self.move_from_hallway_to_room_top(*from, to));
-            }
-
-            for to in self.reachable_room_bottoms_left_of(*from) {
-                // println!("reachable_room_bottoms_left_of: to = {}", to);
-                next_moves.push(self.move_from_hallway_to_room_bottom(*from, to));
-            }
-            for to in self.reachable_room_bottoms_right_of(*from) {
-                // println!("reachable_room_bottoms_right_of: to = {}", to);
-                next_moves.push(self.move_from_hallway_to_room_bottom(*from, to));
-            }
+}
+impl ToChar for Tile {
+    fn to_char(&self) -> char {
+        match self {
+            Wall => '#',
+            Empty => '.',
+            Outside => ' ',
+            Occupied(pod) => pod.to_char(),
         }
-        for from in room_tops {
-            for to in self.reachable_hallways_left_of(from + 2) {
-                next_moves.push(self.move_from_room_top_to_hallway(from, to));
-            }
-            for to in self.reachable_hallways_right_of(from + 1) {
-                next_moves.push(self.move_from_room_top_to_hallway(from, to));
-            }
-        }
-        for from in room_bottoms {
-            if self.rooms[from].has_top() {
-                continue; // can't get out :)
-            }
-            for to in self.reachable_hallways_left_of(from + 2) {
-                next_moves.push(self.move_from_room_bottom_to_hallway(from, to));
-            }
-            for to in self.reachable_hallways_right_of(from + 1) {
-                next_moves.push(self.move_from_room_bottom_to_hallway(from, to));
-            }
-        }
-        // Return only the moves that lead to better results
-        return next_moves
+    }
+}
+
+const ROOM_XS: [usize; 4] = [3, 5, 7, 9];
+const VALID_HALLWAY_XS: [usize; 7] = [1, 2, 4, 6, 8, 10, 11];
+const ALL_HALLWAY_XS: [usize; 11] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+const HALLWAY_Y: usize = 1;
+
+impl Burrow {
+    fn is_finished(&self) -> bool {
+        ROOM_XS
             .iter()
-            .filter(|(cost, pos)| {
-                best.get(pos)
+            .all(|&room_x| self.is_room_full_and_sorted(room_x))
+    }
+    fn is_room_full_and_sorted(&self, room_x: usize) -> bool {
+        self.room_ys().all(|room_y| {
+            if let Occupied(pod) = self.grid[room_y][room_x] {
+                pod.has_destination(room_x)
+            } else {
+                false
+            }
+        })
+    }
+    fn room_ys(&self) -> Range<usize> {
+        2..self.grid.len() - 1
+    }
+    fn get_next_possible_moves(&self, energy: Energy, best: &HashMap<Burrow, Energy>) -> Vec<Move> {
+        let mut moves = vec![];
+
+        for (from_x, from_y, pod) in self.occupied_rooms() {
+            let rooms = self.reachable_rooms_from_room(from_x, pod);
+            // Prioritize rooms over hallways
+            if !rooms.is_empty() {
+                for to in rooms {
+                    moves.push(self.move_from_room_to_room(from_x, from_y, to, pod));
+                }
+            } else {
+                for to in self.reachable_hallways_from_room(from_x) {
+                    moves.push(self.move_from_room_to_hallway(from_x, from_y, to, pod));
+                }
+            }
+        }
+        for (from, pod) in self.occupied_hallways() {
+            for to in self.reachable_rooms_from_hallway(from, pod) {
+                moves.push(self.move_from_hallway_to_room(from, to, pod));
+            }
+        }
+
+        // Return only the moves that lead to better results
+        moves
+            .iter()
+            .filter(|(cost, next)| {
+                best.get(next)
                     .map(|total| energy + *cost < *total)
                     .unwrap_or(true)
             })
             .cloned()
-            .collect();
-    }
-
-    fn occupied_hallways(&self) -> Vec<usize> {
-        self.hallway
-            .iter()
-            .enumerate()
-            .filter(|(_, h)| h.is_occupied())
-            .map(|(i, _)| i)
             .collect()
     }
 
-    fn occupied_room_tops(&self) -> Vec<usize> {
-        self.rooms
+    fn occupied_hallways(&self) -> Vec<(X, Amphipod)> {
+        self.grid[1]
             .iter()
             .enumerate()
-            .filter(|(_, r)| r.has_top())
-            .filter(|(i, r)| !r.is_done(*i))
-            .map(|(i, _)| i)
+            .filter_map(|(x, tile)| match tile {
+                Occupied(pod) => Some((x, *pod)),
+                _ => None,
+            })
             .collect()
     }
 
-    fn occupied_room_bottoms(&self) -> Vec<usize> {
-        self.rooms
-            .iter()
-            .enumerate()
-            .filter(|(_, r)| r.has_bottom())
-            .filter(|(i, r)| !r.is_done(*i))
-            .map(|(i, _)| i)
+    fn occupied_rooms(&self) -> Vec<(X, Y, Amphipod)> {
+        ROOM_XS
+            .into_iter()
+            .filter_map(|x| self.topmost_occupied_room(x).map(|(y, pod)| (x, y, pod)))
+            .filter(|(x, _y, _pod)| !self.is_room_full_and_sorted(*x))
             .collect()
     }
 
-    fn reachable_hallways_left_of(&self, i: usize) -> Vec<usize> {
-        self.hallway
-            .iter()
-            .enumerate()
+    fn reachable_rooms_from_room(&self, from: X, pod: Amphipod) -> Vec<usize> {
+        self.reachable_rooms_from_hallway(from, pod)
+            .into_iter()
+            .filter(|&to| to != from)
+            .collect()
+    }
+
+    fn reachable_hallways_from_room(&self, from: usize) -> Vec<usize> {
+        VALID_HALLWAY_XS
+            .into_iter()
             .rev()
-            .skip(7 - i)
-            .take_while(|(_, h)| h.is_empty())
-            .map(|(i, _)| i)
+            .skip_while(|&x| from <= x)
+            .take_while(|&left| self.is_empty_hallway(left))
+            .chain(
+                VALID_HALLWAY_XS
+                    .into_iter()
+                    .skip_while(|&x| x <= from)
+                    .take_while(|&right| self.is_empty_hallway(right)),
+            )
             .collect()
     }
 
-    fn reachable_hallways_right_of(&self, start: usize) -> Vec<usize> {
-        self.hallway
-            .iter()
-            .enumerate()
-            .skip(start + 1)
-            .take_while(|(_, h)| h.is_empty())
-            .map(|(i, _)| i)
-            .collect()
+    fn is_empty_hallway(&self, x: X) -> bool {
+        matches!(self.grid[HALLWAY_Y][x], Empty)
     }
 
-    fn reachable_left_hallways_including(&self, start: usize) -> Vec<usize> {
-        self.hallway
-            .iter()
-            .enumerate()
+    fn reachable_rooms_from_hallway(&self, from: X, pod: Amphipod) -> Vec<X> {
+        let left = ALL_HALLWAY_XS
+            .into_iter()
             .rev()
-            .skip(7 - start - 1)
-            .take_while(|(curr, h)| *curr == start || h.is_empty())
-            .map(|(i, _)| i)
-            .collect()
-    }
-
-    fn reachable_right_hallways_including(&self, start: usize) -> Vec<usize> {
-        self.hallway
-            .iter()
-            .enumerate()
-            .skip(start)
-            .take_while(|(curr, h)| *curr == start || h.is_empty())
-            .map(|(i, _)| i)
-            .collect()
-    }
-
-    fn room_left_of(hallway: usize) -> usize {
-        match hallway {
-            2 => 0,
-            3 => 1,
-            4 => 2,
-            5..=6 => 3,
-            _ => unreachable!(),
-        }
-    }
-    fn room_right_of(hallway: usize) -> usize {
-        match hallway {
-            0..=1 => 0,
-            2 => 1,
-            3 => 2,
-            4 => 3,
-            _ => unreachable!(),
-        }
-    }
-
-    fn reachable_room_tops_left_of(&self, from: usize) -> Vec<usize> {
-        self.reachable_left_hallways_including(from)
+            .skip_while(|&x| from <= x)
+            .take_while(|&left| self.is_empty_hallway(left));
+        let right = ALL_HALLWAY_XS
             .into_iter()
-            .filter(|via| *via > 1)
-            .filter_map(|via| {
-                let room = Self::room_left_of(via);
-                self.map_top(room, from)
-            })
+            .skip_while(|&x| x <= from)
+            .take_while(|&right| self.is_empty_hallway(right));
+        left.chain(right)
+            .filter(|x| ROOM_XS.contains(x))
+            .filter(|room| pod.has_destination(*room))
+            .filter(|x| self.all_occupants_match(*x, &pod))
             .collect()
     }
 
-    fn reachable_room_tops_right_of(&self, from: usize) -> Vec<usize> {
-        self.reachable_right_hallways_including(from)
-            .into_iter()
-            .filter(|via| *via < 5)
-            .filter_map(|via| {
-                let room = Self::room_right_of(via);
-                self.map_top(room, from)
+    fn move_from_room_to_room(&self, from: X, y: Y, to: X, pod: Amphipod) -> (Energy, Self) {
+        let via_hallway = (from + to) / 2;
+        let (e1, intermediate) = self.move_from_room_to_hallway(from, y, via_hallway, pod);
+        let (e2, next) = intermediate.move_from_hallway_to_room(via_hallway, to, pod);
+        (e1 + e2, next)
+    }
+
+    fn move_from_room_to_hallway(&self, from: X, y: Y, to: X, pod: Amphipod) -> (Energy, Self) {
+        let mut next = self.clone();
+        next.grid[y][from] = Empty;
+        next.grid[HALLWAY_Y][to] = Occupied(pod);
+
+        let y_steps = y - HALLWAY_Y;
+        let x_steps = if from < to { to - from } else { from - to };
+
+        (pod.energy_for(y_steps + x_steps), next)
+    }
+
+    fn move_from_hallway_to_room(&self, from: X, to: X, pod: Amphipod) -> (Energy, Self) {
+        let mut next = self.clone();
+        let room_y = next.top_empty_room_y(to);
+        next.grid[HALLWAY_Y][from] = Empty;
+        next.grid[room_y][to] = Occupied(pod);
+
+        let x_steps = if from < to { to - from } else { from - to };
+        let y_steps = room_y - HALLWAY_Y;
+
+        (pod.energy_for(y_steps + x_steps), next)
+    }
+
+    fn topmost_occupied_room(&self, x: X) -> Option<(Y, Amphipod)> {
+        self.room_ys()
+            .filter_map(|y| match self.grid[y][x] {
+                Occupied(pod) => Some((y, pod)),
+                _ => None,
             })
-            .collect()
+            .next()
     }
 
-    fn reachable_room_bottoms_left_of(&self, from: usize) -> Vec<usize> {
-        self.reachable_left_hallways_including(from)
-            .into_iter()
-            .filter(|via| *via > 1)
-            .filter_map(|via| {
-                let room = Self::room_left_of(via);
-                self.map_bottom(room, from)
-            })
-            .collect()
+    fn all_occupants_match(&self, room: X, pod: &Amphipod) -> bool {
+        self.room_ys().all(|y| match &self.grid[y][room] {
+            Occupied(occupant) => occupant == pod,
+            Empty => true,
+            Wall | Outside => unreachable!(),
+        })
     }
 
-    fn reachable_room_bottoms_right_of(&self, from: usize) -> Vec<usize> {
-        self.reachable_right_hallways_including(from)
-            .into_iter()
-            .filter(|via| *via < 5)
-            .filter_map(|via| {
-                let room = Self::room_right_of(via);
-                self.map_bottom(room, from)
-            })
-            .collect()
+    fn top_empty_room_y(&self, room: X) -> usize {
+        self.topmost_occupied_room(room)
+            .map(|(y, _)| y)
+            .unwrap_or(self.grid.len() - 1)
+            - 1
     }
-
-    fn map_top(&self, room: usize, from_hallway: usize) -> Option<usize> {
-        let pod = self.hallway[from_hallway].amphipod.unwrap();
-        let is_top = self.rooms[room].is_top_empty() && self.rooms[room].bottom.eq(&Some(pod));
-        // println!("pod {} wants({}) = {}", pod, room, pod.wants(room));
-        // println!(
-        //     "self.rooms[room].is_top_empty() {}",
-        //     self.rooms[room].is_top_empty()
-        // );
-        // println!(
-        //     "self.rooms[room].bottom.eq(&Some(pod)) {}",
-        //     self.rooms[room].bottom.eq(&Some(pod))
-        // );
-        if pod.wants(room) && is_top {
-            Some(room)
+    #[cfg(test)]
+    fn get_pod(&self, room_x: X) -> Amphipod {
+        if let Occupied(pod) = self.grid[HALLWAY_Y][room_x] {
+            pod
         } else {
-            None
-        }
-    }
-
-    fn map_bottom(&self, room: usize, from_hallway: usize) -> Option<usize> {
-        let pod = self.hallway[from_hallway].amphipod.unwrap();
-        if pod.wants(room) && self.rooms[room].is_empty() {
-            Some(room)
-        } else {
-            None
-        }
-    }
-
-    fn hallway_step_count(from: usize, to: usize) -> usize {
-        assert_ne!(from, to);
-        let mut steps = 2 * if from < to { to - from } else { from - to };
-        if from == 0 || from == 6 {
-            steps -= 1;
-        }
-        if to == 0 || to == 6 {
-            steps -= 1;
-        }
-        steps
-    }
-
-    fn room_top_to_hallway_step_count(from_room: usize, to_hallway: usize) -> usize {
-        // determine the hallway equivalent
-        let from_hallway = match (from_room, to_hallway) {
-            (0, 0..=1) => 2,
-            (0, 2..=6) => 1,
-            (1, 0..=2) => 3,
-            (1, 3..=6) => 2,
-            (2, 0..=3) => 4,
-            (2, 4..=6) => 3,
-            (3, 0..=4) => 5,
-            (3, 5..=6) => 4,
-            _ => unreachable!("from {} to {}", from_room, to_hallway),
-        };
-        // println!("{} ~ {} (room ~ hallway)", from_room, from_hallway);
-        Self::hallway_step_count(from_hallway, to_hallway)
-    }
-
-    fn move_from_room_top_to_hallway(&self, from: usize, to: usize) -> (Energy, Self) {
-        let mut result = *self;
-        if let Some(pod) = result.rooms[from].top.take() {
-            assert_eq!(result.hallway[to].amphipod, None);
-            result.hallway[to].amphipod = Some(pod);
-            let steps = Self::room_top_to_hallway_step_count(from, to);
-            let energy = pod.energy_for(steps);
-            // println!(
-            //     "move {} from room top {} to hallway {} in {} steps @ energy {}\n{}\n",
-            //     pod, from, to, steps, energy, result
-            // );
-            (energy, result)
-        } else {
-            unreachable!("move_from_room_top_to_hallway({}, {})\n{}", from, to, self);
-        }
-    }
-
-    fn move_from_hallway_to_room_top(&self, from: usize, to: usize) -> (Energy, Self) {
-        let mut result = *self;
-        if let Some(pod) = result.hallway[from].amphipod.take() {
-            assert_eq!(result.rooms[to].top, None);
-            result.rooms[to].top = Some(pod);
-
-            let steps = Self::room_top_to_hallway_step_count(to, from);
-            let energy = pod.energy_for(steps);
-            // println!(
-            //     "move {} from hallway {} to room top {} in {} steps @ energy {}\n{}\n",
-            //     pod, from, to, steps, energy, result
-            // );
-            (energy, result)
-        } else {
-            unreachable!("move_from_hallway_to_room_top({},{})", from, to);
-        }
-    }
-
-    fn move_from_hallway_to_room_bottom(&self, from: usize, to: usize) -> (Energy, Self) {
-        let mut result = *self;
-        if let Some(pod) = result.hallway[from].amphipod.take() {
-            assert_eq!(result.rooms[to].top, None);
-            assert_eq!(result.rooms[to].bottom, None);
-            result.rooms[to].bottom = Some(pod);
-
-            let steps = 1 + Self::room_top_to_hallway_step_count(to, from);
-            let energy = pod.energy_for(steps);
-            // println!(
-            //     "move {} from hallway {} to room bottom {} in {} steps @ energy {}\n{}\n",
-            //     pod, from, to, steps, energy, result
-            // );
-            (energy, result)
-        } else {
-            unreachable!("move_from_hallway_to_room_top({},{})", from, to);
-        }
-    }
-
-    fn move_from_room_bottom_to_hallway(&self, from: usize, to: usize) -> (Energy, Self) {
-        let mut result = *self;
-        assert_eq!(result.rooms[from].top, None);
-        if let Some(pod) = result.rooms[from].bottom.take() {
-            assert_eq!(result.hallway[to].amphipod, None);
-            result.hallway[to].amphipod = Some(pod);
-            let steps = 1 + Self::room_top_to_hallway_step_count(from, to);
-            let energy = pod.energy_for(steps);
-            // println!(
-            //     "move {} from room bottom {} to hallway {} in {} steps @ energy {}\n{}\n",
-            //     pod, from, to, steps, energy, result
-            // );
-            (energy, result)
-        } else {
-            unreachable!("move_from_room_bottom_to_hallway({}, {})", from, to);
+            unreachable!()
         }
     }
 }
-impl Debug for Positions {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
-    }
-}
 
-#[derive(Default, Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Hash)]
-struct Hallway {
-    amphipod: Option<Amphipod>,
-}
-impl Hallway {
-    fn new(pod: Amphipod) -> Self {
-        Hallway {
-            amphipod: Some(pod),
-        }
-    }
-    fn is_empty(&self) -> bool {
-        self.amphipod.is_none()
-    }
-    fn is_occupied(&self) -> bool {
-        self.amphipod.is_some()
-    }
-}
-impl Display for Hallway {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.amphipod.to_char())
-    }
+trait ToChar {
+    fn to_char(&self) -> char;
 }
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Hash)]
@@ -542,59 +306,44 @@ enum Amphipod {
     Copper,
     Desert,
 }
-impl Display for Amphipod {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Amber => 'A',
-                Bronze => 'B',
-                Copper => 'C',
-                Desert => 'D',
-            }
-        )
-    }
-}
-impl Amphipod {
-    fn wants(&self, room: usize) -> bool {
-        room == self.wanted_room()
-    }
-
-    fn wanted_room(&self) -> usize {
-        match self {
-            Amber => 0,
-            Bronze => 1,
-            Copper => 2,
-            Desert => 3,
+impl From<char> for Amphipod {
+    fn from(c: char) -> Self {
+        match c {
+            'A' => Amber,
+            'B' => Bronze,
+            'C' => Copper,
+            'D' => Desert,
+            c => unreachable!("Illegal Amphipod char '{}'", c),
         }
     }
 }
-trait ToChar {
-    fn to_char(&self) -> char;
-}
-impl ToChar for Option<Amphipod> {
+impl ToChar for Amphipod {
     fn to_char(&self) -> char {
         match self {
-            None => '.',
-            Some(pod) => pod.to_string().chars().next().unwrap(),
+            Amber => 'A',
+            Bronze => 'B',
+            Copper => 'C',
+            Desert => 'D',
         }
     }
 }
-impl TryFrom<char> for Amphipod {
-    type Error = String;
-
-    fn try_from(value: char) -> Result<Self, Self::Error> {
-        match value {
-            'A' => Ok(Amber),
-            'B' => Ok(Bronze),
-            'C' => Ok(Copper),
-            'D' => Ok(Desert),
-            _ => Err(format!("Unexpected character '{}'", value)),
-        }
+impl Display for Amphipod {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_char())
     }
 }
 impl Amphipod {
+    fn has_destination(&self, room_x: usize) -> bool {
+        room_x == self.destination_room()
+    }
+    fn destination_room(&self) -> usize {
+        match self {
+            Amber => 3,
+            Bronze => 5,
+            Copper => 7,
+            Desert => 9,
+        }
+    }
     fn energy_per_step(&self) -> Energy {
         match self {
             Amber => 1,
@@ -605,31 +354,6 @@ impl Amphipod {
     }
     fn energy_for(&self, steps: usize) -> Energy {
         steps * self.energy_per_step()
-    }
-}
-
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Hash)]
-struct Room {
-    top: Option<Amphipod>,
-    bottom: Option<Amphipod>,
-}
-impl Room {
-    fn is_top_empty(&self) -> bool {
-        self.top.is_none()
-    }
-    fn is_empty(&self) -> bool {
-        self.top.is_none() && self.bottom.is_none()
-    }
-    fn has_top(&self) -> bool {
-        self.top.is_some()
-    }
-    fn has_bottom(&self) -> bool {
-        self.bottom.is_some()
-    }
-
-    fn is_done(&self, room: usize) -> bool {
-        self.bottom.map(|pod| pod.wants(room)).unwrap_or(false)
-            && self.top.map(|pod| pod.wants(room)).unwrap_or(false)
     }
 }
 
@@ -655,9 +379,7 @@ mod tests {
 
     #[test]
     fn part1_test_all_example_next_steps() {
-        let Burrow {
-            initial_positions: mut positions,
-        } = Burrow::from(EXAMPLE);
+        let mut burrow = Burrow::from(EXAMPLE);
         let expecteds = vec![
             (
                 40,
@@ -671,18 +393,7 @@ mod tests {
                 ),
             ),
             (
-                420,
-                Burrow::from(
-                    "\
-#############
-#...B.C.....#
-###B#.#.#D###
-  #A#D#C#A#  
-  #########  ",
-                ),
-            ),
-            (
-                440,
+                400,
                 Burrow::from(
                     "\
 #############
@@ -693,7 +404,7 @@ mod tests {
                 ),
             ),
             (
-                3440,
+                3000,
                 Burrow::from(
                     "\
 #############
@@ -704,7 +415,7 @@ mod tests {
                 ),
             ),
             (
-                3470,
+                30,
                 Burrow::from(
                     "\
 #############
@@ -715,18 +426,7 @@ mod tests {
                 ),
             ),
             (
-                3490,
-                Burrow::from(
-                    "\
-#############
-#...B.D.....#
-###.#.#C#D###
-  #A#B#C#A#  
-  #########  ",
-                ),
-            ),
-            (
-                3510,
+                40,
                 Burrow::from(
                     "\
 #############
@@ -737,7 +437,7 @@ mod tests {
                 ),
             ),
             (
-                5510,
+                2000,
                 Burrow::from(
                     "\
 #############
@@ -748,7 +448,7 @@ mod tests {
                 ),
             ),
             (
-                5513,
+                3,
                 Burrow::from(
                     "\
 #############
@@ -759,7 +459,7 @@ mod tests {
                 ),
             ),
             (
-                8513,
+                3000,
                 Burrow::from(
                     "\
 #############
@@ -770,7 +470,7 @@ mod tests {
                 ),
             ),
             (
-                12513,
+                4000,
                 Burrow::from(
                     "\
 #############
@@ -781,7 +481,7 @@ mod tests {
                 ),
             ),
             (
-                12491,
+                8,
                 Burrow::from(
                     "\
 #############
@@ -793,46 +493,47 @@ mod tests {
             ),
         ];
 
-        for expected in expecteds {
+        for (exp_e, exp) in expecteds {
             let mut one_matched = false;
-            let (
-                exp_e,
-                Burrow {
-                    initial_positions: exp_pos,
-                },
-            ) = expected;
-            println!("expected {}\n{}\n", exp_e, exp_pos);
-            for (_next_e, next_pos) in positions.get_next_possible_moves(0, &HashMap::new()) {
-                if next_pos == exp_pos {
+            println!("expected {}\n{}\n", exp_e, exp);
+            for (next_e, next) in burrow.get_next_possible_moves(0, &HashMap::new()) {
+                if next == exp {
+                    assert_eq!(next_e, exp_e);
                     one_matched = true;
-                    positions = next_pos;
+                    burrow = next;
                     break;
                 }
             }
             if !one_matched {
-                println!("did not get match for next of\n{}got\n", positions);
-                for (next_e, next_pos) in positions.get_next_possible_moves(0, &HashMap::new()) {
-                    println!("{}\n{}\n", next_e, next_pos)
+                println!(
+                    "did not get match for next of\n{}\n\nbut instead got\n",
+                    burrow
+                );
+                let next = burrow.get_next_possible_moves(0, &HashMap::new());
+                if next.is_empty() {
+                    println!("nothing")
+                } else {
+                    for (next_e, next_pos) in next {
+                        println!("{}\n{}\n", next_e, next_pos)
+                    }
                 }
             }
-            assert!(one_matched);
+            assert!(one_matched, "nothing matched");
         }
     }
 
     #[test]
     fn part1_debug() {
-        let Burrow {
-            initial_positions: positions,
-        } = Burrow::from(
+        let burrow = Burrow::from(
             "\
 #############
-#...B...D..A#
-###D#.#C#.###
-  #B#A#C#.#  
+#.B.....D...#
+###.#C#B#.###
+  #A#D#C#A#  
   #########  ",
         );
-        println!("{}\n", positions);
-        let next = positions.get_next_possible_moves(0, &HashMap::new());
+        println!("{}\n", burrow);
+        let next = burrow.get_next_possible_moves(0, &HashMap::new());
         let len = next.len();
         for (i, (e, next)) in next.into_iter().enumerate() {
             println!("{}/{} @ {}:\n{}\n", i + 1, len, e, next);
@@ -841,102 +542,116 @@ mod tests {
 
     #[test]
     fn part1_example_manual() {
-        let Burrow {
-            initial_positions: positions,
-        } = Burrow::from(EXAMPLE);
+        let burrow = Burrow::from(EXAMPLE);
 
         let mut energy = 0;
-        let (e, positions) = positions.move_from_room_top_to_hallway(2, 2);
+        let (y, pod) = burrow.topmost_occupied_room(7).unwrap();
+        let (e, burrow) = burrow.move_from_room_to_hallway(7, y, 4, pod);
         energy += e;
-        let (e, positions) = positions.move_from_room_top_to_hallway(1, 3);
+
+        let (y, pod) = burrow.topmost_occupied_room(5).unwrap();
+        let (e, burrow) = burrow.move_from_room_to_room(5, y, 7, pod);
         energy += e;
-        let (e, positions) = positions.move_from_hallway_to_room_top(3, 2);
+
+        let (y, pod) = burrow.topmost_occupied_room(5).unwrap();
+        let (e, burrow) = burrow.move_from_room_to_hallway(5, y, 6, pod);
         energy += e;
-        let (e, positions) = positions.move_from_room_bottom_to_hallway(1, 3);
+
+        let (e, burrow) = burrow.move_from_hallway_to_room(4, 5, burrow.get_pod(4));
         energy += e;
-        let (e, positions) = positions.move_from_hallway_to_room_bottom(2, 1);
+
+        let (y, pod) = burrow.topmost_occupied_room(3).unwrap();
+        let (e, burrow) = burrow.move_from_room_to_room(3, y, 5, pod);
         energy += e;
-        let (e, positions) = positions.move_from_room_top_to_hallway(0, 2);
+
+        let (y, pod) = burrow.topmost_occupied_room(9).unwrap();
+        let (e, burrow) = burrow.move_from_room_to_hallway(9, y, 8, pod);
         energy += e;
-        let (e, positions) = positions.move_from_hallway_to_room_top(2, 1);
+
+        let (y, pod) = burrow.topmost_occupied_room(9).unwrap();
+        let (e, burrow) = burrow.move_from_room_to_hallway(9, y, 10, pod);
         energy += e;
-        let (e, positions) = positions.move_from_room_top_to_hallway(3, 4);
+
+        let (e, burrow) = burrow.move_from_hallway_to_room(8, 9, burrow.get_pod(8));
         energy += e;
-        let (e, positions) = positions.move_from_room_bottom_to_hallway(3, 5);
+
+        let (e, burrow) = burrow.move_from_hallway_to_room(6, 9, burrow.get_pod(6));
         energy += e;
-        let (e, positions) = positions.move_from_hallway_to_room_bottom(4, 3);
-        energy += e;
-        let (e, positions) = positions.move_from_hallway_to_room_top(3, 3);
-        energy += e;
-        let (e, positions) = positions.move_from_hallway_to_room_top(5, 0);
+
+        let (e, burrow) = burrow.move_from_hallway_to_room(10, 3, burrow.get_pod(10));
         energy += e;
         assert_eq!(energy, 12521);
-        assert!(positions.is_finished());
+        assert!(burrow.is_finished());
     }
 
     #[test]
     fn part1_manual() {
-        let Burrow {
-            initial_positions: positions,
-        } = Burrow::from(INPUT);
-
+        let burrow = Burrow::from(INPUT);
         let mut energy = 0;
-        let (e, positions) = positions.move_from_room_top_to_hallway(2, 4);
+
+        let (y, pod) = burrow.topmost_occupied_room(7).unwrap();
+        let (e, burrow) = burrow.move_from_room_to_hallway(7, y, 8, pod);
         assert_eq!(e, 200);
         energy += e;
-        let (e, positions) = positions.move_from_room_bottom_to_hallway(2, 2);
+
+        let (y, pod) = burrow.topmost_occupied_room(7).unwrap();
+        let (e, burrow) = burrow.move_from_room_to_hallway(7, y, 4, pod);
         assert_eq!(e, 50);
         energy += e;
-        let (e, positions) = positions.move_from_hallway_to_room_bottom(4, 2);
+
+        let (e, burrow) = burrow.move_from_hallway_to_room(8, 7, burrow.get_pod(8));
         assert_eq!(e, 300);
         energy += e;
-        let (e, positions) = positions.move_from_room_top_to_hallway(3, 4);
-        assert_eq!(e, 200);
+
+        let (y, pod) = burrow.topmost_occupied_room(9).unwrap();
+        let (e, burrow) = burrow.move_from_room_to_room(9, y, 7, pod);
+        assert_eq!(e, 400);
         energy += e;
-        let (e, positions) = positions.move_from_hallway_to_room_top(4, 2);
-        assert_eq!(e, 200);
-        energy += e;
-        let (e, positions) = positions.move_from_room_bottom_to_hallway(3, 6);
+
+        let (y, pod) = burrow.topmost_occupied_room(9).unwrap();
+        let (e, burrow) = burrow.move_from_room_to_hallway(9, y, 11, pod);
         assert_eq!(e, 4);
         energy += e;
-        let (e, positions) = positions.move_from_room_top_to_hallway(1, 4);
-        assert_eq!(e, 4000);
+
+        let (y, pod) = burrow.topmost_occupied_room(5).unwrap();
+        let (e, burrow) = burrow.move_from_room_to_room(5, y, 9, pod);
+        assert_eq!(e, 7000);
         energy += e;
-        let (e, positions) = positions.move_from_hallway_to_room_bottom(4, 3);
-        assert_eq!(e, 3000);
-        energy += e;
-        let (e, positions) = positions.move_from_room_bottom_to_hallway(1, 5);
+
+        let (y, pod) = burrow.topmost_occupied_room(5).unwrap();
+        let (e, burrow) = burrow.move_from_room_to_hallway(5, y, 10, pod);
         assert_eq!(e, 7);
         energy += e;
-        let (e, positions) = positions.move_from_hallway_to_room_bottom(2, 1);
+
+        let (e, burrow) = burrow.move_from_hallway_to_room(4, 5, burrow.get_pod(4));
         assert_eq!(e, 30);
         energy += e;
-        let (e, positions) = positions.move_from_room_top_to_hallway(0, 4);
-        assert_eq!(e, 6000);
+
+        let (y, pod) = burrow.topmost_occupied_room(3).unwrap();
+        let (e, burrow) = burrow.move_from_room_to_room(3, y, 9, pod);
+        assert_eq!(e, 8000);
         energy += e;
-        let (e, positions) = positions.move_from_hallway_to_room_top(4, 3);
-        assert_eq!(e, 2000);
+
+        let (y, pod) = burrow.topmost_occupied_room(3).unwrap();
+        let (e, burrow) = burrow.move_from_room_to_room(3, y, 5, pod);
+        assert_eq!(e, 50);
         energy += e;
-        let (e, positions) = positions.move_from_room_bottom_to_hallway(0, 2);
-        assert_eq!(e, 30);
-        energy += e;
-        let (e, positions) = positions.move_from_hallway_to_room_top(2, 1);
-        assert_eq!(e, 20);
-        energy += e;
-        let (e, positions) = positions.move_from_hallway_to_room_bottom(5, 0);
+
+        let (e, burrow) = burrow.move_from_hallway_to_room(10, 3, burrow.get_pod(10));
         assert_eq!(e, 9);
         energy += e;
-        let (e, positions) = positions.move_from_hallway_to_room_top(6, 0);
+
+        let (e, burrow) = burrow.move_from_hallway_to_room(11, 3, burrow.get_pod(11));
         assert_eq!(e, 9);
         energy += e;
 
         assert_eq!(energy, 16059);
-        assert!(positions.is_finished());
+        assert!(burrow.is_finished());
     }
 
     #[test]
     fn part1_example() {
-        assert_eq!(12521, Burrow::from(EXAMPLE).part1());
+        assert_eq!(12521, Burrow::from(EXAMPLE).solve());
     }
 
     #[test]
@@ -946,12 +661,12 @@ mod tests {
 
     #[test]
     fn part2_example() {
-        assert_eq!(44169, Burrow::from(EXAMPLE2).part2());
+        assert_eq!(44169, Burrow::from(EXAMPLE2).solve());
     }
 
     #[test]
     fn part2() {
-        assert_eq!(1, day23_part2());
+        assert_eq!(43117, day23_part2());
     }
 }
 
