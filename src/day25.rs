@@ -1,5 +1,4 @@
 use std::fmt::{Display, Formatter};
-use std::mem;
 use Tile::*;
 
 const INPUT: &str = include_str!("../input/day25.txt");
