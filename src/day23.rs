@@ -3,7 +3,6 @@ use std::collections::{BinaryHeap, HashMap};
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::Range;
 use Amphipod::*;
-use Tile::*;
 
 const INPUT: &str = include_str!("../input/day23.txt");
 const INPUT2: &str = include_str!("../input/day23_2.txt");
@@ -60,7 +59,7 @@ impl From<&str> for Burrow {
             grid: input
                 .trim()
                 .lines()
-                .map(|line| line.chars().map(Tile::from).collect())
+                .map(|line| line.chars().map(|c| Amphipod::try_from(c).ok()).collect())
                 .collect(),
         }
     }
@@ -72,7 +71,20 @@ impl Display for Burrow {
             "{}",
             self.grid
                 .iter()
-                .map(|row| row.iter().map(|tile| tile.to_char()).collect::<String>())
+                .enumerate()
+                .map(|(y, row)| row
+                    .iter()
+                    .enumerate()
+                    .map(|(x, pod)| pod
+                        .map(|pod| pod.to_char())
+                        .unwrap_or_else(|| match (x, y) {
+                            (_, 0) => '#',
+                            (1..=11, HALLWAY_Y) => '.',
+                            (0 | 1 | 11 | 12, 3..=6) => ' ',
+                            (3 | 5 | 7 | 9, 2..=3) => '.',
+                            (_, _) => '#',
+                        }))
+                    .collect::<String>())
                 .collect::<Vec<_>>()
                 .join("\n")
         )
@@ -80,38 +92,10 @@ impl Display for Burrow {
 }
 
 type Energy = usize;
-type Grid = Vec<Vec<Tile>>;
+type Grid = Vec<Vec<Option<Amphipod>>>;
 type Move = (Energy, Burrow);
 type X = usize;
 type Y = usize;
-
-#[derive(Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Hash)]
-enum Tile {
-    Wall,
-    Empty,
-    Occupied(Amphipod),
-    Outside,
-}
-impl From<char> for Tile {
-    fn from(c: char) -> Self {
-        match c {
-            '#' => Wall,
-            '.' => Empty,
-            ' ' => Outside,
-            _ => Occupied(Amphipod::from(c)),
-        }
-    }
-}
-impl ToChar for Tile {
-    fn to_char(&self) -> char {
-        match self {
-            Wall => '#',
-            Empty => '.',
-            Outside => ' ',
-            Occupied(pod) => pod.to_char(),
-        }
-    }
-}
 
 const ROOM_XS: [usize; 4] = [3, 5, 7, 9];
 const VALID_HALLWAY_XS: [usize; 7] = [1, 2, 4, 6, 8, 10, 11];
@@ -126,7 +110,7 @@ impl Burrow {
     }
     fn is_room_full_and_sorted(&self, room_x: usize) -> bool {
         self.room_ys().all(|room_y| {
-            if let Occupied(pod) = self.grid[room_y][room_x] {
+            if let Some(pod) = self.grid[room_y][room_x] {
                 pod.has_destination(room_x)
             } else {
                 false
@@ -174,10 +158,7 @@ impl Burrow {
         self.grid[1]
             .iter()
             .enumerate()
-            .filter_map(|(x, tile)| match tile {
-                Occupied(pod) => Some((x, *pod)),
-                _ => None,
-            })
+            .filter_map(|(x, pod)| pod.map(|pod| (x, pod)))
             .collect()
     }
 
@@ -212,7 +193,7 @@ impl Burrow {
     }
 
     fn is_empty_hallway(&self, x: X) -> bool {
-        matches!(self.grid[HALLWAY_Y][x], Empty)
+        self.grid[HALLWAY_Y][x].is_none()
     }
 
     fn reachable_rooms_from_hallway(&self, from: X, pod: Amphipod) -> Vec<X> {
@@ -241,8 +222,8 @@ impl Burrow {
 
     fn move_from_room_to_hallway(&self, from: X, y: Y, to: X, pod: Amphipod) -> (Energy, Self) {
         let mut next = self.clone();
-        next.grid[y][from] = Empty;
-        next.grid[HALLWAY_Y][to] = Occupied(pod);
+        next.grid[y][from] = None;
+        next.grid[HALLWAY_Y][to] = Some(pod);
 
         let y_steps = y - HALLWAY_Y;
         let x_steps = if from < to { to - from } else { from - to };
@@ -253,8 +234,8 @@ impl Burrow {
     fn move_from_hallway_to_room(&self, from: X, to: X, pod: Amphipod) -> (Energy, Self) {
         let mut next = self.clone();
         let room_y = next.top_empty_room_y(to);
-        next.grid[HALLWAY_Y][from] = Empty;
-        next.grid[room_y][to] = Occupied(pod);
+        next.grid[HALLWAY_Y][from] = None;
+        next.grid[room_y][to] = Some(pod);
 
         let x_steps = if from < to { to - from } else { from - to };
         let y_steps = room_y - HALLWAY_Y;
@@ -264,18 +245,15 @@ impl Burrow {
 
     fn topmost_occupied_room(&self, x: X) -> Option<(Y, Amphipod)> {
         self.room_ys()
-            .filter_map(|y| match self.grid[y][x] {
-                Occupied(pod) => Some((y, pod)),
-                _ => None,
-            })
+            .filter_map(|y| self.grid[y][x].map(|pod| (y, pod)))
             .next()
     }
 
-    fn all_occupants_match(&self, room: X, pod: &Amphipod) -> bool {
-        self.room_ys().all(|y| match &self.grid[y][room] {
-            Occupied(occupant) => occupant == pod,
-            Empty => true,
-            Wall | Outside => unreachable!(),
+    fn all_occupants_match(&self, room: X, expected: &Amphipod) -> bool {
+        self.room_ys().all(|y| {
+            self.grid[y][room]
+                .map(|occupant| occupant == *expected)
+                .unwrap_or(true)
         })
     }
 
@@ -287,11 +265,7 @@ impl Burrow {
     }
     #[cfg(test)]
     fn get_pod(&self, room_x: X) -> Amphipod {
-        if let Occupied(pod) = self.grid[HALLWAY_Y][room_x] {
-            pod
-        } else {
-            unreachable!()
-        }
+        self.grid[HALLWAY_Y][room_x].unwrap()
     }
 }
 
@@ -306,14 +280,16 @@ enum Amphipod {
     Copper,
     Desert,
 }
-impl From<char> for Amphipod {
-    fn from(c: char) -> Self {
+impl TryFrom<char> for Amphipod {
+    type Error = String;
+
+    fn try_from(c: char) -> Result<Self, Self::Error> {
         match c {
-            'A' => Amber,
-            'B' => Bronze,
-            'C' => Copper,
-            'D' => Desert,
-            c => unreachable!("Illegal Amphipod char '{}'", c),
+            'A' => Ok(Amber),
+            'B' => Ok(Bronze),
+            'C' => Ok(Copper),
+            'D' => Ok(Desert),
+            c => Err(format!("Illegal Amphipod char '{}'", c)),
         }
     }
 }
