@@ -90,11 +90,11 @@ CrZsJsPPZsGzwwsLwLmpwMDw";
 
     #[test]
     fn part1() {
-        assert_eq!(day03_part1(), 7_763);
+        assert_eq!(7_763, day03_part1());
     }
 
     #[test]
     fn part2() {
-        assert_eq!(day03_part2(), 2_569);
+        assert_eq!(2_569, day03_part2());
     }
 }

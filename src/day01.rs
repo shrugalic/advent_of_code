@@ -98,11 +98,11 @@ mod tests {
 
     #[test]
     fn test_part1() {
-        assert_eq!(day01_part1(), 72_240);
+        assert_eq!(72_240, day01_part1());
     }
 
     #[test]
     fn test_part2() {
-        assert_eq!(day01_part2(), 210_957);
+        assert_eq!(210_957, day01_part2());
     }
 }

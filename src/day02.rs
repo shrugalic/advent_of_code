@@ -146,11 +146,11 @@ C Z";
 
     #[test]
     fn part1() {
-        assert_eq!(day02_part1(), 12_276);
+        assert_eq!(12_276, day02_part1());
     }
 
     #[test]
     fn part2() {
-        assert_eq!(day02_part2(), 9_975);
+        assert_eq!(9_975, day02_part2());
     }
 }
