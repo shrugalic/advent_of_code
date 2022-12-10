@@ -1,12 +1,14 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day01.txt");
 
 pub(crate) fn day1_part1() -> u32 {
-    let line = read_file_to_lines("input/day01.txt").remove(0);
+    let line = parse(INPUT).remove(0);
     solve_part1_captcha(line)
 }
 
 pub(crate) fn day1_part2() -> u32 {
-    let line = read_file_to_lines("input/day01.txt").remove(0);
+    let line = parse(INPUT).remove(0);
     solve_part2_captcha(line)
 }
 

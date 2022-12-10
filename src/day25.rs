@@ -1,8 +1,10 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::VecDeque;
 
+const INPUT: &str = include_str!("../input/day25.txt");
+
 pub(crate) fn day25_part1() -> usize {
-    diagnostic_checksum(read_file_to_lines("input/day25.txt"))
+    diagnostic_checksum(parse(INPUT))
 }
 
 type State = char;
@@ -52,8 +54,8 @@ struct TouringMachine {
     program: Program,
     steps_until_checksum: usize,
 }
-impl From<Vec<String>> for TouringMachine {
-    fn from(input: Vec<String>) -> Self {
+impl From<Vec<&str>> for TouringMachine {
+    fn from(input: Vec<&str>) -> Self {
         let curr_state = input[0]
             .trim_start_matches("Begin in state ")
             .chars()
@@ -111,8 +113,8 @@ impl TouringMachine {
 struct Program {
     program: Vec<[Transition; 2]>,
 }
-impl From<Vec<&[String]>> for Program {
-    fn from(states: Vec<&[String]>) -> Self {
+impl From<Vec<&[&str]>> for Program {
+    fn from(states: Vec<&[&str]>) -> Self {
         Program {
             program: states
                 .iter()
@@ -137,7 +139,7 @@ impl Program {
         };
         self.program[idx][value].clone()
     }
-    fn transition_from(desc: &[String]) -> Transition {
+    fn transition_from(desc: &[&str]) -> Transition {
         let value = Value::from(
             desc[0]
                 .trim_start_matches("    - Write the value ")
@@ -155,7 +157,7 @@ impl Program {
     }
 }
 
-fn diagnostic_checksum(input: Vec<String>) -> usize {
+fn diagnostic_checksum(input: Vec<&str>) -> usize {
     let mut touring_machine = TouringMachine::from(input);
     touring_machine.check_sum()
 }
@@ -163,7 +165,7 @@ fn diagnostic_checksum(input: Vec<String>) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 Begin in state A.
@@ -192,7 +194,7 @@ In state B:
 
     #[test]
     fn example_part1() {
-        assert_eq!(3, diagnostic_checksum(read_str_to_lines(EXAMPLE)));
+        assert_eq!(3, diagnostic_checksum(parse(EXAMPLE)));
     }
 
     #[test]

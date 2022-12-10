@@ -1,15 +1,17 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::{HashMap, HashSet};
 
+const INPUT: &str = include_str!("../input/day07.txt");
+
 pub(crate) fn day7_part1() -> String {
-    root_node(read_file_to_lines("input/day07.txt"))
+    root_node(parse(INPUT))
 }
 
 pub(crate) fn day7_part2() -> usize {
-    fixed_weight_of_imbalancing_program(read_file_to_lines("input/day07.txt"))
+    fixed_weight_of_imbalancing_program(parse(INPUT))
 }
 
-fn root_node(lines: Vec<String>) -> String {
+fn root_node(lines: Vec<&str>) -> String {
     let mut parents = HashSet::new();
     let mut children = HashSet::new();
     lines.iter().for_each(|line| {
@@ -114,7 +116,7 @@ impl Weights {
     }
 }
 
-fn fixed_weight_of_imbalancing_program(lines: Vec<String>) -> Weight {
+fn fixed_weight_of_imbalancing_program(lines: Vec<&str>) -> Weight {
     let (mut weights, mut connections) = parse_weights_and_parent_child_connections(lines);
 
     while !connections.is_empty() {
@@ -146,7 +148,7 @@ fn find_leaves(children_by_parent: &mut ChildrenNamesByParentName) -> Vec<Connec
 }
 
 fn parse_weights_and_parent_child_connections(
-    lines: Vec<String>,
+    lines: Vec<&str>,
 ) -> (WeightByName, ChildrenNamesByParentName) {
     let mut weights = HashMap::new();
     let mut children_by_parent = HashMap::new();
@@ -167,7 +169,7 @@ fn parse_weights_and_parent_child_connections(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 pbga (66)
@@ -186,7 +188,7 @@ cntj (57)";
 
     #[test]
     fn example_part1() {
-        assert_eq!("tknk", root_node(read_str_to_lines(EXAMPLE)));
+        assert_eq!("tknk", root_node(parse(EXAMPLE)));
     }
 
     #[test]
@@ -198,7 +200,7 @@ cntj (57)";
     fn example_part2() {
         assert_eq!(
             60,
-            fixed_weight_of_imbalancing_program(read_str_to_lines(EXAMPLE))
+            fixed_weight_of_imbalancing_program(parse(EXAMPLE))
         );
     }
 

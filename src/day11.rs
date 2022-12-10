@@ -1,18 +1,20 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day11.txt");
 
 pub(crate) fn day11_part1() -> usize {
-    distance_to_origin(read_file_to_lines("input/day11.txt"))
+    distance_to_origin(parse(INPUT))
 }
 
-fn distance_to_origin(input: Vec<String>) -> usize {
+fn distance_to_origin(input: Vec<&str>) -> usize {
     curr_and_max_distances_to_origin(input).0
 }
 
-fn max_distance_to_origin(input: Vec<String>) -> usize {
+fn max_distance_to_origin(input: Vec<&str>) -> usize {
     curr_and_max_distances_to_origin(input).1
 }
 
-fn curr_and_max_distances_to_origin(input: Vec<String>) -> (usize, usize) {
+fn curr_and_max_distances_to_origin(input: Vec<&str>) -> (usize, usize) {
     let steps: Vec<Dir> = input[0].split(',').map(Dir::from).collect();
     let mut max_dist = 0;
 
@@ -26,7 +28,7 @@ fn curr_and_max_distances_to_origin(input: Vec<String>) -> (usize, usize) {
 }
 
 pub(crate) fn day11_part2() -> usize {
-    max_distance_to_origin(read_file_to_lines("input/day11.txt"))
+    max_distance_to_origin(parse(INPUT))
 }
 
 enum Dir {
@@ -105,14 +107,14 @@ impl Hex {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     #[test]
     fn part1_examples() {
-        assert_eq!(3, distance_to_origin(read_str_to_lines("ne,ne,ne")));
-        assert_eq!(0, distance_to_origin(read_str_to_lines("ne,ne,sw,sw")));
-        assert_eq!(2, distance_to_origin(read_str_to_lines("ne,ne,s,s")));
-        assert_eq!(3, distance_to_origin(read_str_to_lines("se,sw,se,sw,sw")));
+        assert_eq!(3, distance_to_origin(parse("ne,ne,ne")));
+        assert_eq!(0, distance_to_origin(parse("ne,ne,sw,sw")));
+        assert_eq!(2, distance_to_origin(parse("ne,ne,s,s")));
+        assert_eq!(3, distance_to_origin(parse("se,sw,se,sw,sw")));
     }
 
     #[test]

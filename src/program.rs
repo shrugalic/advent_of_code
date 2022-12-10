@@ -191,8 +191,8 @@ pub(crate) enum Instr {
     Jnz(Value, Value),
 }
 
-impl From<&String> for Instr {
-    fn from(instr: &String) -> Self {
+impl From<&str> for Instr {
+    fn from(instr: &str) -> Self {
         let s: Vec<&str> = instr.split_ascii_whitespace().collect();
         let r = s[1].chars().next().unwrap();
         match s[0] {

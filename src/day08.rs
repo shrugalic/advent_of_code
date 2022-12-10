@@ -1,15 +1,17 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::HashMap;
 
+const INPUT: &str = include_str!("../input/day08.txt");
+
 pub(crate) fn day8_part1() -> isize {
-    greatest_value_in_any_register_after_running(read_file_to_lines("input/day08.txt")).0
+    greatest_value_in_any_register_after_running(parse(INPUT)).0
 }
 
 pub(crate) fn day8_part2() -> isize {
-    greatest_value_in_any_register_after_running(read_file_to_lines("input/day08.txt")).1
+    greatest_value_in_any_register_after_running(parse(INPUT)).1
 }
 
-fn greatest_value_in_any_register_after_running(instructions: Vec<String>) -> (isize, isize) {
+fn greatest_value_in_any_register_after_running(instructions: Vec<&str>) -> (isize, isize) {
     let mut registers: HashMap<String, isize> = HashMap::new();
     let mut max_reg_val = 0;
     for instruction in instructions {
@@ -68,7 +70,7 @@ fn apply_operation(op: &str, val: isize, reg: &mut isize) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 b inc 5 if a > 1
@@ -80,7 +82,7 @@ c inc -20 if c == 10";
     fn example_part1() {
         assert_eq!(
             1,
-            greatest_value_in_any_register_after_running(read_str_to_lines(EXAMPLE)).0
+            greatest_value_in_any_register_after_running(parse(EXAMPLE)).0
         );
     }
 
@@ -93,7 +95,7 @@ c inc -20 if c == 10";
     fn example_part2() {
         assert_eq!(
             10,
-            greatest_value_in_any_register_after_running(read_str_to_lines(EXAMPLE)).1
+            greatest_value_in_any_register_after_running(parse(EXAMPLE)).1
         );
     }
 

@@ -1,5 +1,7 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::HashMap;
+
+const INPUT: &str = include_str!("../input/day16.txt");
 
 pub(crate) fn day16_part1() -> String {
     dance_once()
@@ -67,7 +69,7 @@ impl Dance for Vec<char> {
 }
 
 fn parse_dance_moves() -> Vec<Move> {
-    let input = read_file_to_lines("input/day16.txt");
+    let input = parse(INPUT);
     input[0].split(',').map(Move::from).collect()
 }
 

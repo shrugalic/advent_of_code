@@ -2,18 +2,20 @@ use crate::program::Instr;
 use crate::program::NumberValue;
 use crate::program::Program;
 use crate::program::State::*;
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day18.txt");
 
 pub(crate) fn day18_part1() -> NumberValue {
-    value_of_last_recovered_frequency(read_file_to_lines("input/day18.txt"))
+    value_of_last_recovered_frequency(parse(INPUT))
 }
 
 pub(crate) fn day18_part2() -> usize {
-    number_of_times_program_1_sent_a_value(read_file_to_lines("input/day18.txt"))
+    number_of_times_program_1_sent_a_value(parse(INPUT))
 }
 
-fn value_of_last_recovered_frequency(input: Vec<String>) -> NumberValue {
-    let instr = input.iter().map(Instr::from).collect::<Vec<_>>();
+fn value_of_last_recovered_frequency(input: Vec<&str>) -> NumberValue {
+    let instr = input.into_iter().map(Instr::from).collect::<Vec<_>>();
     let mut program = Program::new(0, &instr);
     let mut last_played_freq = 0;
     loop {
@@ -27,8 +29,8 @@ fn value_of_last_recovered_frequency(input: Vec<String>) -> NumberValue {
     }
 }
 
-fn number_of_times_program_1_sent_a_value(input: Vec<String>) -> usize {
-    let instr = input.iter().map(Instr::from).collect::<Vec<_>>();
+fn number_of_times_program_1_sent_a_value(input: Vec<&str>) -> usize {
+    let instr = input.into_iter().map(Instr::from).collect::<Vec<_>>();
     let mut programs = [Program::new(0, &instr), Program::new(1, &instr)];
     let mut send_count = [0, 0];
     let mut is_blocked = [false, false];
@@ -52,7 +54,7 @@ fn number_of_times_program_1_sent_a_value(input: Vec<String>) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE_1: &str = "\
 set a 1
@@ -70,7 +72,7 @@ jgz a -2";
     fn part1_example() {
         assert_eq!(
             4,
-            value_of_last_recovered_frequency(read_str_to_lines(EXAMPLE_1))
+            value_of_last_recovered_frequency(parse(EXAMPLE_1))
         );
     }
     #[test]
@@ -91,7 +93,7 @@ rcv d";
     fn part2_example() {
         assert_eq!(
             3,
-            number_of_times_program_1_sent_a_value(read_str_to_lines(EXAMPLE_2))
+            number_of_times_program_1_sent_a_value(parse(EXAMPLE_2))
         );
     }
 

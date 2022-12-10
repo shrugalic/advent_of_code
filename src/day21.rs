@@ -1,20 +1,22 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
+
+const INPUT: &str = include_str!("../input/day21.txt");
 
 const STARTING_PATTERN: &str = ".#./..#/###";
 const ON: char = '#';
 const OFF: char = '.';
 
 pub(crate) fn day21_part1() -> usize {
-    pixels_after_n_iterations(read_file_to_lines("input/day21.txt"), 5)
+    pixels_after_n_iterations(parse(INPUT), 5)
 }
 
 pub(crate) fn day21_part2() -> usize {
-    pixels_after_n_iterations(read_file_to_lines("input/day21.txt"), 18)
+    pixels_after_n_iterations(parse(INPUT), 18)
 }
 
-fn pixels_after_n_iterations(input: Vec<String>, n: usize) -> usize {
+fn pixels_after_n_iterations(input: Vec<&str>, n: usize) -> usize {
     let rules: Vec<Rule> = input.iter().map(Rule::from).collect();
     let pattern = Pattern::from(STARTING_PATTERN);
     let mut cache: HashMap<(Pattern, usize), usize> = HashMap::new();
@@ -217,7 +219,7 @@ impl<T: AsRef<str>> From<T> for Rule {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE_RULES: &str = "\
 ../.# => ##./#../...
@@ -361,7 +363,7 @@ mod tests {
 
     #[test]
     fn matches_rule() {
-        let rule: Rule = Rule::from(&read_str_to_lines(EXAMPLE_RULES)[1]);
+        let rule: Rule = Rule::from(&parse(EXAMPLE_RULES)[1]);
         let pattern = Pattern::from(STARTING_PATTERN);
         assert!(rule.matches(&pattern));
     }
@@ -370,7 +372,7 @@ mod tests {
     fn part1_example() {
         assert_eq!(
             12,
-            pixels_after_n_iterations(read_str_to_lines(EXAMPLE_RULES), 2)
+            pixels_after_n_iterations(parse(EXAMPLE_RULES), 2)
         );
     }
 

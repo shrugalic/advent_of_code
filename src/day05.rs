@@ -1,4 +1,6 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day05.txt");
 
 pub(crate) fn day5_part1() -> usize {
     let jump_offsets = parse_input();
@@ -11,7 +13,7 @@ pub(crate) fn day5_part2() -> usize {
 }
 
 fn parse_input() -> Vec<isize> {
-    read_file_to_lines("input/day05.txt")
+    parse(INPUT)
         .iter()
         .map(|s| s.parse().unwrap())
         .collect()

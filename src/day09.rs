@@ -1,12 +1,14 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day09.txt");
 
 pub(crate) fn day9_part1() -> usize {
-    let groups = read_file_to_lines("input/day09.txt");
+    let groups = parse(INPUT);
     score_groups(&groups[0])
 }
 
 pub(crate) fn day9_part2() -> usize {
-    let groups = read_file_to_lines("input/day09.txt");
+    let groups = parse(INPUT);
     garbage_char_count(&groups[0])
 }
 

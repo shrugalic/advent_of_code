@@ -1,12 +1,14 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::VecDeque;
 
+const INPUT: &str = include_str!("../input/day10.txt");
+
 pub(crate) fn day10_part1() -> usize {
-    part1_hash_checksum(255, read_file_to_lines("input/day10.txt"))
+    part1_hash_checksum(255, parse(INPUT))
 }
 
 pub(crate) fn day10_part2() -> String {
-    part2_hash(read_file_to_lines("input/day10.txt"))
+    part2_hash(parse(INPUT))
 }
 
 struct Hasher {
@@ -98,7 +100,7 @@ impl Hasher {
     }
 }
 
-fn part1_hash_checksum(max_idx: u8, input: Vec<String>) -> usize {
+fn part1_hash_checksum(max_idx: u8, input: Vec<&str>) -> usize {
     let lengths = input[0].split(',').map(|i| i.parse().unwrap()).collect();
     let mut hasher = Hasher::new(max_idx, lengths);
     hasher.do_hash_cycle();
@@ -106,8 +108,8 @@ fn part1_hash_checksum(max_idx: u8, input: Vec<String>) -> usize {
     hasher.ring[0] as usize * hasher.ring[1] as usize
 }
 
-fn part2_hash(input: Vec<String>) -> String {
-    day10_part2_hash(&input[0])
+fn part2_hash(input: Vec<&str>) -> String {
+    day10_part2_hash(input[0])
 }
 
 pub(crate) fn day10_part2_hash(input: &str) -> String {
@@ -123,11 +125,11 @@ pub(crate) fn day10_part2_hash(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     #[test]
     fn part1_example() {
-        assert_eq!(12, part1_hash_checksum(4, read_str_to_lines("3,4,1,5")));
+        assert_eq!(12, part1_hash_checksum(4, parse("3,4,1,5")));
     }
 
     #[test]
@@ -152,7 +154,7 @@ mod tests {
     fn part2_example1() {
         assert_eq!(
             "a2582a3a0e66e6e86e3812dcb672a272",
-            part2_hash(read_str_to_lines(""))
+            part2_hash(vec![""])
         );
     }
 
@@ -160,7 +162,7 @@ mod tests {
     fn part2_example2() {
         assert_eq!(
             "33efeb34ea91902bb2f59c9920caa6cd",
-            part2_hash(read_str_to_lines("AoC 2017"))
+            part2_hash(parse("AoC 2017"))
         );
     }
 
@@ -168,7 +170,7 @@ mod tests {
     fn part2_example3() {
         assert_eq!(
             "3efbe78a8d82f29979031a4aa0b16a9d",
-            part2_hash(read_str_to_lines("1,2,3"))
+            part2_hash(parse("1,2,3"))
         );
     }
 
@@ -176,7 +178,7 @@ mod tests {
     fn part2_example4() {
         assert_eq!(
             "63960835bcdc130f0b66d7ff4f6a5a8e",
-            part2_hash(read_str_to_lines("1,2,4"))
+            part2_hash(parse("1,2,4"))
         );
     }
 

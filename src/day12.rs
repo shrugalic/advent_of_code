@@ -1,23 +1,25 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::{HashMap, HashSet};
 
+const INPUT: &str = include_str!("../input/day12.txt");
+
 pub(crate) fn day12_part1() -> usize {
-    count_programs_in_group0(read_file_to_lines("input/day12.txt"))
+    count_programs_in_group0(parse(INPUT))
 }
 
 pub(crate) fn day12_part2() -> usize {
-    count_total_groups(read_file_to_lines("input/day12.txt"))
+    count_total_groups(parse(INPUT))
 }
 
-fn count_programs_in_group0(input: Vec<String>) -> usize {
+fn count_programs_in_group0(input: Vec<&str>) -> usize {
     count_group0_members_or_total_groups(input, true)
 }
 
-fn count_total_groups(input: Vec<String>) -> usize {
+fn count_total_groups(input: Vec<&str>) -> usize {
     count_group0_members_or_total_groups(input, false)
 }
 
-fn count_group0_members_or_total_groups(input: Vec<String>, get_group0_only: bool) -> usize {
+fn count_group0_members_or_total_groups(input: Vec<&str>, get_group0_only: bool) -> usize {
     let connections = parse_connections(input);
     let mut group_size_by_root_node = HashMap::new();
 
@@ -50,7 +52,7 @@ fn group_connected_to<'a>(
     group
 }
 
-fn parse_connections(input: Vec<String>) -> HashMap<usize, HashSet<usize>> {
+fn parse_connections(input: Vec<&str>) -> HashMap<usize, HashSet<usize>> {
     let mut connections = HashMap::new();
     for line in input {
         let (source, destinations) = line.split_once(" <-> ").unwrap();
@@ -67,7 +69,7 @@ fn parse_connections(input: Vec<String>) -> HashMap<usize, HashSet<usize>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE1: &str = "\
 0 <-> 2
@@ -80,7 +82,7 @@ mod tests {
 
     #[test]
     fn part1_example() {
-        assert_eq!(6, count_programs_in_group0(read_str_to_lines(EXAMPLE1)));
+        assert_eq!(6, count_programs_in_group0(parse(EXAMPLE1)));
     }
 
     #[test]

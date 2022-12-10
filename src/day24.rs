@@ -1,12 +1,14 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::cmp::Ordering;
 
+const INPUT: &str = include_str!("../input/day24.txt");
+
 pub(crate) fn day24_part1() -> usize {
-    strength_of_strongest_bridge(read_file_to_lines("input/day24.txt"))
+    strength_of_strongest_bridge(parse(INPUT))
 }
 
 pub(crate) fn day24_part2() -> usize {
-    strength_of_longest_bridge(read_file_to_lines("input/day24.txt"))
+    strength_of_longest_bridge(parse(INPUT))
 }
 
 type Pins = usize;
@@ -25,7 +27,7 @@ impl ComponentMethods for Component {
         &self.0 == pins || &self.1 == pins
     }
 }
-fn strength_of_strongest_bridge(input: Vec<String>) -> Strength {
+fn strength_of_strongest_bridge(input: Vec<&str>) -> Strength {
     let mut components = parse_input(input);
     *strengths_and_lengths(0, 0, &0, &mut components[..])
         .iter()
@@ -34,7 +36,7 @@ fn strength_of_strongest_bridge(input: Vec<String>) -> Strength {
         .unwrap()
 }
 
-fn strength_of_longest_bridge(input: Vec<String>) -> Strength {
+fn strength_of_longest_bridge(input: Vec<&str>) -> Strength {
     let mut components = parse_input(input);
     strengths_and_lengths(0, 0, &0, &mut components[..])
         .iter()
@@ -46,7 +48,7 @@ fn strength_of_longest_bridge(input: Vec<String>) -> Strength {
         .0
 }
 
-fn parse_input(input: Vec<String>) -> Vec<Component> {
+fn parse_input(input: Vec<&str>) -> Vec<Component> {
     input
         .iter()
         .map(|s| {
@@ -86,7 +88,7 @@ fn strengths_and_lengths(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 0/2
@@ -100,7 +102,7 @@ mod tests {
 
     #[test]
     fn example_part1() {
-        assert_eq!(31, strength_of_strongest_bridge(read_str_to_lines(EXAMPLE)));
+        assert_eq!(31, strength_of_strongest_bridge(parse(EXAMPLE)));
     }
 
     #[test]
@@ -110,7 +112,7 @@ mod tests {
 
     #[test]
     fn example_part2() {
-        assert_eq!(19, strength_of_longest_bridge(read_str_to_lines(EXAMPLE)));
+        assert_eq!(19, strength_of_longest_bridge(parse(EXAMPLE)));
     }
 
     #[test]

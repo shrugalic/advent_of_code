@@ -1,17 +1,19 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use reformation::Reformation;
 use std::collections::HashMap;
 use std::ops::AddAssign;
 
+const INPUT: &str = include_str!("../input/day20.txt");
+
 pub(crate) fn day20_part1() -> usize {
-    index_of_particle_staying_closest_to_origin(read_file_to_lines("input/day20.txt"))
+    index_of_particle_staying_closest_to_origin(parse(INPUT))
 }
 
 pub(crate) fn day20_part2() -> usize {
-    number_of_particles_remaining_after_collisions(read_file_to_lines("input/day20.txt"))
+    number_of_particles_remaining_after_collisions(parse(INPUT))
 }
 
-fn index_of_particle_staying_closest_to_origin(input: Vec<String>) -> usize {
+fn index_of_particle_staying_closest_to_origin(input: Vec<&str>) -> usize {
     let particles = parse_input(input);
     // The particle that will stay closest to the origin is the one with the smallest acceleration
     particles
@@ -22,7 +24,7 @@ fn index_of_particle_staying_closest_to_origin(input: Vec<String>) -> usize {
         .0
 }
 
-fn number_of_particles_remaining_after_collisions(input: Vec<String>) -> usize {
+fn number_of_particles_remaining_after_collisions(input: Vec<&str>) -> usize {
     let mut particles = parse_input(input);
     while particles.iter().any(Particle::is_decelerating)
         // This second condition is only for the part 2 example ;)
@@ -49,7 +51,7 @@ fn number_of_particles_remaining_after_collisions(input: Vec<String>) -> usize {
     particles.len()
 }
 
-fn parse_input(input: Vec<String>) -> Vec<Particle> {
+fn parse_input(input: Vec<&str>) -> Vec<Particle> {
     input
         .iter()
         .map(|line| Particle::parse(line).unwrap())
@@ -100,7 +102,7 @@ impl Particle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE_1: &str = "\
 p=<3,0,0>, v=<2,0,0>, a=<-1,0,0>
@@ -166,7 +168,7 @@ p=<4,0,0>, v=<0,0,0>, a=<-2,0,0>";
     fn part1_example() {
         assert_eq!(
             0,
-            index_of_particle_staying_closest_to_origin(read_str_to_lines(EXAMPLE_1))
+            index_of_particle_staying_closest_to_origin(parse(EXAMPLE_1))
         );
     }
     #[test]
@@ -184,7 +186,7 @@ p=<3,0,0>, v=<-1,0,0>, a=<0,0,0>";
     fn part2_example() {
         assert_eq!(
             1,
-            number_of_particles_remaining_after_collisions(read_str_to_lines(EXAMPLE_2))
+            number_of_particles_remaining_after_collisions(parse(EXAMPLE_2))
         );
     }
 

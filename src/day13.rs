@@ -1,12 +1,14 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::VecDeque;
 
+const INPUT: &str = include_str!("../input/day13.txt");
+
 pub(crate) fn day13_part1() -> usize {
-    trip_severity(read_file_to_lines("input/day13.txt"))
+    trip_severity(parse(INPUT))
 }
 
 pub(crate) fn day13_part2() -> usize {
-    delay_to_get_through_safely(read_file_to_lines("input/day13.txt"))
+    delay_to_get_through_safely(parse(INPUT))
 }
 
 #[derive(Clone, Debug)]
@@ -22,7 +24,7 @@ impl Firewall {
     }
 }
 
-fn trip_severity(input: Vec<String>) -> usize {
+fn trip_severity(input: Vec<&str>) -> usize {
     let mut firewalls = parse_firewalls(input);
 
     let mut severity = 0;
@@ -55,7 +57,7 @@ fn trip_severity(input: Vec<String>) -> usize {
     severity
 }
 
-fn delay_to_get_through_safely(input: Vec<String>) -> usize {
+fn delay_to_get_through_safely(input: Vec<&str>) -> usize {
     // We only care about firewalls when they're scanning the top layer, where packets travel
     // These are the periods where their scanner is at the top
     let firewall_periods: Vec<Option<usize>> = parse_firewalls(input)
@@ -96,7 +98,7 @@ fn delay_to_get_through_safely(input: Vec<String>) -> usize {
     unreachable!()
 }
 
-fn parse_firewalls(input: Vec<String>) -> Vec<Option<Firewall>> {
+fn parse_firewalls(input: Vec<&str>) -> Vec<Option<Firewall>> {
     let layer_count = parse_firewall(input.last().unwrap()).0 + 1;
     let mut firewalls = vec![None; layer_count];
     input
@@ -122,7 +124,7 @@ fn parse_firewall(line: &str) -> (usize, Firewall) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE1: &str = "\
 0: 3
@@ -132,7 +134,7 @@ mod tests {
 
     #[test]
     fn part1_example() {
-        assert_eq!(24, trip_severity(read_str_to_lines(EXAMPLE1)));
+        assert_eq!(24, trip_severity(parse(EXAMPLE1)));
     }
     #[test]
     fn part1_full() {
@@ -141,7 +143,7 @@ mod tests {
 
     #[test]
     fn part2_example() {
-        assert_eq!(10, delay_to_get_through_safely(read_str_to_lines(EXAMPLE1)));
+        assert_eq!(10, delay_to_get_through_safely(parse(EXAMPLE1)));
     }
 
     #[test]

@@ -1,3 +1,7 @@
+fn parse(input: &str) -> Vec<&str> {
+    input.lines().collect()
+}
+
 mod day01;
 use crate::day01::{day1_part1, day1_part2};
 fn day01() {

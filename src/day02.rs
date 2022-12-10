@@ -1,14 +1,16 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day02.txt");
 
 pub(crate) fn day2_part1() -> usize {
-    sum_of_differences_of_each_lines_max_and_min_number(read_file_to_lines("input/day02.txt"))
+    sum_of_differences_of_each_lines_max_and_min_number(parse(INPUT))
 }
 
 pub(crate) fn day2_part2() -> usize {
-    sum_of_divisions_of_the_only_two_evenly_divisible_numbers(read_file_to_lines("input/day02.txt"))
+    sum_of_divisions_of_the_only_two_evenly_divisible_numbers(parse(INPUT))
 }
 
-fn sum_of_differences_of_each_lines_max_and_min_number(lines: Vec<String>) -> usize {
+fn sum_of_differences_of_each_lines_max_and_min_number(lines: Vec<&str>) -> usize {
     lines
         .iter()
         .map(|line| parse_line(line))
@@ -26,7 +28,7 @@ fn difference_of_max_and_min_number(numbers: Vec<usize>) -> usize {
     numbers.iter().max().unwrap() - numbers.iter().min().unwrap()
 }
 
-fn sum_of_divisions_of_the_only_two_evenly_divisible_numbers(lines: Vec<String>) -> usize {
+fn sum_of_divisions_of_the_only_two_evenly_divisible_numbers(lines: Vec<&str>) -> usize {
     lines
         .iter()
         .map(|line| parse_line(line))
@@ -52,7 +54,7 @@ fn divide_the_only_two_evenly_divisible_numbers_in(numbers: Vec<usize>) -> usize
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE_1: &str = "\
 5 1 9 5
@@ -63,7 +65,7 @@ mod tests {
     fn example1() {
         assert_eq!(
             18,
-            sum_of_differences_of_each_lines_max_and_min_number(read_str_to_lines(EXAMPLE_1))
+            sum_of_differences_of_each_lines_max_and_min_number(parse(EXAMPLE_1))
         );
     }
 
@@ -80,7 +82,7 @@ mod tests {
     fn example2() {
         assert_eq!(
             9,
-            sum_of_divisions_of_the_only_two_evenly_divisible_numbers(read_str_to_lines(EXAMPLE_2))
+            sum_of_divisions_of_the_only_two_evenly_divisible_numbers(parse(EXAMPLE_2))
         );
     }
 

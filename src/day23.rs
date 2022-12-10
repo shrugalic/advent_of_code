@@ -2,18 +2,20 @@ use crate::program::Instr;
 use crate::program::Program;
 use crate::program::State::SentOutput;
 use crate::program::State::*;
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day23.txt");
 
 pub(crate) fn day23_part1() -> usize {
-    count_mul_instructions(read_file_to_lines("input/day23.txt"))
+    count_mul_instructions(parse(INPUT))
 }
 
 pub(crate) fn day23_part2() -> usize {
     value_in_reg_h()
 }
 
-fn count_mul_instructions(input: Vec<String>) -> usize {
-    let instr = input.iter().map(Instr::from).collect::<Vec<_>>();
+fn count_mul_instructions(input: Vec<&str>) -> usize {
+    let instr = input.into_iter().map(Instr::from).collect::<Vec<_>>();
     let mut program = Program::new(0, &instr);
     let mut mul_count = 0;
     loop {

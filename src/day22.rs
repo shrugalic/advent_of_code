@@ -1,21 +1,23 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::HashMap;
+
+const INPUT: &str = include_str!("../input/day22.txt");
 
 const PART1_BURSTS: usize = 10_000;
 const PART2_BURSTS: usize = 10_000_000;
 pub(crate) fn day22_part1() -> usize {
-    infections_after_bursts_part1(read_file_to_lines("input/day22.txt"), PART1_BURSTS)
+    infections_after_bursts_part1(parse(INPUT), PART1_BURSTS)
 }
 
 pub(crate) fn day22_part2() -> usize {
-    infections_after_bursts_part2(read_file_to_lines("input/day22.txt"), PART2_BURSTS)
+    infections_after_bursts_part2(parse(INPUT), PART2_BURSTS)
 }
 
-fn infections_after_bursts_part1(input: Vec<String>, burst_count: usize) -> usize {
+fn infections_after_bursts_part1(input: Vec<&str>, burst_count: usize) -> usize {
     infections_after_bursts(input, burst_count, Part::One)
 }
 
-fn infections_after_bursts_part2(input: Vec<String>, burst_count: usize) -> usize {
+fn infections_after_bursts_part2(input: Vec<&str>, burst_count: usize) -> usize {
     infections_after_bursts(input, burst_count, Part::Two)
 }
 
@@ -25,7 +27,7 @@ enum Part {
     Two,
 }
 
-fn infections_after_bursts(input: Vec<String>, burst_count: usize, part: Part) -> usize {
+fn infections_after_bursts(input: Vec<&str>, burst_count: usize, part: Part) -> usize {
     let mut grid = parse_input(&input);
     let mut curr_pos = Loc::new((input[0].len() as isize) / 2, (input.len() / 2) as isize);
     let mut infections_caused = 0;
@@ -146,7 +148,7 @@ impl NodeState {
     }
 }
 
-fn parse_input(input: &[String]) -> HashMap<Loc, NodeState> {
+fn parse_input(input: &[&str]) -> HashMap<Loc, NodeState> {
     let mut grid: HashMap<Loc, NodeState> = HashMap::new();
     input.iter().enumerate().for_each(|(y, line)| {
         line.chars().enumerate().for_each(|(x, c)| {
@@ -159,7 +161,7 @@ fn parse_input(input: &[String]) -> HashMap<Loc, NodeState> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE_MAP: &str = "\
 ..#
@@ -170,7 +172,7 @@ mod tests {
     fn part1_example() {
         assert_eq!(
             5587,
-            infections_after_bursts_part1(read_str_to_lines(EXAMPLE_MAP), PART1_BURSTS)
+            infections_after_bursts_part1(parse(EXAMPLE_MAP), PART1_BURSTS)
         );
     }
 
@@ -183,7 +185,7 @@ mod tests {
     fn part2_example_short() {
         assert_eq!(
             26,
-            infections_after_bursts_part2(read_str_to_lines(EXAMPLE_MAP), 100)
+            infections_after_bursts_part2(parse(EXAMPLE_MAP), 100)
         );
     }
 
@@ -191,7 +193,7 @@ mod tests {
     fn part2_example() {
         assert_eq!(
             2511944,
-            infections_after_bursts_part2(read_str_to_lines(EXAMPLE_MAP), PART2_BURSTS)
+            infections_after_bursts_part2(parse(EXAMPLE_MAP), PART2_BURSTS)
         );
     }
 

@@ -1,8 +1,10 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::HashSet;
 
+const INPUT: &str = include_str!("../input/day04.txt");
+
 pub(crate) fn day4_part1() -> usize {
-    read_file_to_lines("input/day04.txt")
+    parse(INPUT)
         .into_iter()
         .filter(|phrase| contains_only_unique_words(phrase))
         // The linter suggests the to change the above line to the following:
@@ -12,7 +14,7 @@ pub(crate) fn day4_part1() -> usize {
 }
 
 pub(crate) fn day4_part2() -> usize {
-    read_file_to_lines("input/day04.txt")
+    parse(INPUT)
         .into_iter()
         // Same deal as above on line 8
         .filter(|phrase| contains_no_anagrams(phrase))

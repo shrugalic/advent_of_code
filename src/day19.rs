@@ -1,15 +1,17 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::fmt::{Display, Formatter};
 
+const INPUT: &str = include_str!("../input/day19.txt");
+
 pub(crate) fn day19_part1() -> String {
-    follow_path_and_return_letters_and_step_count(read_file_to_lines("input/day19.txt")).0
+    follow_path_and_return_letters_and_step_count(parse(INPUT)).0
 }
 
 pub(crate) fn day19_part2() -> usize {
-    follow_path_and_return_letters_and_step_count(read_file_to_lines("input/day19.txt")).1
+    follow_path_and_return_letters_and_step_count(parse(INPUT)).1
 }
 
-fn follow_path_and_return_letters_and_step_count(input: Vec<String>) -> (String, usize) {
+fn follow_path_and_return_letters_and_step_count(input: Vec<&str>) -> (String, usize) {
     let grid = parse_input(input);
     let mut y = 0;
     let mut x = grid[y].iter().position(|c| c == &'|').unwrap();
@@ -80,14 +82,14 @@ impl Display for Dir {
     }
 }
 
-fn parse_input(input: Vec<String>) -> Vec<Vec<char>> {
+fn parse_input(input: Vec<&str>) -> Vec<Vec<char>> {
     input.iter().map(|line| line.chars().collect()).collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "     |          \
                          \n     |  +--+    \
@@ -101,7 +103,7 @@ mod tests {
     fn part1_example() {
         assert_eq!(
             "ABCDEF",
-            follow_path_and_return_letters_and_step_count(read_str_to_lines(EXAMPLE)).0
+            follow_path_and_return_letters_and_step_count(parse(EXAMPLE)).0
         );
     }
     #[test]
@@ -113,7 +115,7 @@ mod tests {
     fn part2_example() {
         assert_eq!(
             38,
-            follow_path_and_return_letters_and_step_count(read_str_to_lines(EXAMPLE)).1
+            follow_path_and_return_letters_and_step_count(parse(EXAMPLE)).1
         );
     }
 
