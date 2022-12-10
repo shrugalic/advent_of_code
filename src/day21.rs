@@ -1,6 +1,8 @@
-use line_reader::{read_file_to_lines, read_str_to_lines};
+use crate::parse;
 use std::ops::{Add, AddAssign};
 use Type::*;
+
+const INPUT: &str = include_str!("../input/day21.txt");
 
 pub(crate) fn day21_part1() -> usize {
     // Minimum cost of equipment that lets the player win
@@ -91,7 +93,7 @@ fn total_cost_of(items: &[&Item]) -> usize {
 }
 
 fn parse_items(items: &'static str) -> Vec<Item> {
-    read_str_to_lines(items)
+    parse(items)
         .into_iter()
         .skip(1)
         .map(|line| {
@@ -136,7 +138,7 @@ Defense +2   40     0       2
 Defense +3   80     0       3";
 
 fn boss_from_input() -> Character {
-    let input = read_file_to_lines("input/day21.txt");
+    let input = parse(INPUT);
     Character::from(input)
 }
 
@@ -190,9 +192,9 @@ impl Default for Character {
         }
     }
 }
-impl From<Vec<String>> for Character {
-    fn from(s: Vec<String>) -> Self {
-        let extract_number = |line: &String| {
+impl From<Vec<&str>> for Character {
+    fn from(s: Vec<&str>) -> Self {
+        let extract_number = |line: &str| {
             line.split_ascii_whitespace()
                 .last()
                 .unwrap()

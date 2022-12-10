@@ -1,12 +1,14 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::HashSet;
 
+const INPUT: &str = include_str!("../input/day03.txt");
+
 pub(crate) fn day03_part1() -> usize {
-    presents_delivered_by_santa(&read_file_to_lines("input/day03.txt")[0])
+    presents_delivered_by_santa(&parse(INPUT)[0])
 }
 
 pub(crate) fn day03_part2() -> usize {
-    presents_delivered_by_santa_and_robo_santa(&read_file_to_lines("input/day03.txt")[0])
+    presents_delivered_by_santa_and_robo_santa(&parse(INPUT)[0])
 }
 
 fn presents_delivered_by_santa(path: &str) -> usize {

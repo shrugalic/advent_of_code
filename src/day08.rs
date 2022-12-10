@@ -1,14 +1,15 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+const INPUT: &str = include_str!("../input/day08.txt");
 
 pub(crate) fn day08_part1() -> usize {
-    count_unescaping_overhead(read_file_to_lines("input/day08.txt"))
+    count_unescaping_overhead(parse(INPUT))
 }
 
 pub(crate) fn day08_part2() -> usize {
-    count_escaping_overhead(read_file_to_lines("input/day08.txt"))
+    count_escaping_overhead(parse(INPUT))
 }
 
-fn count_unescaping_overhead(input: Vec<String>) -> usize {
+fn count_unescaping_overhead(input: Vec<&str>) -> usize {
     let (orig_escaped_count, unescaped_count) = input
         .iter()
         .map(|s| get_unescaped_counts(s))
@@ -17,7 +18,7 @@ fn count_unescaping_overhead(input: Vec<String>) -> usize {
     orig_escaped_count - unescaped_count
 }
 
-fn count_escaping_overhead(input: Vec<String>) -> usize {
+fn count_escaping_overhead(input: Vec<&str>) -> usize {
     let (orig_unescaped_count, escaped_count) = input
         .iter()
         .map(|s| get_escaped_counts(s))
@@ -61,7 +62,7 @@ fn get_escaped_counts(s: &str) -> (usize, usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 \"\"
@@ -77,10 +78,7 @@ mod tests {
         assert_eq!((10, 7), get_unescaped_counts("\"aaa\\\"aaa\"")); // "aaa\"aaa"
         assert_eq!((4, 1), get_unescaped_counts("\"\\\\\"")); // "\\"
         assert_eq!((6, 1), get_unescaped_counts("\"\\x27\"")); // "\x27"
-        assert_eq!(
-            2 + 2 + 3 + 3 + 5,
-            count_unescaping_overhead(read_str_to_lines(EXAMPLE))
-        );
+        assert_eq!(2 + 2 + 3 + 3 + 5, count_unescaping_overhead(parse(EXAMPLE)));
 
         assert_eq!(
             (41, 30),
@@ -99,10 +97,7 @@ mod tests {
         assert_eq!((10, 16), get_escaped_counts("\"aaa\\\"aaa\"")); // "aaa\"aaa"
         assert_eq!((4, 10), get_escaped_counts("\"\\\\\"")); // "\\"
         assert_eq!((6, 11), get_escaped_counts("\"\\x27\"")); // "\x27"
-        assert_eq!(
-            4 + 4 + 6 + 6 + 5,
-            count_escaping_overhead(read_str_to_lines(EXAMPLE))
-        );
+        assert_eq!(4 + 4 + 6 + 6 + 5, count_escaping_overhead(parse(EXAMPLE)));
     }
 
     #[test]

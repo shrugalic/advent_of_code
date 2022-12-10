@@ -1,4 +1,6 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day25.txt");
 
 pub(crate) fn day25_part1() -> usize {
     let (row, column) = parse_input();
@@ -6,7 +8,7 @@ pub(crate) fn day25_part1() -> usize {
 }
 
 fn parse_input() -> (usize, usize) {
-    let line = &read_file_to_lines("input/day25.txt")[0];
+    let line = &parse(INPUT)[0];
     let parts: Vec<_> = line.split(|c| [' ', '.', ','].contains(&c)).collect();
     (parts[18].parse().unwrap(), parts[21].parse().unwrap())
 }

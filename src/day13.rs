@@ -1,14 +1,16 @@
+use crate::parse;
 use crate::permutation::generate_permutations_of_n_indices;
-use line_reader::read_file_to_lines;
+
+const INPUT: &str = include_str!("../input/day13.txt");
 
 pub(crate) fn day13_part1() -> isize {
-    let input = read_file_to_lines("input/day13.txt");
+    let input = parse(INPUT);
     let happiness_table = parse_family(input);
     find_optimal_happiness(happiness_table)
 }
 
 pub(crate) fn day13_part2() -> isize {
-    let input = read_file_to_lines("input/day13.txt");
+    let input = parse(INPUT);
     let mut happiness_table = parse_family(input);
     happiness_table.push(vec![0; happiness_table.len()]);
     happiness_table.iter_mut().for_each(|h| h.push(0));
@@ -35,7 +37,7 @@ fn find_optimal_happiness(happiness: Vec<Vec<isize>>) -> isize {
         .unwrap()
 }
 
-fn parse_family(input: Vec<String>) -> Vec<Vec<isize>> {
+fn parse_family(input: Vec<&str>) -> Vec<Vec<isize>> {
     // Vector of family members. This is only needed to get a unique index for each location
     let mut family: Vec<_> = vec![];
     // Happiness from each family member to all other family members (by index)
@@ -72,7 +74,7 @@ fn parse_family(input: Vec<String>) -> Vec<Vec<isize>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 Alice would gain 54 happiness units by sitting next to Bob.
@@ -90,7 +92,7 @@ David would gain 41 happiness units by sitting next to Carol.";
 
     #[test]
     fn part1_example() {
-        let input = read_str_to_lines(EXAMPLE);
+        let input = parse(EXAMPLE);
         let happiness_table = parse_family(input);
         assert_eq!(330, find_optimal_happiness(happiness_table));
     }

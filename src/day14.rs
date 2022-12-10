@@ -1,16 +1,18 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day14.txt");
 
 pub(crate) fn day14_part1() -> usize {
-    let input = read_file_to_lines("input/day14.txt");
+    let input = parse(INPUT);
     max_distance_after(2503, input)
 }
 
 pub(crate) fn day14_part2() -> usize {
-    let input = read_file_to_lines("input/day14.txt");
+    let input = parse(INPUT);
     max_points_after(2503, input)
 }
 
-fn max_distance_after(duration: usize, input: Vec<String>) -> usize {
+fn max_distance_after(duration: usize, input: Vec<&str>) -> usize {
     parse_reindeer(input)
         .into_iter()
         .map(|r| r.distance_after(duration))
@@ -18,7 +20,7 @@ fn max_distance_after(duration: usize, input: Vec<String>) -> usize {
         .unwrap()
 }
 
-fn max_points_after(duration: usize, input: Vec<String>) -> usize {
+fn max_points_after(duration: usize, input: Vec<&str>) -> usize {
     let reindeer = parse_reindeer(input);
     let mut time = 0;
     let mut distances = vec![0; reindeer.len()];
@@ -40,7 +42,7 @@ fn max_points_after(duration: usize, input: Vec<String>) -> usize {
     *points.iter().max().unwrap()
 }
 
-fn parse_reindeer(input: Vec<String>) -> Vec<Reindeer> {
+fn parse_reindeer(input: Vec<&str>) -> Vec<Reindeer> {
     let reindeer: Vec<_> = input.iter().map(Reindeer::from).collect();
     reindeer
 }
@@ -87,7 +89,7 @@ impl Reindeer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 Comet can fly 14 km/s for 10 seconds, but then must rest for 127 seconds.
@@ -95,7 +97,7 @@ Dancer can fly 16 km/s for 11 seconds, but then must rest for 162 seconds.";
 
     #[test]
     fn part1_example() {
-        let input = read_str_to_lines(EXAMPLE);
+        let input = parse(EXAMPLE);
         assert_eq!(1120, max_distance_after(1000, input));
     }
     #[test]
@@ -105,7 +107,7 @@ Dancer can fly 16 km/s for 11 seconds, but then must rest for 162 seconds.";
 
     #[test]
     fn part2_example() {
-        let input = read_str_to_lines(EXAMPLE);
+        let input = parse(EXAMPLE);
         assert_eq!(689, max_points_after(1000, input));
     }
 

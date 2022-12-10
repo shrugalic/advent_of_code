@@ -1,10 +1,12 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day02.txt");
 
 pub(crate) fn day02_part1() -> usize {
-    total_wrapping_paper_needed(read_file_to_lines("input/day02.txt"))
+    total_wrapping_paper_needed(parse(INPUT))
 }
 pub(crate) fn day02_part2() -> usize {
-    total_ribbon_needed(read_file_to_lines("input/day02.txt"))
+    total_ribbon_needed(parse(INPUT))
 }
 
 struct Box {
@@ -35,14 +37,14 @@ impl Box {
     }
 }
 
-fn total_wrapping_paper_needed(input: Vec<String>) -> usize {
+fn total_wrapping_paper_needed(input: Vec<&str>) -> usize {
     input
         .iter()
         .map(|s| Box::from(s).wrapping_paper_needed())
         .sum()
 }
 
-fn total_ribbon_needed(input: Vec<String>) -> usize {
+fn total_ribbon_needed(input: Vec<&str>) -> usize {
     input.iter().map(|s| Box::from(s).ribbon_needed()).sum()
 }
 

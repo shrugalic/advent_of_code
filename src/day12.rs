@@ -1,14 +1,16 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day12.txt");
 
 pub(crate) fn day12_part1() -> isize {
-    sum_of_numbers(read_file_to_lines("input/day12.txt"))
+    sum_of_numbers(parse(INPUT))
 }
 
 pub(crate) fn day12_part2() -> isize {
-    sum_of_numbers_without_red(read_file_to_lines("input/day12.txt"))
+    sum_of_numbers_without_red(parse(INPUT))
 }
 
-fn sum_of_numbers(input: Vec<String>) -> isize {
+fn sum_of_numbers(input: Vec<&str>) -> isize {
     input
         .iter()
         .map(|line| {
@@ -19,7 +21,7 @@ fn sum_of_numbers(input: Vec<String>) -> isize {
         .sum()
 }
 
-fn sum_of_numbers_without_red(input: Vec<String>) -> isize {
+fn sum_of_numbers_without_red(input: Vec<&str>) -> isize {
     input.iter().map(|s| sum_without_red(s)).sum()
 }
 
@@ -90,21 +92,18 @@ fn parse_sum_without_red(line: Vec<char>, terminator: Option<char>) -> (isize, V
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     #[test]
     fn part1_examples() {
-        assert_eq!(6, sum_of_numbers(read_str_to_lines("[1,2,3]")));
-        assert_eq!(6, sum_of_numbers(read_str_to_lines("{\"a\":2,\"b\":4}")));
-        assert_eq!(3, sum_of_numbers(read_str_to_lines("[[[3]]]")));
-        assert_eq!(
-            3,
-            sum_of_numbers(read_str_to_lines("{\"a\":{\"b\":4},\"c\":-1}"))
-        );
-        assert_eq!(0, sum_of_numbers(read_str_to_lines("{\"a\":[-1,1]}")));
-        assert_eq!(0, sum_of_numbers(read_str_to_lines("[-1,{\"a\":1}]")));
-        assert_eq!(0, sum_of_numbers(read_str_to_lines("[]")));
-        assert_eq!(0, sum_of_numbers(read_str_to_lines("{}")));
+        assert_eq!(6, sum_of_numbers(parse("[1,2,3]")));
+        assert_eq!(6, sum_of_numbers(parse("{\"a\":2,\"b\":4}")));
+        assert_eq!(3, sum_of_numbers(parse("[[[3]]]")));
+        assert_eq!(3, sum_of_numbers(parse("{\"a\":{\"b\":4},\"c\":-1}")));
+        assert_eq!(0, sum_of_numbers(parse("{\"a\":[-1,1]}")));
+        assert_eq!(0, sum_of_numbers(parse("[-1,{\"a\":1}]")));
+        assert_eq!(0, sum_of_numbers(parse("[]")));
+        assert_eq!(0, sum_of_numbers(parse("{}")));
     }
 
     #[test]
@@ -114,21 +113,16 @@ mod tests {
 
     #[test]
     fn part2_examples() {
-        assert_eq!(6, sum_of_numbers_without_red(read_str_to_lines("[1,2,3]")));
+        assert_eq!(6, sum_of_numbers_without_red(parse("[1,2,3]")));
         assert_eq!(
             4,
-            sum_of_numbers_without_red(read_str_to_lines("[1,{\"c\":\"red\",\"b\":2},3]"))
+            sum_of_numbers_without_red(parse("[1,{\"c\":\"red\",\"b\":2},3]"))
         );
         assert_eq!(
             0,
-            sum_of_numbers_without_red(read_str_to_lines(
-                "{\"d\":\"red\",\"e\":[1,2,3,4],\"f\":5}"
-            ))
+            sum_of_numbers_without_red(parse("{\"d\":\"red\",\"e\":[1,2,3,4],\"f\":5}"))
         );
-        assert_eq!(
-            6,
-            sum_of_numbers_without_red(read_str_to_lines("[1,\"red\",5]"))
-        );
+        assert_eq!(6, sum_of_numbers_without_red(parse("[1,\"red\",5]")));
     }
 
     #[test]

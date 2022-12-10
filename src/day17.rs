@@ -1,12 +1,14 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day17.txt");
 
 pub(crate) fn day17_part1() -> usize {
-    let input = read_file_to_lines("input/day17.txt");
+    let input = parse(INPUT);
     ways_to_fill_containers(input, TOTAL, Part::One)
 }
 
 pub(crate) fn day17_part2() -> usize {
-    let input = read_file_to_lines("input/day17.txt");
+    let input = parse(INPUT);
     ways_to_fill_containers(input, TOTAL, Part::Two)
 }
 
@@ -15,7 +17,7 @@ enum Part {
     One,
     Two,
 }
-fn ways_to_fill_containers(input: Vec<String>, total: usize, part: Part) -> usize {
+fn ways_to_fill_containers(input: Vec<&str>, total: usize, part: Part) -> usize {
     let mut containers = parse_containers(input);
 
     // Optimization: The containers are sorted by largest first, so that
@@ -55,7 +57,7 @@ fn ways_to_fill_containers(input: Vec<String>, total: usize, part: Part) -> usiz
     }
 }
 
-fn parse_containers(input: Vec<String>) -> Vec<usize> {
+fn parse_containers(input: Vec<&str>) -> Vec<usize> {
     input
         .into_iter()
         .map(|line| line.parse().unwrap())
@@ -65,7 +67,7 @@ fn parse_containers(input: Vec<String>) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 20
@@ -76,7 +78,7 @@ mod tests {
 
     #[test]
     fn part1_example() {
-        let input = read_str_to_lines(EXAMPLE);
+        let input = parse(EXAMPLE);
         assert_eq!(4, ways_to_fill_containers(input, 25, Part::One));
     }
     #[test]
@@ -86,7 +88,7 @@ mod tests {
 
     #[test]
     fn part2_example() {
-        let input = read_str_to_lines(EXAMPLE);
+        let input = parse(EXAMPLE);
         assert_eq!(3, ways_to_fill_containers(input, 25, Part::Two));
     }
 

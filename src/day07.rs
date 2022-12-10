@@ -1,14 +1,16 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::HashMap;
 
+const INPUT: &str = include_str!("../input/day07.txt");
+
 pub(crate) fn day07_part1() -> Num {
-    let input = read_file_to_lines("input/day07.txt");
+    let input = parse(INPUT);
     let signals = determine_signals(input);
     *signals.get(&"a".to_string()).unwrap()
 }
 
 pub(crate) fn day07_part2() -> Num {
-    let input = read_file_to_lines("input/day07.txt");
+    let input = parse(INPUT);
     let mut instructions: Vec<_> = input.into_iter().map(Instruction::from).collect();
     instructions.iter_mut().for_each(|instr| {
         if let Instruction::Signal {
@@ -25,7 +27,7 @@ pub(crate) fn day07_part2() -> Num {
     *signals.get(&"a".to_string()).unwrap()
 }
 
-fn determine_signals(input: Vec<String>) -> HashMap<Id, Num> {
+fn determine_signals(input: Vec<&str>) -> HashMap<Id, Num> {
     let instructions: Vec<_> = input.into_iter().map(Instruction::from).collect();
     signals_from(instructions)
 }
@@ -108,8 +110,8 @@ enum Instruction {
     RShift { i: Id, v: Num, o: Id },
     Not { i: Id, o: Id },
 }
-impl From<String> for Instruction {
-    fn from(s: String) -> Self {
+impl From<&str> for Instruction {
+    fn from(s: &str) -> Self {
         let p: Vec<_> = s.split_ascii_whitespace().collect();
         match p.len() {
             3 => {
@@ -159,7 +161,7 @@ impl From<String> for Instruction {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 123 -> x
@@ -173,7 +175,7 @@ NOT y -> i";
 
     #[test]
     fn part1_example() {
-        let signals = determine_signals(read_str_to_lines(EXAMPLE));
+        let signals = determine_signals(parse(EXAMPLE));
         println!("signals {:?}", signals);
         assert_eq!(Some(&72), signals.get("d"));
         assert_eq!(Some(&507), signals.get("e"));

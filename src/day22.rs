@@ -1,6 +1,8 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use Spell::*;
 use Type::*;
+
+const INPUT: &str = include_str!("../input/day22.txt");
 
 pub(crate) fn day22_part1() -> usize {
     minimum_mana_cost_player_winning_fight(false)
@@ -113,7 +115,7 @@ type Damage = usize;
 type Time = usize;
 
 fn boss_from_input() -> Character {
-    let input = read_file_to_lines("input/day22.txt");
+    let input = parse(INPUT);
     Character::from(input)
 }
 
@@ -198,9 +200,9 @@ impl Default for Character {
         }
     }
 }
-impl From<Vec<String>> for Character {
-    fn from(lines: Vec<String>) -> Self {
-        let extract_number = |line: &String| {
+impl From<Vec<&str>> for Character {
+    fn from(lines: Vec<&str>) -> Self {
+        let extract_number = |line: &str| {
             line.split_ascii_whitespace()
                 .last()
                 .unwrap()

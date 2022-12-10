@@ -1,6 +1,8 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
+
+const INPUT: &str = include_str!("../input/day19.txt");
 
 pub(crate) fn day19_part1() -> usize {
     let (replacements, molecule) = parse_day19_input();
@@ -16,8 +18,8 @@ pub(crate) fn day19_part2() -> usize {
 
 const STARTING_MOLECULE: &str = "e";
 
-fn parse_day19_input() -> (Vec<String>, String) {
-    let input = read_file_to_lines("input/day19.txt");
+fn parse_day19_input() -> (Vec<&'static str>, String) {
+    let input = parse(INPUT);
     let parts: Vec<_> = input.split(|element| element.is_empty()).collect();
     (parts[0].to_vec(), parts[1][0].to_string()) // (replacements, molecule)
 }
@@ -25,17 +27,17 @@ fn parse_day19_input() -> (Vec<String>, String) {
 type Replacements = HashMap<String, Vec<String>>;
 type Results = HashSet<String>;
 
-fn parse_replacements(input: &[String]) -> Replacements {
+fn parse_replacements(input: &[&str]) -> Replacements {
     replacements_from(input, &|line| line.split_once(" => ").unwrap())
 }
 
-fn parse_reverse_replacements(input: &[String]) -> Replacements {
+fn parse_reverse_replacements(input: &[&str]) -> Replacements {
     replacements_from(input, &|line| {
         line.split_once(" => ").map(|(l, r)| (r, l)).unwrap()
     })
 }
 
-fn replacements_from(input: &[String], split: &dyn Fn(&String) -> (&str, &str)) -> Replacements {
+fn replacements_from(input: &[&str], split: &dyn Fn(&str) -> (&str, &str)) -> Replacements {
     let mut replacements = Replacements::new();
     input.iter().for_each(|line| {
         let (left, right) = split(line);
@@ -111,7 +113,7 @@ fn count_number_of_replacements(curr: &str, replacements: &Replacements) -> usiz
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE1_REPLACEMENTS: &str = "\
 H => HO
@@ -121,7 +123,7 @@ O => HH";
 
     #[test]
     fn part1_example() {
-        let input = read_str_to_lines(EXAMPLE1_REPLACEMENTS);
+        let input = parse(EXAMPLE1_REPLACEMENTS);
         let replacements = parse_replacements(&input);
         let results = results_of_one_replacement(EXAMPLE1_START, &replacements);
         assert_eq!(4, results.len());
@@ -144,7 +146,7 @@ O => HH";
 
     #[test]
     fn part2_examples() {
-        let input = read_str_to_lines(EXAMPLE2_REPLACEMENTS);
+        let input = parse(EXAMPLE2_REPLACEMENTS);
         let replacements = parse_reverse_replacements(&input);
         assert_eq!(
             3,

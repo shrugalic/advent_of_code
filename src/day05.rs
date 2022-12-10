@@ -1,15 +1,17 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::HashMap;
 
+const INPUT: &str = include_str!("../input/day05.txt");
+
 pub(crate) fn day05_part1() -> usize {
-    count_nice_strings(read_file_to_lines("input/day05.txt"), &is_nice_part1)
+    count_nice_strings(parse(INPUT), &is_nice_part1)
 }
 
 pub(crate) fn day05_part2() -> usize {
-    count_nice_strings(read_file_to_lines("input/day05.txt"), &is_nice_part2)
+    count_nice_strings(parse(INPUT), &is_nice_part2)
 }
 
-fn count_nice_strings(strings: Vec<String>, is_nice: &dyn Fn(&str) -> bool) -> usize {
+fn count_nice_strings(strings: Vec<&str>, is_nice: &dyn Fn(&str) -> bool) -> usize {
     strings.iter().filter(|&s| is_nice(s)).count()
 }
 

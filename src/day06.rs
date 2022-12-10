@@ -1,16 +1,16 @@
-use crate::day06::Action::Toggle;
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::ops::RangeInclusive;
+const INPUT: &str = include_str!("../input/day06.txt");
 
 pub(crate) fn day06_part1() -> usize {
-    count_turned_on_lights(read_file_to_lines("input/day06.txt"))
+    count_turned_on_lights(parse(INPUT))
 }
 
 pub(crate) fn day06_part2() -> usize {
-    total_brightness(read_file_to_lines("input/day06.txt"))
+    total_brightness(parse(INPUT))
 }
 
-fn count_turned_on_lights(strings: Vec<String>) -> usize {
+fn count_turned_on_lights(strings: Vec<&str>) -> usize {
     let mut grid = [[false; 1000]; 1000];
     let instructions: Vec<_> = strings.into_iter().map(Instruction::from).collect();
     for instr in instructions {
@@ -19,7 +19,7 @@ fn count_turned_on_lights(strings: Vec<String>) -> usize {
                 match instr.action {
                     Action::On => grid[y][x] = true,
                     Action::Off => grid[y][x] = false,
-                    Toggle => grid[y][x] = !grid[y][x],
+                    Action::Toggle => grid[y][x] = !grid[y][x],
                 }
             }
         }
@@ -29,7 +29,7 @@ fn count_turned_on_lights(strings: Vec<String>) -> usize {
         .sum()
 }
 
-fn total_brightness(strings: Vec<String>) -> usize {
+fn total_brightness(strings: Vec<&str>) -> usize {
     let mut grid = [[0u8; 1000]; 1000];
     let instructions: Vec<_> = strings.into_iter().map(Instruction::from).collect();
     for instr in instructions {
@@ -42,7 +42,7 @@ fn total_brightness(strings: Vec<String>) -> usize {
                             grid[y][x] -= 1;
                         }
                     }
-                    Toggle => grid[y][x] += 2,
+                    Action::Toggle => grid[y][x] += 2,
                 }
             }
         }
@@ -57,8 +57,8 @@ struct Instruction {
     top_left: Corner,
     bottom_right: Corner,
 }
-impl From<String> for Instruction {
-    fn from(s: String) -> Self {
+impl From<&str> for Instruction {
+    fn from(s: &str) -> Self {
         let (prefix, bottom_right) = s.split_once(" through ").unwrap();
         let (action, top_left) = prefix.rsplit_once(' ').unwrap();
         Instruction {

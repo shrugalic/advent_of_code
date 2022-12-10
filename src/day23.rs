@@ -1,5 +1,7 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use Instruction::*;
+
+const INPUT: &str = include_str!("../input/day23.txt");
 
 pub(crate) fn day23_part1() -> usize {
     let mut computer = computer_from_input();
@@ -15,12 +17,12 @@ pub(crate) fn day23_part2() -> usize {
 }
 
 fn computer_from_input() -> Computer {
-    let input = read_file_to_lines("input/day23.txt");
+    let input = parse(INPUT);
     let instructions = parse_instructions(input);
     Computer::new(instructions)
 }
 
-fn parse_instructions(input: Vec<String>) -> Vec<Instruction> {
+fn parse_instructions(input: Vec<&str>) -> Vec<Instruction> {
     input.into_iter().map(Instruction::from).collect()
 }
 
@@ -36,8 +38,8 @@ enum Instruction {
     JumpByOffsetIfEven(Register, Offset),
     JumpByOffsetIfOne(Register, Offset),
 }
-impl From<String> for Instruction {
-    fn from(s: String) -> Self {
+impl From<&str> for Instruction {
+    fn from(s: &str) -> Self {
         let parts: Vec<_> = s.split(|c| c == ' ' || c == ',').collect();
         match parts[0] {
             "hlf" => Half(parts[1].parse().unwrap()),
@@ -116,7 +118,7 @@ impl ToIndex for Register {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 inc a
@@ -126,7 +128,7 @@ inc a";
 
     #[test]
     fn parse_part1_example() {
-        let instructions = parse_instructions(read_str_to_lines(EXAMPLE));
+        let instructions = parse_instructions(parse(EXAMPLE));
         assert_eq!(
             vec![Inc('a'), JumpByOffsetIfOne('a', 2), Triple('a'), Inc('a')],
             instructions
@@ -141,7 +143,7 @@ inc a";
 
     #[test]
     fn part1_example1() {
-        let input = read_str_to_lines(EXAMPLE);
+        let input = parse(EXAMPLE);
         let instructions = parse_instructions(input);
         let mut computer = Computer::new(instructions);
         computer.run();

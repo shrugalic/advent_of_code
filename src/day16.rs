@@ -1,17 +1,19 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::HashMap;
 
+const INPUT: &str = include_str!("../input/day16.txt");
+
 pub(crate) fn day16_part1() -> usize {
-    let input = read_file_to_lines("input/day16.txt");
+    let input = parse(INPUT);
     find_matching_memory_part1(input)
 }
 
 pub(crate) fn day16_part2() -> usize {
-    let input = read_file_to_lines("input/day16.txt");
+    let input = parse(INPUT);
     find_matching_memory_part2(input)
 }
 
-fn find_matching_memory_part1(input: Vec<String>) -> usize {
+fn find_matching_memory_part1(input: Vec<&str>) -> usize {
     let analysis_result = analysis_result();
     for line in input {
         let (sue_number, memories) = extract_memories(line);
@@ -22,7 +24,7 @@ fn find_matching_memory_part1(input: Vec<String>) -> usize {
     unreachable!()
 }
 
-fn find_matching_memory_part2(input: Vec<String>) -> usize {
+fn find_matching_memory_part2(input: Vec<&str>) -> usize {
     let analysis_result = analysis_result();
     for line in input {
         let (sue_number, memories) = extract_memories(line);
@@ -51,7 +53,7 @@ fn analysis_result() -> HashMap<String, usize> {
     .collect()
 }
 
-fn extract_memories(line: String) -> (usize, Vec<(String, usize)>) {
+fn extract_memories(line: &str) -> (usize, Vec<(String, usize)>) {
     let parts: Vec<_> = line.split_ascii_whitespace().collect();
     let extract_pair = |idx: usize| {
         (

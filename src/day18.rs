@@ -1,7 +1,9 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day18.txt");
 
 pub(crate) fn day18_part1() -> usize {
-    let input = read_file_to_lines("input/day18.txt");
+    let input = parse(INPUT);
     let mut grid = Grid::from(input);
     for _ in 0..100 {
         grid.iterate_part1()
@@ -10,7 +12,7 @@ pub(crate) fn day18_part1() -> usize {
 }
 
 pub(crate) fn day18_part2() -> usize {
-    let input = read_file_to_lines("input/day18.txt");
+    let input = parse(INPUT);
     let mut grid = Grid::from(input);
     for _ in 0..100 {
         grid.iterate_part2()
@@ -23,8 +25,8 @@ struct Grid {
     grid: Vec<Vec<bool>>,
     on_count: Vec<Vec<u8>>, // Keeps track of the neighbor-on-count for each cell
 }
-impl From<Vec<String>> for Grid {
-    fn from(input: Vec<String>) -> Grid {
+impl From<Vec<&str>> for Grid {
+    fn from(input: Vec<&str>) -> Grid {
         let grid: Vec<Vec<bool>> = input
             .iter()
             .map(|line| line.chars().map(|c| c == '#').collect())
@@ -143,11 +145,11 @@ impl ToString for Grid {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     #[test]
     fn part1_example() {
-        let input = read_str_to_lines(EXAMPLE1[0]);
+        let input = parse(EXAMPLE1[0]);
         let mut grid = Grid::from(input);
         for expected in EXAMPLE1 {
             assert_eq!(grid.to_string(), expected);
@@ -161,7 +163,7 @@ mod tests {
 
     #[test]
     fn part2_example() {
-        let input = read_str_to_lines(EXAMPLE2[0]);
+        let input = parse(EXAMPLE2[0]);
         let mut grid = Grid::from(input);
         for expected in EXAMPLE2 {
             assert_eq!(grid.to_string(), expected);

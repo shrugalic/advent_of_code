@@ -1,13 +1,15 @@
+use crate::parse;
 use itertools::Itertools;
-use line_reader::read_file_to_lines;
+
+const INPUT: &str = include_str!("../input/day24.txt");
 
 pub(crate) fn day24_part1() -> usize {
-    let weights = parse_weights(read_file_to_lines("input/day24.txt"));
+    let weights = parse_weights(parse(INPUT));
     smallest_groups(&weights, 3).unwrap()
 }
 
 pub(crate) fn day24_part2() -> usize {
-    let weights = parse_weights(read_file_to_lines("input/day24.txt"));
+    let weights = parse_weights(parse(INPUT));
     smallest_groups(&weights, 4).unwrap()
 }
 
@@ -24,7 +26,7 @@ impl MinimumQuantumEntanglement for Vec<Vec<Weight>> {
 }
 
 type Weight = usize;
-fn parse_weights(input: Vec<String>) -> Vec<Weight> {
+fn parse_weights(input: Vec<&str>) -> Vec<Weight> {
     input.into_iter().map(|l| l.parse().unwrap()).collect()
 }
 
@@ -66,7 +68,7 @@ fn smallest_groups(weights: &[Weight], n: usize) -> Option<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 1
@@ -82,13 +84,13 @@ mod tests {
 
     #[test]
     fn parse_part1_example() {
-        let weights = parse_weights(read_str_to_lines(EXAMPLE));
+        let weights = parse_weights(parse(EXAMPLE));
         assert_eq!(vec![1, 2, 3, 4, 5, 7, 8, 9, 10, 11], weights);
     }
 
     #[test]
     fn part1_example1() {
-        let weights = parse_weights(read_str_to_lines(EXAMPLE));
+        let weights = parse_weights(parse(EXAMPLE));
         assert_eq!(99, smallest_groups(&weights, 3).unwrap());
     }
     #[test]
@@ -98,7 +100,7 @@ mod tests {
 
     #[test]
     fn part2_example1() {
-        let weights = parse_weights(read_str_to_lines(EXAMPLE));
+        let weights = parse_weights(parse(EXAMPLE));
         assert_eq!(44, smallest_groups(&weights, 4).unwrap());
     }
 

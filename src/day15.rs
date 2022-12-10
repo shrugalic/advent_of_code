@@ -1,26 +1,28 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::ops::AddAssign;
 
+const INPUT: &str = include_str!("../input/day15.txt");
+
 pub(crate) fn day15_part1() -> isize {
-    let input = read_file_to_lines("input/day15.txt");
+    let input = parse(INPUT);
     find_high_score_ignore_calories(input)
 }
 
 pub(crate) fn day15_part2() -> isize {
-    let input = read_file_to_lines("input/day15.txt");
+    let input = parse(INPUT);
     find_high_score_fix_calories(input)
 }
 
-fn find_high_score_ignore_calories(input: Vec<String>) -> isize {
+fn find_high_score_ignore_calories(input: Vec<&str>) -> isize {
     find_high_score(input, false)
 }
 
-fn find_high_score_fix_calories(input: Vec<String>) -> isize {
+fn find_high_score_fix_calories(input: Vec<&str>) -> isize {
     find_high_score(input, true)
 }
 
 const TOTAL_AMOUNT: isize = 100;
-fn find_high_score(input: Vec<String>, fix_calories: bool) -> isize {
+fn find_high_score(input: Vec<&str>, fix_calories: bool) -> isize {
     let ingredients = parse_ingredients(input);
     let mut score = 0;
     for i0 in 0..=TOTAL_AMOUNT {
@@ -54,7 +56,7 @@ fn calc_score(ingredients: &[Ingredient], amounts: &[isize], fix_calories: bool)
     }
 }
 
-fn parse_ingredients(input: Vec<String>) -> Vec<Ingredient> {
+fn parse_ingredients(input: Vec<&str>) -> Vec<Ingredient> {
     input.into_iter().map(Ingredient::from).collect()
 }
 
@@ -66,10 +68,10 @@ struct Ingredient {
     texture: isize,
     calories: isize,
 }
-impl From<String> for Ingredient {
+impl From<&str> for Ingredient {
     // Example:
     // Butterscotch: capacity -1, durability -2, flavor 6, texture 3, calories 8
-    fn from(s: String) -> Self {
+    fn from(s: &str) -> Self {
         let parts: Vec<_> = s.split(|c| c == ' ' || c == ',').collect();
         Ingredient {
             capacity: parts[2].parse().unwrap(),
@@ -118,7 +120,7 @@ impl Ingredient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 Butterscotch: capacity -1, durability -2, flavor 6, texture 3, calories 8
@@ -126,7 +128,7 @@ Cinnamon: capacity 2, durability 3, flavor -2, texture -1, calories 3";
 
     #[test]
     fn part1_example() {
-        let input = read_str_to_lines(EXAMPLE);
+        let input = parse(EXAMPLE);
         assert_eq!(62842880, find_high_score_ignore_calories(input));
     }
     #[test]
@@ -136,7 +138,7 @@ Cinnamon: capacity 2, durability 3, flavor -2, texture -1, calories 3";
 
     #[test]
     fn part2_example() {
-        let input = read_str_to_lines(EXAMPLE);
+        let input = parse(EXAMPLE);
         assert_eq!(57600000, find_high_score_fix_calories(input));
     }
 

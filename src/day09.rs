@@ -1,21 +1,23 @@
+use crate::parse;
 use crate::permutation::generate_permutations_of_n_indices;
-use line_reader::read_file_to_lines;
+
+const INPUT: &str = include_str!("../input/day09.txt");
 
 pub(crate) fn day09_part1() -> usize {
-    shortest_route_length(read_file_to_lines("input/day09.txt"))
+    shortest_route_length(parse(INPUT))
 }
 
 pub(crate) fn day09_part2() -> usize {
-    longest_route_length(read_file_to_lines("input/day09.txt"))
+    longest_route_length(parse(INPUT))
 }
 
-fn shortest_route_length(input: Vec<String>) -> usize {
+fn shortest_route_length(input: Vec<&str>) -> usize {
     route_lengths(input).into_iter().min().unwrap()
 }
-fn longest_route_length(input: Vec<String>) -> usize {
+fn longest_route_length(input: Vec<&str>) -> usize {
     route_lengths(input).into_iter().max().unwrap()
 }
-fn route_lengths(input: Vec<String>) -> Vec<usize> {
+fn route_lengths(input: Vec<&str>) -> Vec<usize> {
     let distances = parse_distances_from(input);
     generate_permutations_of_n_indices(distances.len())
         .into_iter()
@@ -29,7 +31,7 @@ fn route_lengths(input: Vec<String>) -> Vec<usize> {
         .collect()
 }
 
-fn parse_distances_from(input: Vec<String>) -> Vec<Vec<usize>> {
+fn parse_distances_from(input: Vec<&str>) -> Vec<Vec<usize>> {
     // Vector of location names. This is only needed to get a unique index for each location
     let mut locations: Vec<String> = vec![];
     // Distances from each location to all other locations (by index)
@@ -60,7 +62,7 @@ fn parse_distances_from(input: Vec<String>) -> Vec<Vec<usize>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 London to Dublin = 464
@@ -69,7 +71,7 @@ Dublin to Belfast = 141";
 
     #[test]
     fn part1_example() {
-        assert_eq!(605, shortest_route_length(read_str_to_lines(EXAMPLE)));
+        assert_eq!(605, shortest_route_length(parse(EXAMPLE)));
     }
 
     #[test]
@@ -79,7 +81,7 @@ Dublin to Belfast = 141";
 
     #[test]
     fn part2_example() {
-        assert_eq!(982, longest_route_length(read_str_to_lines(EXAMPLE)));
+        assert_eq!(982, longest_route_length(parse(EXAMPLE)));
     }
 
     #[test]

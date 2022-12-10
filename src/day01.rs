@@ -1,10 +1,12 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day01.txt");
 
 pub(crate) fn day01_part1() -> isize {
-    result_floor(&read_file_to_lines("input/day01.txt")[0])
+    result_floor(parse(INPUT)[0])
 }
 pub(crate) fn day01_part2() -> usize {
-    position_of_char_that_results_in_basement_floor(&read_file_to_lines("input/day01.txt")[0])
+    position_of_char_that_results_in_basement_floor(parse(INPUT)[0])
 }
 
 fn result_floor(input: &str) -> isize {
