@@ -677,7 +677,7 @@ mod tests {
     #[test]
     fn example1() {
         assert_eq!(
-            product_of_corner_tile_ids(&read_file_to_lines("input/day20_example1.txt")),
+            product_of_corner_tile_ids(&read_file_to_lines("input/day20/example1.txt")),
             1951 * 3079 * 2971 * 1171
         );
     }
@@ -685,7 +685,7 @@ mod tests {
     #[test]
     fn example0() {
         assert_eq!(
-            product_of_corner_tile_ids(&read_file_to_lines("input/day20_example0.txt")),
+            product_of_corner_tile_ids(&read_file_to_lines("input/day20/example0.txt")),
             1951 * 2311 * 2729 * 1427
         );
     }
@@ -801,7 +801,7 @@ mod tests {
     #[test]
     fn part2_example1() {
         assert_eq!(
-            count_hashes_not_part_of_sea_monsters(&read_file_to_lines("input/day20_example1.txt")),
+            count_hashes_not_part_of_sea_monsters(&read_file_to_lines("input/day20/example1.txt")),
             273
         );
     }
