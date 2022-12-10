@@ -1,0 +1,143 @@
+w = next_input  // 1 to 9
+z = w + 15
+
+w = next_input  // 1 to 9
+if (z % 26) + 15 != w {
+    z *= 26
+    y = w + 10
+} else {
+    y = 0
+}
+z += y
+
+w = next_input  // 1 to 9
+if ((z % 26) + 12) != w {
+    z *= 26
+    y = w + 2
+} else {
+    y = 0
+}
+z += y
+
+w = next_input  // 1 to 9
+if x = ((z % 26) + 13) != w {
+    z *= 26
+    y = w + 16
+} else {
+    y = 0
+}
+z += y
+
+w = next_input  // 1 to 9
+x = z % 26
+z /= 26
+x -= 12
+if x != w {
+    z *= 26
+    y = w + 12
+} else {
+    y = 0
+}
+z += y
+
+w = next_input  // 1 to 9
+if (z % 26) + 10 != w {
+    z *= 26
+    y = w + 11
+} else {
+    y = 0
+}
+z += y
+
+w = next_input  // 1 to 9
+x = z % 26
+z /= 26
+x -= 9
+if x != w {
+    z *= 26
+    y = w + 5
+} else {
+    y = 0
+}
+z += y
+
+w = next_input  // 1 to 9
+if (z % 26) + 14 != w {
+    z *= 26
+    y = w + 16
+} else {
+    y = 0
+}
+z += y
+
+w = next_input  // 1 to 9
+if (z % 26) + 13 != w {
+    z *= 26
+    y = w + 6
+} else {
+    y = 0
+}
+z += y
+
+w = next_input  // 1 to 9
+x = z % 26
+z /= 26
+x -= 14
+if x != w {
+    z *= 26
+    y = w + 15
+} else {
+    y = 0
+}
+
+z += y
+
+w = next_input  // 1 to 9
+x = z % 26
+z /= 26
+x -= 11
+if x != w {
+    z *= 26
+    y = w + 3
+} else {
+    y = 0
+}
+z += y
+
+w = next_input  // 1 to 9
+x = z % 26
+z /= 26
+x -= 2
+if x != w {
+    z *= 26
+    y = w + 12
+} else {
+    y = 0
+}
+z += y
+
+w = next_input  // 1 to 9
+x = z % 26
+z /= 26
+x -= 16
+if x != w {
+    z *= 26
+    y = w + 10
+} else {
+    y = 0
+}
+z += y
+
+w = next_input  // 1 to 9
+x = z % 26
+z /= 26
+x -= 14
+if x != w {
+    z *= 26
+    y = w + 13
+} else {
+    y = 0
+}
+z += y
+
+// valid numbers end with a 0 in z
