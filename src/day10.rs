@@ -1,14 +1,16 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::HashMap;
 
+const INPUT: &str = include_str!("../input/day10.txt");
+
 pub(crate) fn day10_part1() -> usize {
-    let input = read_file_to_lines("input/day10.txt");
+    let input = parse(INPUT);
     let mut bot_traders = BotTraders::from(input);
     bot_traders.bot_responsible_for_handling(61, 17)
 }
 
 pub(crate) fn day10_part2() -> usize {
-    let input = read_file_to_lines("input/day10.txt");
+    let input = parse(INPUT);
     let mut bot_traders = BotTraders::from(input);
     bot_traders.trade(&|_| false)
 }
@@ -68,8 +70,8 @@ impl BotTraders {
             * self.values_by_output.get(&2).unwrap().first().unwrap()
     }
 }
-impl From<Vec<String>> for BotTraders {
-    fn from(input: Vec<String>) -> Self {
+impl From<Vec<&str>> for BotTraders {
+    fn from(input: Vec<&str>) -> Self {
         let (initial_values, bots): (Vec<_>, Vec<_>) =
             input.into_iter().partition(|l| l.starts_with("value"));
 
@@ -141,7 +143,7 @@ impl From<&[&str]> for Recipient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 value 5 goes to bot 2
@@ -153,21 +155,21 @@ value 2 goes to bot 2";
 
     #[test]
     fn part1_example_initial() {
-        let input = read_str_to_lines(EXAMPLE);
+        let input = parse(EXAMPLE);
         let mut bot_traders = BotTraders::from(input);
         assert_eq!(2, bot_traders.bot_responsible_for_handling(2, 5));
     }
 
     #[test]
     fn part1_example_after_first_distribution() {
-        let input = read_str_to_lines(EXAMPLE);
+        let input = parse(EXAMPLE);
         let mut bot_traders = BotTraders::from(input);
         assert_eq!(1, bot_traders.bot_responsible_for_handling(2, 3));
     }
 
     #[test]
     fn part1_example_after_second_distribution() {
-        let input = read_str_to_lines(EXAMPLE);
+        let input = parse(EXAMPLE);
         let mut bot_traders = BotTraders::from(input);
         assert_eq!(1, bot_traders.bot_responsible_for_handling(2, 3));
     }

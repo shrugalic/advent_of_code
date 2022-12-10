@@ -1,4 +1,6 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day08.txt");
 
 pub(crate) fn day08_part1() -> usize {
     let screen = apply_all_input_operations_to_screen();
@@ -32,10 +34,7 @@ fn apply_all_input_operations_to_screen() -> Screen {
 }
 
 fn parse_operations() -> Vec<Op> {
-    read_file_to_lines("input/day08.txt")
-        .into_iter()
-        .map(Op::from)
-        .collect()
+    parse(INPUT).into_iter().map(Op::from).collect()
 }
 
 #[derive(PartialEq, Debug)]

@@ -1,12 +1,14 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::HashSet;
 
+const INPUT: &str = include_str!("../input/day01.txt");
+
 pub(crate) fn day01_part1() -> usize {
-    distance_from_origin(&read_file_to_lines("input/day01.txt")[0])
+    distance_from_origin(&parse(INPUT)[0])
 }
 
 pub(crate) fn day01_part2() -> usize {
-    distance_to_first_location_visited_twice(&read_file_to_lines("input/day01.txt")[0])
+    distance_to_first_location_visited_twice(&parse(INPUT)[0])
 }
 
 fn distance_from_origin(input: &str) -> usize {

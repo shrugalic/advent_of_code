@@ -1,14 +1,16 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
+const INPUT: &str = include_str!("../input/day24.txt");
+
 pub(crate) fn day24_part1() -> usize {
-    let mut maze = Maze::from(read_file_to_lines("input/day24.txt"));
+    let mut maze = Maze::from(parse(INPUT));
     maze.len_of_shortest_path_to_reach_all_points_of_interest()
 }
 
 pub(crate) fn day24_part2() -> usize {
-    let mut maze = Maze::from(read_file_to_lines("input/day24.txt"));
+    let mut maze = Maze::from(parse(INPUT));
     maze.len_of_shortest_round_trip_to_reach_all_points_of_interest()
 }
 
@@ -47,8 +49,8 @@ impl Pos {
 struct Maze {
     grid: Vec<Vec<Tile>>,
 }
-impl From<Vec<String>> for Maze {
-    fn from(v: Vec<String>) -> Self {
+impl From<Vec<&str>> for Maze {
+    fn from(v: Vec<&str>) -> Self {
         Maze {
             grid: v
                 .into_iter()
@@ -192,7 +194,7 @@ impl PartialOrd for State {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 ###########
@@ -203,7 +205,7 @@ mod tests {
 
     #[test]
     fn part1_example() {
-        let mut maze = Maze::from(read_str_to_lines(EXAMPLE));
+        let mut maze = Maze::from(parse(EXAMPLE));
         assert_eq!(
             14,
             maze.len_of_shortest_path_to_reach_all_points_of_interest()
@@ -217,7 +219,7 @@ mod tests {
 
     #[test]
     fn part2_example() {
-        let mut maze = Maze::from(read_str_to_lines(EXAMPLE));
+        let mut maze = Maze::from(parse(EXAMPLE));
         assert_eq!(
             20,
             maze.len_of_shortest_round_trip_to_reach_all_points_of_interest()

@@ -1,14 +1,16 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};
 
+const INPUT: &str = include_str!("../input/day11.txt");
+
 pub(crate) fn day11_part1() -> usize {
-    let mut facility = Facility::from(read_file_to_lines("input/day11.txt"));
+    let mut facility = Facility::from(parse(INPUT));
     facility.steps_to_bring_everything_to_floor_3()
 }
 
 pub(crate) fn day11_part2() -> usize {
-    let mut facility = Facility::from(read_file_to_lines("input/day11.txt"));
+    let mut facility = Facility::from(parse(INPUT));
     facility.microchips.push(0);
     facility.generators.push(0);
     facility.microchips.push(0);
@@ -85,8 +87,8 @@ struct Facility {
     microchips: Vec<Floor>,
     elevator_floor: Floor,
 }
-impl From<Vec<String>> for Facility {
-    fn from(input: Vec<String>) -> Self {
+impl From<Vec<&str>> for Facility {
+    fn from(input: Vec<&str>) -> Self {
         let mut elements = vec![];
         input
             .iter()
@@ -278,7 +280,7 @@ impl Facility {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 The first floor contains a hydrogen-compatible microchip and a lithium-compatible microchip.
@@ -288,7 +290,7 @@ The fourth floor contains nothing relevant.";
 
     #[test]
     fn part1_example() {
-        let mut facility = Facility::from(read_str_to_lines(EXAMPLE));
+        let mut facility = Facility::from(parse(EXAMPLE));
         assert_eq!(11, facility.steps_to_bring_everything_to_floor_3());
     }
 

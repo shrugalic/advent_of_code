@@ -1,19 +1,21 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::HashMap;
 
+const INPUT: &str = include_str!("../input/day06.txt");
+
 pub(crate) fn day06_part1() -> String {
-    error_corrected_message(read_file_to_lines("input/day06.txt"), Part::One)
+    error_corrected_message(parse(INPUT), Part::One)
 }
 
 pub(crate) fn day06_part2() -> String {
-    error_corrected_message(read_file_to_lines("input/day06.txt"), Part::Two)
+    error_corrected_message(parse(INPUT), Part::Two)
 }
 
 enum Part {
     One,
     Two,
 }
-fn error_corrected_message(messages: Vec<String>, part: Part) -> String {
+fn error_corrected_message(messages: Vec<&str>, part: Part) -> String {
     let mut corrected = vec![];
     for idx in 0..messages[0].len() {
         let mut frequency = HashMap::new();
@@ -35,7 +37,7 @@ fn error_corrected_message(messages: Vec<String>, part: Part) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 eedadn
@@ -59,7 +61,7 @@ enarar";
     fn part1_example() {
         assert_eq!(
             "easter".to_string(),
-            error_corrected_message(read_str_to_lines(EXAMPLE), Part::One)
+            error_corrected_message(parse(EXAMPLE), Part::One)
         );
     }
 
@@ -72,7 +74,7 @@ enarar";
     fn part2_example() {
         assert_eq!(
             "advent".to_string(),
-            error_corrected_message(read_str_to_lines(EXAMPLE), Part::Two)
+            error_corrected_message(parse(EXAMPLE), Part::Two)
         );
     }
 

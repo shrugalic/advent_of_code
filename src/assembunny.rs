@@ -32,8 +32,8 @@ pub(crate) enum Op {
     // The op below is for day 25 only
     Out(Param), // Transmit the next clock signal value
 }
-impl From<String> for Op {
-    fn from(s: String) -> Self {
+impl From<&str> for Op {
+    fn from(s: &str) -> Self {
         let p: Vec<_> = s.split_ascii_whitespace().collect();
         match p[0] {
             "cpy" => Cpy(Param::from(p[1]), p[2].to_char()),
@@ -70,8 +70,8 @@ pub(crate) struct Computer {
     code: Vec<Op>,
     register: Vec<Value>,
 }
-impl From<Vec<String>> for Computer {
-    fn from(s: Vec<String>) -> Self {
+impl From<Vec<&str>> for Computer {
+    fn from(s: Vec<&str>) -> Self {
         let code = s.into_iter().map(Op::from).collect();
         let register = vec![0; 4];
         Computer { code, register }

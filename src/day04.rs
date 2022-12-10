@@ -1,13 +1,15 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
+const INPUT: &str = include_str!("../input/day04.txt");
+
 pub(crate) fn day04_part1() -> usize {
-    sum_of_valid_sector_ids(read_file_to_lines("input/day04.txt"))
+    sum_of_valid_sector_ids(parse(INPUT))
 }
 
 pub(crate) fn day04_part2() -> usize {
-    read_file_to_lines("input/day04.txt")
+    parse(INPUT)
         .into_iter()
         .filter_map(extract_valid_room)
         .filter(|(name, id)| decrypt(name, id) == "northpole object storage")
@@ -16,7 +18,7 @@ pub(crate) fn day04_part2() -> usize {
         .unwrap()
 }
 
-fn sum_of_valid_sector_ids(input: Vec<String>) -> usize {
+fn sum_of_valid_sector_ids(input: Vec<&str>) -> usize {
     input
         .into_iter()
         .filter_map(extract_valid_room)
@@ -70,7 +72,7 @@ fn expected_checksum(name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 aaaaa-bbb-z-y-x-123[abxyz]
@@ -97,7 +99,7 @@ totally-real-room-200[decoy]";
 
     #[test]
     fn part1_example() {
-        assert_eq!(1514, sum_of_valid_sector_ids(read_str_to_lines(EXAMPLE)));
+        assert_eq!(1514, sum_of_valid_sector_ids(parse(EXAMPLE)));
     }
 
     #[test]

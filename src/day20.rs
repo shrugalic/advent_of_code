@@ -1,16 +1,18 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::VecDeque;
 use std::ops::RangeInclusive;
+
+const INPUT: &str = include_str!("../input/day20.txt");
 
 const MAX_IP: usize = 4_294_967_295;
 
 pub(crate) fn day20_part1() -> usize {
-    let blacklist: Vec<IpRange> = parse_rules(read_file_to_lines("input/day20.txt"));
+    let blacklist: Vec<IpRange> = parse_rules(parse(INPUT));
     lowest_valued_non_forbidden_ip(blacklist)
 }
 
 pub(crate) fn day20_part2() -> usize {
-    let blacklist: Vec<IpRange> = parse_rules(read_file_to_lines("input/day20.txt"));
+    let blacklist: Vec<IpRange> = parse_rules(parse(INPUT));
     number_of_allowed_ips(blacklist)
 }
 
@@ -26,7 +28,7 @@ fn lowest_valued_non_forbidden_ip(blacklist: Vec<IpRange>) -> usize {
     unreachable!()
 }
 
-fn parse_rules(input: Vec<String>) -> Vec<IpRange> {
+fn parse_rules(input: Vec<&str>) -> Vec<IpRange> {
     input
         .into_iter()
         .map(|s| {
@@ -70,7 +72,7 @@ fn merge_overlapping_ranges(mut blacklist: Vec<IpRange>) -> Vec<IpRange> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 5-8
@@ -79,7 +81,7 @@ mod tests {
 
     #[test]
     fn part1_example() {
-        let blacklist: Vec<IpRange> = parse_rules(read_str_to_lines(EXAMPLE));
+        let blacklist: Vec<IpRange> = parse_rules(parse(EXAMPLE));
         assert_eq!(3, lowest_valued_non_forbidden_ip(blacklist));
     }
 
@@ -90,7 +92,7 @@ mod tests {
 
     #[test]
     fn part2_example() {
-        let blacklist: Vec<IpRange> = parse_rules(read_str_to_lines(EXAMPLE));
+        let blacklist: Vec<IpRange> = parse_rules(parse(EXAMPLE));
         assert_eq!(MAX_IP + 1 - 8, number_of_allowed_ips(blacklist));
     }
 

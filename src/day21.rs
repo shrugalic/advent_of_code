@@ -1,13 +1,14 @@
-use crate::day21::Op::{MovePos, RotateLeft, RotateRight};
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day21.txt");
 
 pub(crate) fn day21_part1() -> String {
-    let ops: Vec<Op> = parse_operations(read_file_to_lines("input/day21.txt"));
+    let ops: Vec<Op> = parse_operations(parse(INPUT));
     scramble(&ops, "abcdefgh")
 }
 
 pub(crate) fn day21_part2() -> String {
-    let ops: Vec<Op> = parse_operations(read_file_to_lines("input/day21.txt"));
+    let ops: Vec<Op> = parse_operations(parse(INPUT));
     unscramble(&ops, "fbgdceah")
 }
 
@@ -46,26 +47,26 @@ impl Op {
     }
     fn inverse(&self, chars: &[char]) -> Op {
         match self {
-            Op::RotateLeft(x) => RotateRight(*x),
-            Op::RotateRight(x) => RotateLeft(*x),
-            Op::MovePos(x, y) => MovePos(*y, *x),
+            Op::RotateLeft(x) => Op::RotateRight(*x),
+            Op::RotateRight(x) => Op::RotateLeft(*x),
+            Op::MovePos(x, y) => Op::MovePos(*y, *x),
             Op::RotateBasedOnLetterPos(x) => match chars.find_pos(x) {
-                1 => RotateLeft(1),
-                3 => RotateLeft(2),
-                5 => RotateLeft(3),
-                7 => RotateLeft(4),
-                2 => RotateLeft(6 % chars.len()),
-                4 => RotateLeft(7 % chars.len()),
-                6 => RotateLeft(0),
-                0 => RotateLeft(1),
+                1 => Op::RotateLeft(1),
+                3 => Op::RotateLeft(2),
+                5 => Op::RotateLeft(3),
+                7 => Op::RotateLeft(4),
+                2 => Op::RotateLeft(6 % chars.len()),
+                4 => Op::RotateLeft(7 % chars.len()),
+                6 => Op::RotateLeft(0),
+                0 => Op::RotateLeft(1),
                 _ => unreachable!(),
             },
             op => *op, // These other ops are their own inverse
         }
     }
 }
-impl From<String> for Op {
-    fn from(s: String) -> Self {
+impl From<&str> for Op {
+    fn from(s: &str) -> Self {
         let p: Vec<_> = s.split_ascii_whitespace().collect();
         match (p[0], p[1]) {
             ("swap", "position") => Op::SwapPos(p[2].parse().unwrap(), p[5].parse().unwrap()),
@@ -82,7 +83,7 @@ impl From<String> for Op {
     }
 }
 
-fn parse_operations(input: Vec<String>) -> Vec<Op> {
+fn parse_operations(input: Vec<&str>) -> Vec<Op> {
     input.into_iter().map(Op::from).collect()
 }
 
@@ -120,7 +121,7 @@ fn unscramble(ops: &[Op], input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE_OPS: &str = "\
 swap position 4 with position 0
@@ -135,7 +136,7 @@ rotate based on position of letter d";
     #[test]
     fn part1_example() {
         let input = "abcde";
-        let ops: Vec<Op> = parse_operations(read_str_to_lines(EXAMPLE_OPS));
+        let ops: Vec<Op> = parse_operations(parse(EXAMPLE_OPS));
         assert_eq!("decab", scramble(&ops, input));
     }
 
@@ -146,7 +147,7 @@ rotate based on position of letter d";
 
     #[test]
     fn part2_example() {
-        let ops: Vec<Op> = parse_operations(read_str_to_lines(EXAMPLE_OPS));
+        let ops: Vec<Op> = parse_operations(parse(EXAMPLE_OPS));
         assert_eq!("abcde", unscramble(&ops, "decab"));
     }
 

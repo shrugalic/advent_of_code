@@ -1,14 +1,16 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day03.txt");
 
 pub(crate) fn day03_part1() -> usize {
-    count_possible_triangle_rows(read_file_to_lines("input/day03.txt"))
+    count_possible_triangle_rows(parse(INPUT))
 }
 
 pub(crate) fn day03_part2() -> usize {
-    count_possible_triangle_columns(read_file_to_lines("input/day03.txt"))
+    count_possible_triangle_columns(parse(INPUT))
 }
 
-fn count_possible_triangle_rows(input: Vec<String>) -> usize {
+fn count_possible_triangle_rows(input: Vec<&str>) -> usize {
     input
         .iter()
         .map(|line| {
@@ -26,7 +28,7 @@ fn is_triangle(a: usize, b: usize, c: usize) -> bool {
     sides[0] + sides[1] > sides[2]
 }
 
-fn count_possible_triangle_columns(input: Vec<String>) -> usize {
+fn count_possible_triangle_columns(input: Vec<&str>) -> usize {
     let input: Vec<Vec<usize>> = input
         .iter()
         .map(|line| {
@@ -51,7 +53,7 @@ fn count_possible_triangle_columns(input: Vec<String>) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     #[test]
     fn part1() {
@@ -68,10 +70,7 @@ mod tests {
 
     #[test]
     fn part2_example() {
-        assert_eq!(
-            6,
-            count_possible_triangle_columns(read_str_to_lines(EXAMPLE))
-        );
+        assert_eq!(6, count_possible_triangle_columns(parse(EXAMPLE)));
     }
 
     #[test]

@@ -1,25 +1,23 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::fmt::{Debug, Formatter};
 
+const INPUT: &str = include_str!("../input/day22.txt");
+
 pub(crate) fn day22_part1() -> usize {
-    let lines = read_file_to_lines("input/day22.txt");
+    let lines = parse(INPUT);
     let pairs = parse_pairs(lines);
     let stats = pairs.into_iter().map(|n| n.stats).collect();
     viable_pair_count(stats)
 }
 
 pub(crate) fn day22_part2() -> usize {
-    let lines = read_file_to_lines("input/day22.txt");
+    let lines = parse(INPUT);
     let pairs = parse_pairs(lines);
     count_steps_to_move_goal_data_to_origin(pairs)
 }
 
-fn parse_pairs(lines: Vec<String>) -> Vec<Pair> {
-    lines
-        .iter()
-        .skip(2)
-        .map(|s| Pair::from(s.as_str()))
-        .collect()
+fn parse_pairs(lines: Vec<&str>) -> Vec<Pair> {
+    lines.iter().skip(2).map(|&s| Pair::from(s)).collect()
 }
 
 fn viable_pair_count(mut stats: Vec<Stats>) -> usize {
@@ -272,7 +270,7 @@ impl Debug for Stats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     #[test]
     fn parse_node() {
@@ -303,7 +301,7 @@ Filesystem            Size  Used  Avail  Use%
 /dev/grid/node-x2-y2    9T    6T     3T   66%";
     #[test]
     fn part2_example() {
-        let nodes = parse_pairs(read_str_to_lines(EXAMPLE));
+        let nodes = parse_pairs(parse(EXAMPLE));
 
         assert_eq!(7, count_steps_to_move_goal_data_to_origin(nodes));
     }

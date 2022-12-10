@@ -1,17 +1,13 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day07.txt");
 
 pub(crate) fn day07_part1() -> usize {
-    read_file_to_lines("input/day07.txt")
-        .into_iter()
-        .filter(|s| supports_tls(s))
-        .count()
+    parse(INPUT).into_iter().filter(|s| supports_tls(s)).count()
 }
 
 pub(crate) fn day07_part2() -> usize {
-    read_file_to_lines("input/day07.txt")
-        .into_iter()
-        .filter(|s| supports_ssl(s))
-        .count()
+    parse(INPUT).into_iter().filter(|s| supports_ssl(s)).count()
 }
 
 fn supports_tls(ip: &str) -> bool {

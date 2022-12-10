@@ -1,9 +1,11 @@
 use crate::assembunny::Computer;
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day25.txt");
 
 pub(crate) fn day25_part1() -> isize {
     for i in 1.. {
-        let mut computer = Computer::from(read_file_to_lines("input/day25.txt"));
+        let mut computer = Computer::from(parse(INPUT));
         computer.set_register('a', i);
         let result = computer.run();
         if result == 1 {

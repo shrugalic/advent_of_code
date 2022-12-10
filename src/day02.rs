@@ -1,19 +1,21 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use NumPad::*;
 
+const INPUT: &str = include_str!("../input/day02.txt");
+
 pub(crate) fn day02_part1() -> String {
-    bathroom_code(read_file_to_lines("input/day02.txt"), NumPadType::Simple)
+    bathroom_code(parse(INPUT), NumPadType::Simple)
 }
 
 pub(crate) fn day02_part2() -> String {
-    bathroom_code(read_file_to_lines("input/day02.txt"), NumPadType::Complex)
+    bathroom_code(parse(INPUT), NumPadType::Complex)
 }
 
 enum NumPadType {
     Simple,
     Complex,
 }
-fn bathroom_code(input: Vec<String>, numpad_type: NumPadType) -> String {
+fn bathroom_code(input: Vec<&str>, numpad_type: NumPadType) -> String {
     let dirs: Vec<Vec<_>> = input
         .iter()
         .map(|line| line.chars().map(Dir::from).collect())
@@ -187,7 +189,7 @@ impl NumPad {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 ULL
@@ -197,10 +199,7 @@ UUUUD";
 
     #[test]
     fn part1_example() {
-        assert_eq!(
-            "1985",
-            bathroom_code(read_str_to_lines(EXAMPLE), NumPadType::Simple)
-        );
+        assert_eq!("1985", bathroom_code(parse(EXAMPLE), NumPadType::Simple));
     }
 
     #[test]
@@ -210,10 +209,7 @@ UUUUD";
 
     #[test]
     fn part2_example() {
-        assert_eq!(
-            "5DB3",
-            bathroom_code(read_str_to_lines(EXAMPLE), NumPadType::Complex)
-        );
+        assert_eq!("5DB3", bathroom_code(parse(EXAMPLE), NumPadType::Complex));
     }
 
     #[test]

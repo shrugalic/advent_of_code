@@ -1,20 +1,22 @@
 use crate::assembunny::Computer;
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day12.txt");
 
 pub(crate) fn day12_part1() -> isize {
-    let mut computer = Computer::from(read_file_to_lines("input/day12.txt"));
+    let mut computer = Computer::from(parse(INPUT));
     computer.run()
 }
 
 pub(crate) fn day12_part2() -> isize {
-    let mut computer = Computer::from(read_file_to_lines("input/day12.txt"));
+    let mut computer = Computer::from(parse(INPUT));
     computer.set_register('c', 1);
     computer.run()
 }
 
 #[cfg(test)]
 mod tests {
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     use super::*;
 
@@ -28,7 +30,7 @@ dec a";
 
     #[test]
     fn part1_example() {
-        let mut computer = Computer::from(read_str_to_lines(EXAMPLE));
+        let mut computer = Computer::from(parse(EXAMPLE));
         assert_eq!(42, computer.run());
     }
 

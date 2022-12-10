@@ -1,12 +1,14 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day09.txt");
 
 pub(crate) fn day09_part1() -> usize {
-    let input = &read_file_to_lines("input/day09.txt")[0];
+    let input = &parse(INPUT)[0];
     outer_only_decompress(input).len()
 }
 
 pub(crate) fn day09_part2() -> usize {
-    let input = &read_file_to_lines("input/day09.txt")[0];
+    let input = &parse(INPUT)[0];
     full_decompressed_len(input)
 }
 

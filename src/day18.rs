@@ -1,12 +1,14 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day18.txt");
 
 pub(crate) fn day18_part1() -> usize {
-    let input = read_file_to_lines("input/day18.txt");
+    let input = parse(INPUT);
     safe_tile_count_of_generated_grid(&input[0], 40)
 }
 
 pub(crate) fn day18_part2() -> usize {
-    let input = read_file_to_lines("input/day18.txt");
+    let input = parse(INPUT);
     safe_tile_count_of_generated_grid(&input[0], 40_0000)
 }
 
