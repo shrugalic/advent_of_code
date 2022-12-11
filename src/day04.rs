@@ -17,10 +17,7 @@ fn parse(input: &str) -> Vec<(RangeInclusive<u8>, RangeInclusive<u8>)> {
         .trim()
         .lines()
         .map(|line| {
-            let parts: Vec<u8> = line
-                .split(|c| c == ',' || c == '-')
-                .map(|s| s.parse().unwrap())
-                .collect();
+            let parts: Vec<u8> = line.split([',', '-']).map(|s| s.parse().unwrap()).collect();
             (parts[0]..=parts[1], parts[2]..=parts[3])
         })
         .collect()

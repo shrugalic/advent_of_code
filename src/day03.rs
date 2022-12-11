@@ -34,7 +34,7 @@ fn sum_of_common_items_in_left_and_right_half(backpacks: Vec<Vec<u8>>) -> usize 
 
 fn sum_of_common_items_of_each_group_of_3(backpacks: Vec<Vec<u8>>) -> usize {
     let mut sum = 0;
-    for rucksack in backpacks.as_slice().windows(3).step_by(3) {
+    for rucksack in backpacks.as_slice().chunks(3) {
         let first: HashSet<_> = HashSet::from_iter(&rucksack[0]);
         let second: HashSet<_> = HashSet::from_iter(&rucksack[1]);
         let common_chars: HashSet<_> = first.intersection(&second).cloned().collect();
