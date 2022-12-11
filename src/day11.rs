@@ -32,6 +32,24 @@ struct Monkey {
     target_if_false: usize,
     inspect_counter: usize,
 }
+impl Monkey {
+    fn inspect(&mut self) -> WorryLevel {
+        self.inspect_counter += 1;
+        let item = self.items.remove(0);
+        match self.operation {
+            Operation::Add(addend) => item + addend,
+            Operation::Multiply(multiplier) => item * multiplier,
+            Operation::Square => item * item,
+        }
+    }
+    fn test(&self, item: WorryLevel) -> usize {
+        if item % self.divisible_by == 0 {
+            self.target_if_true
+        } else {
+            self.target_if_false
+        }
+    }
+}
 impl From<&str> for Monkey {
     fn from(s: &str) -> Self {
         let lines: Vec<_> = s.lines().collect();
@@ -72,42 +90,28 @@ impl From<&str> for Monkey {
 }
 
 fn calculate_level_of_monkey_business_part1(monkeys: Vec<Monkey>) -> usize {
-    calculate_level_of_monkey_business(monkeys, 20, |wl: WorryLevel| -> WorryLevel { wl / 3 })
+    calculate_level_of_monkey_business(monkeys, 20, true)
 }
 fn calculate_level_of_monkey_business_part2(monkeys: Vec<Monkey>) -> usize {
-    let divisor: usize = monkeys.iter().map(|m| m.divisible_by).product();
-    calculate_level_of_monkey_business(monkeys, 10_000, |wl: WorryLevel| -> WorryLevel {
-        wl % divisor
-    })
+    calculate_level_of_monkey_business(monkeys, 10_000, false)
 }
 fn calculate_level_of_monkey_business(
     mut monkeys: Vec<Monkey>,
     rounds: usize,
-    reduce: impl Fn(WorryLevel) -> WorryLevel,
+    divide_by_3: bool,
 ) -> usize {
-    // Move items into their own collection to avoid multiple mutable borrows of `monkeys`
-    let mut all_monkeys_items: Vec<Vec<WorryLevel>> = monkeys
-        .iter_mut()
-        .map(|monkey| monkey.items.drain(..).collect())
-        .collect();
+    let divisor: usize = monkeys.iter().map(|m| m.divisible_by).product();
     for _ in 0..rounds {
-        for (i, monkey) in &mut monkeys.iter_mut().enumerate() {
-            // Move monkey's items to avoid multiple mutable borrows of `all_items`
-            let mut single_monkeys_items: Vec<_> = all_monkeys_items[i].drain(..).collect();
-            monkey.inspect_counter += single_monkeys_items.len();
-            for mut worry_level in single_monkeys_items.drain(..) {
-                match monkey.operation {
-                    Operation::Add(addend) => worry_level += addend,
-                    Operation::Multiply(multiplier) => worry_level *= multiplier,
-                    Operation::Square => worry_level *= worry_level,
-                };
-                worry_level = reduce(worry_level);
-                let target = if worry_level % monkey.divisible_by == 0 {
-                    monkey.target_if_true
-                } else {
-                    monkey.target_if_false
-                };
-                all_monkeys_items[target].push(worry_level);
+        for i in 0..monkeys.len() {
+            for _ in 0..monkeys[i].items.len() {
+                let monkey = monkeys.get_mut(i).unwrap();
+                let mut item = monkey.inspect();
+                if divide_by_3 {
+                    item /= 3;
+                }
+                item %= divisor; // This works for part 1 and 2
+                let target = monkey.test(item);
+                monkeys.get_mut(target).unwrap().items.push(item);
             }
         }
     }
