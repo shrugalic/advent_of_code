@@ -146,7 +146,7 @@ fn next_visible_seat_in_direction(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::line_reader::{read_file_to_lines, read_str_to_lines};
 
     const INITIAL_STATE: &str = "L.LL.LL.LL
 LLLLLLL.LL

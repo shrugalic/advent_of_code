@@ -650,7 +650,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::*;
+    use crate::line_reader::*;
     #[cfg(test)]
     use std::collections::HashMap;
 

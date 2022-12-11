@@ -256,7 +256,7 @@ fn evaluate_line_part2(line: &dyn AsRef<str>) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_file_to_lines;
+    use crate::line_reader::read_file_to_lines;
 
     #[test]
     fn part1_example_1() {

@@ -27,7 +27,7 @@ pub(crate) fn seat_id(row_n_col: (usize, usize)) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_file_to_lines;
+    use crate::line_reader::read_file_to_lines;
 
     #[test]
     fn seat_id_works() {

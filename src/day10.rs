@@ -98,7 +98,7 @@ fn diffs_between(numbers: &[usize]) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::line_reader::{read_file_to_lines, read_str_to_lines};
 
     const EXAMPLE_1: &str = "16
 10

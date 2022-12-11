@@ -51,7 +51,7 @@ pub(crate) fn sum_of_unique_yes_answers_per_group2(lines: &[String]) -> usize {
 #[cfg(test)]
 mod tests {
     use super::{sum_of_unique_yes_answers_per_group, sum_of_unique_yes_answers_per_group2};
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::line_reader::{read_file_to_lines, read_str_to_lines};
 
     #[test]
     fn part1_example() {

@@ -32,7 +32,7 @@ pub(crate) const PART2_SLOPES: [Slope; 5] = [
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::line_reader::{read_file_to_lines, read_str_to_lines};
 
     const EXAMPLE_MAP: &str = "..##.......
 #...#...#..

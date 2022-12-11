@@ -224,7 +224,7 @@ fn ingredient_appearance_count(foods: &[Food], ingredients: HashSet<String>) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::*;
+    use crate::line_reader::*;
     const EXAMPLE_1: &str = "mxmxvkd kfcds sqjhc nhms (contains dairy, fish)
 trh fvjkl sbzzf mxmxvkd (contains dairy)
 sqjhc fvjkl (contains soy)
@@ -232,7 +232,9 @@ sqjhc mxmxvkd sbzzf (contains fish)";
 
     #[test]
     fn food_from_str() {
-        let to_strings = |str_vec: Vec<&str>| str_vec.into_iter().map(str::to_string).collect();
+        let to_strings = |str_vec: Vec<&str>| -> HashSet<String> {
+            str_vec.into_iter().map(str::to_string).collect()
+        };
         let actual = Food::from("mxmxvkd kfcds sqjhc nhms (contains dairy, fish)");
         let expected = Food {
             ingredients: to_strings(vec!["mxmxvkd", "kfcds", "sqjhc", "nhms"]),

@@ -113,7 +113,7 @@ fn bag_counts_by_color(bags_desc: &str) -> HashMap<String, usize> {
 #[cfg(test)]
 mod tests {
     use super::{number_of_bags_within_bag_of, number_of_possible_bags_that_can_hold};
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::line_reader::{read_file_to_lines, read_str_to_lines};
 
     const EXAMPLE_1: &str = "light red bags contain 1 bright white bag, 2 muted yellow bags.
 dark orange bags contain 3 bright white bags, 4 muted yellow bags.

@@ -111,7 +111,7 @@ fn are_valid(kvs: &[(&str, &str)]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::line_reader::{read_file_to_lines, read_str_to_lines};
 
     const EXAMPLE: &str = "ecl:gry pid:860033327 eyr:2020 hcl:#fffffd
 byr:1937 iyr:2017 cid:147 hgt:183cm

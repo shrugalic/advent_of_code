@@ -124,7 +124,7 @@ fn rotate(waypoint: (isize, isize), mut deg: isize) -> (isize, isize) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::line_reader::{read_file_to_lines, read_str_to_lines};
 
     #[test]
     fn action_from_text() {

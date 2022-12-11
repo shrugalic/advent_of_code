@@ -132,7 +132,7 @@ fn find_meet_time(freq: &[usize], offset: &[usize], start: usize) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::line_reader::{read_file_to_lines, read_str_to_lines};
 
     const EXAMPLE1: &str = "939
 7,13,x,x,59,x,31,19";

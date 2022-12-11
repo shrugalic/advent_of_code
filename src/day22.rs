@@ -90,7 +90,7 @@ fn deck_from(players: &[String]) -> Deck {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::*;
+    use crate::line_reader::*;
 
     const EXAMPLE_1: &str = "Player 1:
 9

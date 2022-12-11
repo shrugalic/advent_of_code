@@ -190,7 +190,7 @@ pub(crate) fn day14_part2impl(input: &[String]) -> usize {
 #[cfg(test)]
 mod tests {
     use super::{day14_part1impl, day14_part2impl};
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::line_reader::{read_file_to_lines, read_str_to_lines};
 
     const EXAMPLE1: &str = "mask = XXXXXXXXXXXXXXXXXXXXXXXXXXXXX1XXXX0X
 mem[8] = 11

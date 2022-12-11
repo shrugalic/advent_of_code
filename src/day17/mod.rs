@@ -2,7 +2,7 @@ mod pocket_dimension_map_3d;
 pub(crate) mod pocket_dimension_map_4d;
 pub(crate) mod pocket_dimension_vec;
 
-use line_reader::read_file_to_lines;
+use crate::line_reader::read_file_to_lines;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter, Result};
 use std::ops::RangeInclusive;
@@ -70,7 +70,7 @@ pub(crate) fn day17_input() -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use line_reader::read_str_to_lines;
+    use crate::line_reader::read_str_to_lines;
 
     use super::*;
     use crate::day17::pocket_dimension_map_3d::*;

@@ -89,7 +89,7 @@ fn run_program(program: &[Instr]) -> (isize, bool) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::line_reader::{read_file_to_lines, read_str_to_lines};
 
     #[test]
     fn operation_from_text() {

@@ -175,7 +175,7 @@ fn num_string_to_vec(s: &str) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::line_reader::{read_file_to_lines, read_str_to_lines};
 
     const EXAMPLE1: &str = "class: 1-3 or 5-7
 row: 6-11 or 33-44

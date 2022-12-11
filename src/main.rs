@@ -37,7 +37,7 @@ use crate::day23::{
 };
 use crate::day24::{black_tile_count, iterate_for_given_number_of_days};
 use crate::day25::{find_encryption_key, DAY_25_PUZZLE_INPUT};
-use line_reader::read_file_to_lines;
+use crate::line_reader::read_file_to_lines;
 
 mod day01;
 mod day02;
@@ -64,6 +64,7 @@ mod day22;
 mod day23;
 mod day24;
 mod day25;
+mod line_reader;
 
 fn main() {
     day01();
