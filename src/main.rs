@@ -1,66 +1,188 @@
-use crate::day01::{cumulate_frequency_adjustments, find_first_repeated_frequency};
-use crate::day02::{differing_letters_of_correct_boxes, product_of_2_and_3_counts};
-use crate::day03::{id_of_non_overlapping_claim, overlapping_claim_count};
-use crate::day04::{strategy_one, strategy_two};
-use crate::day05::{length_of_shortest_possible_polymer, remaining_units_after_reaction};
-use crate::day06::{
-    size_of_area_with_max_total_distance_to_all_coords, size_of_largest_finite_area,
-};
-use crate::day07::{count_seconds, order_of_steps};
-use crate::day08::{input_metadata_sum, input_value};
-use crate::day09::high_score;
-use crate::day10::message;
-use crate::day11::{largest_total_power_3x3_square, largest_total_power_variable_size_square};
-use crate::day12::{number_of_plants_after_20_gens, number_of_plants_after_generations};
-use crate::day13::{location_of_first_crash, location_of_last_cart};
-use crate::day14::{recipe_count_until_this_score_appears, score_of_10_recipes_after};
-use crate::day15::Grid;
-use crate::day16::{
-    figure_out_op_code_numbers_and_run_program, number_of_samples_matching_3_or_more_opcodes,
-};
-use crate::day17::Ground;
-use crate::day18::LumberCollectionArea;
-use crate::day19::sum_of_divisors;
-use crate::day20::Base;
-use crate::day21::reversed_day21program;
-use crate::day22::full_cave;
-use crate::day23::{
-    count_nanobots_in_signal_range, distance_to_origin_from_point_within_range_of_most_nanobots,
-};
-use crate::day24::{
-    fight_until_army1_wins_with_smallest_possible_boost, fight_until_one_army_left,
-};
-use crate::day25::number_of_constellations;
-use crate::device::Device;
-use line_reader::read_file_to_lines;
-
-mod day01;
-mod day02;
-mod day03;
-mod day04;
-mod day05;
-mod day06;
-mod day07;
-mod day08;
-mod day09;
-mod day10;
-mod day11;
-mod day12;
-mod day13;
-mod day14;
-mod day15;
-mod day16;
-mod day17;
-mod day18;
-mod day19;
-mod day20;
-mod day21;
-mod day22;
-mod day23;
-mod day24;
-mod day25;
 mod device;
 mod opcode;
+
+fn parse(input: &str) -> Vec<&str> {
+    input.lines().collect()
+}
+
+use crate::day01::{day1_part1, day1_part2};
+mod day01;
+fn day01() {
+    assert_eq!(day1_part1(), 454);
+    assert_eq!(day1_part2(), 566);
+}
+
+use crate::day02::{day2_part1, day2_part2};
+mod day02;
+fn day02() {
+    assert_eq!(day2_part1(), 7_936);
+    assert_eq!(day2_part2(), "lnfqdscwjyteorambzuchrgpx");
+}
+
+use crate::day03::{day3_part1, day3_part2};
+mod day03;
+fn day03() {
+    assert_eq!(day3_part1(), 11_3576);
+    assert_eq!(day3_part2(), 825);
+}
+
+use crate::day04::{day4_part1, day4_part2};
+mod day04;
+fn day04() {
+    assert_eq!(65_489, day4_part1());
+    assert_eq!(3_852, day4_part2());
+}
+
+use crate::day05::{day5_part1, day5_part2};
+mod day05;
+fn day05() {
+    assert_eq!(9_462, day5_part1());
+    assert_eq!(4_952, day5_part2());
+}
+
+use crate::day06::{day6_part1, day6_part2};
+mod day06;
+fn day06() {
+    assert_eq!(4_589, day6_part1());
+    assert_eq!(40_252, day6_part2());
+}
+
+use crate::day07::{day7_part1, day7_part2};
+mod day07;
+fn day07() {
+    assert_eq!("JNOIKSYABEQRUVWXGTZFDMHLPC", day7_part1());
+    assert_eq!(1_099, day7_part2());
+}
+
+use crate::day08::{day8_part1, day8_part2};
+mod day08;
+fn day08() {
+    assert_eq!(42_146, day8_part1());
+    assert_eq!(26_753, day8_part2());
+}
+
+use crate::day09::{day9_part1, day9_part2};
+mod day09;
+fn day09() {
+    assert_eq!(374_690, day9_part1());
+    assert_eq!(3_009_951_158, day9_part2());
+}
+
+use crate::day10::day10_part1;
+mod day10;
+fn day10() {
+    assert_eq!(10511, day10_part1());
+}
+
+use crate::day11::{day11_part1, day11_part2};
+mod day11;
+fn day11() {
+    assert_eq!((28, 235, 87), day11_part1());
+    assert_eq!((119, 234, 272, 18), day11_part2());
+}
+
+use crate::day12::{day12_part1, day12_part2};
+mod day12;
+fn day12() {
+    assert_eq!(2_063, day12_part1());
+    assert_eq!(1_600_000_000_328, day12_part2());
+}
+
+use crate::day13::{day13_part1, day13_part2};
+mod day13;
+fn day13() {
+    assert_eq!((102, 114), day13_part1());
+    assert_eq!((146, 87), day13_part2());
+}
+
+use crate::day14::{day14_part1, day14_part2};
+mod day14;
+fn day14() {
+    assert_eq!("1411383621", day14_part1());
+    assert_eq!(20_177_474, day14_part2());
+}
+
+use crate::day15::{day15_part1, day15_part2};
+mod day15;
+fn day15() {
+    assert_eq!(207_059, day15_part1());
+    assert_eq!(49_120, day15_part2());
+}
+
+use crate::day16::{day16_part1, day16_part2};
+mod day16;
+fn day16() {
+    assert_eq!(605, day16_part1());
+    assert_eq!(653, day16_part2());
+}
+
+use crate::day17::{day17_part1, day17_part2};
+mod day17;
+fn day17() {
+    assert_eq!(31_949, day17_part1());
+    assert_eq!(26_384, day17_part2());
+}
+
+use crate::day18::{day18_part1, day18_part2};
+mod day18;
+fn day18() {
+    assert_eq!(605_154, day18_part1());
+    assert_eq!(200_364, day18_part2());
+}
+
+use crate::day19::{day19_part1, day19_part2};
+mod day19;
+fn day19() {
+    assert_eq!(1872, day19_part1());
+    assert_eq!(
+        18_992_592, // 1 + 2 + 5 + 10 + 1_055_143 + 2_110_286 + 5_275_715 + 10_551_430,
+        day19_part2()
+    );
+}
+
+use crate::day20::{day20_part1, day20_part2};
+mod day20;
+fn day20() {
+    assert_eq!(4_360, day20_part1());
+    assert_eq!(8_509, day20_part2());
+}
+
+use crate::day21::{day21_part1, day21_part2};
+mod day21;
+fn day21() {
+    assert_eq!(103_548, day21_part1());
+    assert_eq!(14_256_686, day21_part2());
+}
+
+use crate::day22::{day22_part1, day22_part2};
+mod day22;
+fn day22() {
+    assert_eq!(10_115, day22_part1());
+    assert_eq!(990, day22_part2());
+}
+
+use crate::day23::{day23_part1, day23_part2};
+mod day23;
+fn day23() {
+    assert_eq!(417, day23_part1());
+    assert_eq!(112_997_634, day23_part2());
+}
+
+use crate::day24::{day24_part1, day24_part2};
+mod day24;
+fn day24() {
+    assert_eq!(
+        3186 + 1252 + 2241 + 2590 + 1650 + 7766 + 1790 + 264 + 2257, // 22996
+        day24_part1()
+    );
+    assert_eq!(935 + 857 + 2535 /* 4327 */, day24_part2());
+}
+
+use crate::day25::day25_part1;
+mod day25;
+fn day25() {
+    assert_eq!(399, day25_part1());
+}
 
 fn main() {
     day01();
@@ -88,249 +210,4 @@ fn main() {
     day23();
     day24();
     day25();
-}
-
-fn day01() {
-    assert_eq!(
-        cumulate_frequency_adjustments(&read_file_to_lines("input/day01.txt")),
-        454
-    );
-    assert_eq!(
-        find_first_repeated_frequency(&read_file_to_lines("input/day01.txt")),
-        566
-    );
-}
-
-fn day02() {
-    assert_eq!(
-        product_of_2_and_3_counts(&read_file_to_lines("input/day02.txt")),
-        7936
-    );
-    assert_eq!(
-        differing_letters_of_correct_boxes(&read_file_to_lines("input/day02.txt")),
-        "lnfqdscwjyteorambzuchrgpx"
-    );
-}
-
-fn day03() {
-    assert_eq!(
-        overlapping_claim_count(&read_file_to_lines("input/day03.txt")),
-        113576
-    );
-    assert_eq!(
-        id_of_non_overlapping_claim(&read_file_to_lines("input/day03.txt")),
-        825
-    );
-}
-
-fn day04() {
-    assert_eq!(65489, strategy_one(&read_file_to_lines("input/day04.txt")));
-    assert_eq!(3852, strategy_two(&read_file_to_lines("input/day04.txt")));
-}
-
-fn day05() {
-    assert_eq!(
-        9462,
-        remaining_units_after_reaction(&read_file_to_lines("input/day05.txt")[0])
-    );
-    assert_eq!(
-        4952,
-        length_of_shortest_possible_polymer(&read_file_to_lines("input/day05.txt")[0])
-    );
-}
-
-fn day06() {
-    assert_eq!(
-        4589,
-        size_of_largest_finite_area(read_file_to_lines("input/day06.txt"))
-    );
-    assert_eq!(
-        40252,
-        size_of_area_with_max_total_distance_to_all_coords(
-            read_file_to_lines("input/day06.txt"),
-            10_000
-        )
-    );
-}
-
-fn day07() {
-    assert_eq!(
-        "JNOIKSYABEQRUVWXGTZFDMHLPC",
-        order_of_steps(&read_file_to_lines("input/day07.txt"))
-    );
-    assert_eq!(
-        1099,
-        count_seconds(&read_file_to_lines("input/day07.txt"), 5, 60)
-    );
-}
-
-fn day08() {
-    assert_eq!(
-        42146,
-        input_metadata_sum(&read_file_to_lines("input/day08.txt")[0])
-    );
-    assert_eq!(
-        26753,
-        input_value(&read_file_to_lines("input/day08.txt")[0])
-    );
-}
-
-fn day09() {
-    assert_eq!(374690, high_score(477, 70851));
-    assert_eq!(3_009_951_158, high_score(477, 7_085_100));
-}
-
-fn day10() {
-    let input = &read_file_to_lines("input/day10.txt");
-    assert_eq!(10511, message(input).1);
-}
-
-fn day11() {
-    assert_eq!((28, 235, 87), largest_total_power_3x3_square(8199));
-    assert_eq!(
-        (119, 234, 272, 18),
-        largest_total_power_variable_size_square(8199)
-    );
-}
-
-fn day12() {
-    assert_eq!(
-        2063,
-        number_of_plants_after_20_gens(&read_file_to_lines("input/day12.txt"))
-    );
-    assert_eq!(
-        1_600_000_000_328,
-        number_of_plants_after_generations(&read_file_to_lines("input/day12.txt"), 50_000_000_000)
-    );
-}
-
-fn day13() {
-    assert_eq!(
-        (102, 114),
-        location_of_first_crash(&read_file_to_lines("input/day13.txt"))
-    );
-    assert_eq!(
-        (146, 87),
-        location_of_last_cart(&read_file_to_lines("input/day13.txt"))
-    );
-}
-
-fn day14() {
-    assert_eq!("1411383621", score_of_10_recipes_after(760_221));
-    assert_eq!(20177474, recipe_count_until_this_score_appears("760_221"));
-}
-
-fn day15() {
-    assert_eq!(
-        207_059,
-        Grid::from(&read_file_to_lines("input/day15.txt")).play_until_no_enemies_remain()
-    );
-    assert_eq!(
-        49_120,
-        Grid::from(&read_file_to_lines("input/day15.txt"))
-            .play_with_increasing_elf_attack_power_until_elves_win_without_a_single_loss()
-    );
-}
-
-fn day16() {
-    assert_eq!(
-        605,
-        number_of_samples_matching_3_or_more_opcodes(&read_file_to_lines("input/day16.txt"))
-    );
-    assert_eq!(
-        653,
-        figure_out_op_code_numbers_and_run_program(&read_file_to_lines("input/day16.txt"))
-    );
-}
-
-fn day17() {
-    let mut ground = Ground::from(read_file_to_lines("input/day17.txt").as_slice());
-    let tiles_reachable_by_water = ground.tiles_reachable_by_water();
-    assert_eq!(31949, tiles_reachable_by_water);
-
-    let mut ground = Ground::from(read_file_to_lines("input/day17.txt").as_slice());
-    let retained_water_count = ground.water_retained_when_spring_runs_dry();
-    assert_eq!(26384, retained_water_count);
-}
-
-fn day18() {
-    let mut grid = LumberCollectionArea::from(read_file_to_lines("input/day18.txt").as_slice());
-    grid.run(10);
-    let (trees, lumberyards) = grid.tree_and_lumberyard_count();
-    assert_eq!(605_154, trees * lumberyards);
-
-    let mut grid = LumberCollectionArea::from(read_file_to_lines("input/day18.txt").as_slice());
-    grid.run(1_000_000_000);
-    let (trees, lumberyards) = grid.tree_and_lumberyard_count();
-    assert_eq!(200_364, trees * lumberyards);
-}
-
-fn day19() {
-    let program = read_file_to_lines("input/day19.txt");
-    assert_eq!(1872, Device::default().run_program(&program));
-    assert_eq!(
-        18_992_592, // 1 + 2 + 5 + 10 + 1_055_143 + 2_110_286 + 5_275_715 + 10_551_430,
-        sum_of_divisors(10_551_430)
-    );
-}
-
-fn day20() {
-    let base = Base::from(read_file_to_lines("input/day20.txt")[0].as_str());
-    assert_eq!(4360, base.furthest_room_from_start());
-
-    let base = Base::from(read_file_to_lines("input/day20.txt")[0].as_str());
-    assert_eq!(8509, base.number_of_rooms_at_least_1000_doors_away());
-}
-
-fn day21() {
-    let halting_value = *reversed_day21program(1).first().unwrap();
-    assert_eq!(103548, halting_value);
-
-    let halting_values = reversed_day21program(usize::MAX);
-    assert_eq!(14256686, *halting_values.last().unwrap());
-}
-
-fn day22() {
-    let mut cave = full_cave();
-    assert_eq!(10115, cave.risk_level());
-
-    let mut cave = full_cave();
-    assert_eq!(990, cave.shortest_path_len());
-}
-
-fn day23() {
-    assert_eq!(
-        417,
-        count_nanobots_in_signal_range(read_file_to_lines("input/day23.txt"))
-    );
-
-    assert_eq!(
-        112997634,
-        distance_to_origin_from_point_within_range_of_most_nanobots(read_file_to_lines(
-            "input/day23.txt"
-        ))
-    );
-}
-
-fn day24() {
-    let lines = read_file_to_lines("input/day24.txt");
-    let unit_count_of_winning_army = fight_until_one_army_left(lines);
-    assert_eq!(
-        3186 + 1252 + 2241 + 2590 + 1650 + 7766 + 1790 + 264 + 2257, // 22996
-        unit_count_of_winning_army
-    );
-
-    let lines = read_file_to_lines("input/day24.txt");
-    let unit_count_of_winning_army = fight_until_army1_wins_with_smallest_possible_boost(lines);
-    assert_eq!(
-        935 + 857 + 2535, // 4327
-        unit_count_of_winning_army
-    );
-}
-
-fn day25() {
-    assert_eq!(
-        399,
-        number_of_constellations(&read_file_to_lines("input/day25.txt"))
-    );
 }

@@ -1,4 +1,12 @@
-pub(crate) fn score_of_10_recipes_after(count: usize) -> String {
+pub(crate) fn day14_part1() -> String {
+    score_of_10_recipes_after(760_221)
+}
+
+pub(crate) fn day14_part2() -> usize {
+    recipe_count_until_this_score_appears("760_221")
+}
+
+fn score_of_10_recipes_after(count: usize) -> String {
     let mut list = Vec::with_capacity(count + 10 + 1);
     list.push(3);
     list.push(7);
@@ -25,7 +33,7 @@ pub(crate) fn score_of_10_recipes_after(count: usize) -> String {
         .join("")
 }
 
-pub(crate) fn recipe_count_until_this_score_appears<T: AsRef<str>>(score: T) -> usize {
+fn recipe_count_until_this_score_appears<T: AsRef<str>>(score: T) -> usize {
     let digits = score
         .as_ref()
         .chars()
@@ -101,7 +109,7 @@ mod tests {
 
     #[test]
     fn part1() {
-        assert_eq!("1411383621", score_of_10_recipes_after(760_221));
+        assert_eq!("1411383621", day14_part1());
     }
 
     #[test]
@@ -126,6 +134,6 @@ mod tests {
 
     #[test]
     fn part2() {
-        assert_eq!(20177474, recipe_count_until_this_score_appears("760_221"));
+        assert_eq!(20_177_474, day14_part2());
     }
 }

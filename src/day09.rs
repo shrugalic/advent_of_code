@@ -1,3 +1,11 @@
+pub(crate) fn day9_part1() -> Score {
+    high_score(477, 70851)
+}
+
+pub(crate) fn day9_part2() -> Score {
+    high_score(477, 7_085_100)
+}
+
 type PlayerCount = usize;
 type Score = usize;
 type Marble = usize;
@@ -12,7 +20,7 @@ impl Neighbors {
     }
 }
 
-pub(crate) fn high_score(players: PlayerCount, last_marble: Score) -> Score {
+fn high_score(players: PlayerCount, last_marble: Score) -> Score {
     let mut current: Marble = 0;
     // linked_marbles works sort of like a doubly linked list, to keep track of the neighboring
     // marbles in both directions (counter-clockwise and clockwise). Its index corresponds to the
@@ -71,11 +79,11 @@ mod tests {
 
     #[test]
     fn part_1() {
-        assert_eq!(374_690, high_score(477, 70_851));
+        assert_eq!(374_690, day9_part1());
     }
 
     #[test]
     fn part_2() {
-        assert_eq!(3_009_951_158, high_score(477, 7_085_100));
+        assert_eq!(3_009_951_158, day9_part2());
     }
 }

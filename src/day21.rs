@@ -1,5 +1,13 @@
 use crate::opcode::Number;
 
+pub(crate) fn day21_part1() -> Number {
+    *reversed_day21program(1).first().unwrap()
+}
+pub(crate) fn day21_part2() -> Number {
+    let halting_values = reversed_day21program(usize::MAX);
+    *halting_values.last().unwrap()
+}
+
 pub(crate) fn reversed_day21program(limit: usize) -> Vec<Number> {
     let mut halting_values = vec![];
 
@@ -31,19 +39,20 @@ pub(crate) fn reversed_day21program(limit: usize) -> Vec<Number> {
 mod tests {
     use super::*;
     use crate::device::Device;
-    use line_reader::read_file_to_lines;
+    use crate::parse;
+
+    const INPUT: &str = include_str!("../input/day21.txt");
 
     #[test]
     fn part1() {
-        let halting_value = *reversed_day21program(1).first().unwrap();
-        assert_eq!(103548, halting_value);
+        assert_eq!(103_548, day21_part1());
     }
 
     #[test]
     fn compare_instructions_with_reversed_program() {
         let limit = 10;
 
-        let program = read_file_to_lines("input/day21.txt");
+        let program = parse(INPUT);
         let mut device = Device::default();
         let halting_values_from_instructions = device.halting_values(&program, 28, 4, limit);
 
@@ -57,12 +66,7 @@ mod tests {
     // #[test] // slow at ~5 minutes
     #[allow(dead_code)]
     fn part2_with_instructions() {
-        let program = read_file_to_lines("input/day21.txt");
-        let mut device = Device::default();
-        let halting_values = device.halting_values(&program, 28, 4, usize::MAX - 1);
-
-        println!("{} values", halting_values.len());
-        assert_eq!(14256686, *halting_values.last().unwrap());
+        assert_eq!(14_256_686, day21_part2());
     }
 
     #[test]

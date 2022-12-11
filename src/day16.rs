@@ -1,11 +1,22 @@
 use crate::opcode::{Number, Op, Register, Values, ALL_OPS};
+use crate::parse;
 use std::collections::{HashMap, HashSet};
+
+const INPUT: &str = include_str!("../input/day16.txt");
+
+pub(crate) fn day16_part1() -> usize {
+    number_of_samples_matching_3_or_more_opcodes(&parse(INPUT))
+}
+
+pub(crate) fn day16_part2() -> usize {
+    figure_out_op_code_numbers_and_run_program(&parse(INPUT))
+}
 
 type OpCode = Number;
 type Instruction = (OpCode, Values);
 type Sample = (Register, Instruction, Register);
 
-pub(crate) fn number_of_samples_matching_3_or_more_opcodes(input: &[String]) -> usize {
+pub(crate) fn number_of_samples_matching_3_or_more_opcodes(input: &[&str]) -> usize {
     let (samples, _program) = parse_input(input);
 
     samples
@@ -14,7 +25,7 @@ pub(crate) fn number_of_samples_matching_3_or_more_opcodes(input: &[String]) -> 
         .count()
 }
 
-pub(crate) fn figure_out_op_code_numbers_and_run_program(input: &[String]) -> usize {
+pub(crate) fn figure_out_op_code_numbers_and_run_program(input: &[&str]) -> usize {
     let (samples, program) = parse_input(input);
 
     let hints: Vec<(OpCode, HashSet<Op>)> =
@@ -53,7 +64,7 @@ fn work_out_op_code_to_op_mapping(mut hints: Vec<(OpCode, HashSet<Op>)>) -> Hash
     op_by_code
 }
 
-fn parse_input(input: &[String]) -> (Vec<Sample>, Vec<Instruction>) {
+fn parse_input(input: &[&str]) -> (Vec<Sample>, Vec<Instruction>) {
     // samples are divided by single empty lines from each other
     let parts = input.split(|line| line.is_empty());
     // after the samples there are 3 empty lines, so the parts from above
@@ -63,12 +74,12 @@ fn parse_input(input: &[String]) -> (Vec<Sample>, Vec<Instruction>) {
         .take_while(|slice| !slice.is_empty())
         .map(|sample| parse_sample(sample))
         .collect();
-    let instructions: &[String] = parts.skip_while(|slice| !slice.is_empty()).nth(2).unwrap();
+    let instructions: &[&str] = parts.skip_while(|slice| !slice.is_empty()).nth(2).unwrap();
     let program = parse_program(instructions);
     (samples, program)
 }
 
-fn parse_sample(sample: &[String]) -> (Register, Instruction, Register) {
+fn parse_sample(sample: &[&str]) -> (Register, Instruction, Register) {
     let before = sample[0]
         .trim_start_matches("Before: [")
         .trim_end_matches(']')
@@ -88,7 +99,7 @@ fn parse_sample(sample: &[String]) -> (Register, Instruction, Register) {
     (before, instr, after)
 }
 
-fn parse_program(instructions: &[String]) -> Vec<Instruction> {
+fn parse_program(instructions: &[&str]) -> Vec<Instruction> {
     instructions
         .iter()
         .map(|instr| parse_instruction(instr))
@@ -124,7 +135,7 @@ fn op_codes_matching_sample(sample: Sample) -> (OpCode, HashSet<Op>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::parse;
 
     const EXAMPLE: &str = "\
 Before: [3, 2, 1, 1]
@@ -137,23 +148,17 @@ After:  [3, 2, 2, 1]";
             .iter()
             .cloned()
             .collect();
-        let sample = parse_sample(&read_str_to_lines(EXAMPLE));
+        let sample = parse_sample(&parse(EXAMPLE));
         assert_eq!(ops, op_codes_matching_sample(sample).1);
     }
 
     #[test]
     fn part1() {
-        assert_eq!(
-            605,
-            number_of_samples_matching_3_or_more_opcodes(&read_file_to_lines("input/day16.txt"))
-        );
+        assert_eq!(605, day16_part1());
     }
 
     #[test]
     fn part2() {
-        assert_eq!(
-            653,
-            figure_out_op_code_numbers_and_run_program(&read_file_to_lines("input/day16.txt"))
-        );
+        assert_eq!(653, day16_part2());
     }
 }

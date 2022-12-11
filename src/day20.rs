@@ -1,4 +1,17 @@
+use crate::parse;
 use std::fmt::{Debug, Formatter};
+
+const INPUT: &str = include_str!("../input/day20.txt");
+
+pub(crate) fn day20_part1() -> usize {
+    let base = Base::from(parse(INPUT)[0]);
+    base.furthest_room_from_start()
+}
+
+pub(crate) fn day20_part2() -> usize {
+    let base = Base::from(parse(INPUT)[0]);
+    base.number_of_rooms_at_least_1000_doors_away()
+}
 
 type Coord = isize;
 type X = Coord;
@@ -291,7 +304,6 @@ impl Base {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_file_to_lines;
 
     const EXAMPLE: &str = "\
 #####
@@ -380,13 +392,11 @@ mod tests {
 
     #[test]
     fn part1() {
-        let base = Base::from(read_file_to_lines("input/day20.txt")[0].as_str());
-        assert_eq!(4360, base.furthest_room_from_start());
+        assert_eq!(4_360, day20_part1());
     }
 
     #[test]
     fn part2() {
-        let base = Base::from(read_file_to_lines("input/day20.txt")[0].as_str());
-        assert_eq!(8509, base.number_of_rooms_at_least_1000_doors_away());
+        assert_eq!(8_509, day20_part2());
     }
 }

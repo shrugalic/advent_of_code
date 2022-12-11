@@ -1,6 +1,17 @@
+use crate::parse;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::ops::{Add, Div, RangeInclusive};
+
+const INPUT: &str = include_str!("../input/day23.txt");
+
+pub(crate) fn day23_part1() -> usize {
+    count_nanobots_in_signal_range(parse(INPUT))
+}
+
+pub(crate) fn day23_part2() -> usize {
+    distance_to_origin_from_point_within_range_of_most_nanobots(parse(INPUT))
+}
 
 type Coord = isize;
 type Radius = usize;
@@ -75,8 +86,8 @@ impl Nanobot {
     }
 }
 
-impl From<String> for Nanobot {
-    fn from(s: String) -> Self {
+impl From<&str> for Nanobot {
+    fn from(s: &str) -> Self {
         let (pos, r) = s.split_once(">, r=").unwrap();
         let pos: Vec<Coord> = pos
             .trim_start_matches("pos=<")
@@ -89,7 +100,7 @@ impl From<String> for Nanobot {
     }
 }
 
-pub(crate) fn count_nanobots_in_signal_range(input: Vec<String>) -> usize {
+pub(crate) fn count_nanobots_in_signal_range(input: Vec<&str>) -> usize {
     let nanobots: Vec<Nanobot> = input.into_iter().map(Nanobot::from).collect();
     let signal = nanobots.iter().max_by_key(|n| n.radius).unwrap();
 
@@ -141,7 +152,7 @@ impl Ord for Candidate {
 }
 
 pub(crate) fn distance_to_origin_from_point_within_range_of_most_nanobots(
-    input: Vec<String>,
+    input: Vec<&str>,
 ) -> usize {
     let bots: Vec<Nanobot> = input.into_iter().map(Nanobot::from).collect();
 
@@ -228,7 +239,7 @@ fn range_of_center(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::parse;
 
     const EXAMPLE_1: &str = "\
 pos=<0,0,0>, r=4
@@ -251,37 +262,24 @@ pos=<10,10,10>, r=5";
 
     #[test]
     fn part1_example_count_nanobots_in_signal_range() {
-        assert_eq!(
-            7,
-            count_nanobots_in_signal_range(read_str_to_lines(EXAMPLE_1))
-        );
+        assert_eq!(7, count_nanobots_in_signal_range(parse(EXAMPLE_1)));
     }
 
     #[test]
     fn part1_count_nanobots_in_signal_range() {
-        assert_eq!(
-            417,
-            count_nanobots_in_signal_range(read_file_to_lines("input/day23.txt"))
-        );
+        assert_eq!(417, day23_part1());
     }
 
     #[test]
     fn part2_example_distance_to_origin_from_point_withing_range_of_most_nanobots() {
         assert_eq!(
             36,
-            distance_to_origin_from_point_within_range_of_most_nanobots(read_str_to_lines(
-                EXAMPLE_2
-            ))
+            distance_to_origin_from_point_within_range_of_most_nanobots(parse(EXAMPLE_2))
         );
     }
 
     #[test]
-    fn part2_distance_to_origin_from_point_withing_range_of_most_nanobots() {
-        assert_eq!(
-            112997634,
-            distance_to_origin_from_point_within_range_of_most_nanobots(read_file_to_lines(
-                "input/day23.txt"
-            ))
-        );
+    fn part2() {
+        assert_eq!(112_997_634, day23_part2());
     }
 }

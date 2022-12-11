@@ -1,10 +1,20 @@
+use crate::parse;
 use std::collections::HashMap;
 use std::ops::Range;
+
+const INPUT: &str = include_str!("../input/day04.txt");
 
 type SleepPhase = Range<usize>;
 type SleepPhases = Vec<SleepPhase>;
 
-pub(crate) fn strategy_one(input: &[String]) -> usize {
+pub(crate) fn day4_part1() -> usize {
+    strategy_one(&parse(INPUT))
+}
+pub(crate) fn day4_part2() -> usize {
+    strategy_two(&parse(INPUT))
+}
+
+fn strategy_one(input: &[&str]) -> usize {
     let shifts = split_into_guard_shifts(input);
     let sleep_phases_by_guard_id = sleep_phases_by_guard_id(shifts);
     let guard = find_longest_sleeping_guard(&sleep_phases_by_guard_id);
@@ -14,7 +24,7 @@ pub(crate) fn strategy_one(input: &[String]) -> usize {
     *guard.0 * minute
 }
 
-pub(crate) fn strategy_two(input: &[String]) -> usize {
+fn strategy_two(input: &[&str]) -> usize {
     let shifts = split_into_guard_shifts(input);
     let sleep_phases_by_guard_id = sleep_phases_by_guard_id(shifts);
     let guard = find_most_often_sleeping_guard(&sleep_phases_by_guard_id);
@@ -65,7 +75,7 @@ fn sleep_phases_by_guard_id(shifts: Vec<Vec<String>>) -> HashMap<usize, SleepPha
     sleep_phases_by_guard_id
 }
 
-fn split_into_guard_shifts(input: &[String]) -> Vec<Vec<String>> {
+fn split_into_guard_shifts(input: &[&str]) -> Vec<Vec<String>> {
     let mut sorted = input.to_vec();
     sorted.sort();
     let joined = sorted.join("\n");
@@ -135,7 +145,7 @@ fn extract_minutes(line: &str) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::parse;
 
     const EXAMPLE1: &str = "[1518-11-01 00:00] Guard #10 begins shift
 [1518-11-01 00:05] falls asleep
@@ -157,21 +167,21 @@ mod tests {
 
     #[test]
     fn part_1_example_1() {
-        assert_eq!(240, strategy_one(&read_str_to_lines(EXAMPLE1)));
+        assert_eq!(240, strategy_one(&parse(EXAMPLE1)));
     }
 
     #[test]
     fn part_1() {
-        assert_eq!(65489, strategy_one(&read_file_to_lines("input/day04.txt")));
+        assert_eq!(65489, strategy_one(&parse(INPUT)));
     }
 
     #[test]
     fn part_2_example_1() {
-        assert_eq!(4455, strategy_two(&read_str_to_lines(EXAMPLE1)));
+        assert_eq!(4455, strategy_two(&parse(EXAMPLE1)));
     }
 
     #[test]
     fn part_2() {
-        assert_eq!(3852, strategy_two(&read_file_to_lines("input/day04.txt")));
+        assert_eq!(3852, strategy_two(&parse(INPUT)));
     }
 }

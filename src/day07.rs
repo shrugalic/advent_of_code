@@ -1,4 +1,15 @@
+use crate::parse;
 use std::collections::HashSet;
+
+const INPUT: &str = include_str!("../input/day07.txt");
+
+pub(crate) fn day7_part1() -> String {
+    order_of_steps(&parse(INPUT))
+}
+
+pub(crate) fn day7_part2() -> usize {
+    count_seconds(&parse(INPUT), 5, 60)
+}
 
 type Index = u8;
 type Step = char;
@@ -12,7 +23,7 @@ type Worker = (Step, WorkRemaining);
 trait ToInstruction {
     fn to_instruction(&self) -> Instruction;
 }
-impl ToInstruction for String {
+impl ToInstruction for &str {
     fn to_instruction(&self) -> Instruction {
         if let Some((req, follow_up)) = self.split_once(" must be finished before step ") {
             (
@@ -48,19 +59,15 @@ impl ToStep for &str {
     }
 }
 
-pub fn order_of_steps(input: &[String]) -> String {
+fn order_of_steps(input: &[&str]) -> String {
     order_and_duration(input, 1, 0).0
 }
-pub fn count_seconds(input: &[String], worker_count: u8, base_duration: u8) -> usize {
+fn count_seconds(input: &[&str], worker_count: u8, base_duration: u8) -> usize {
     order_and_duration(input, worker_count, base_duration).1
 }
 
-pub fn order_and_duration(
-    input: &[String],
-    worker_count: u8,
-    base_duration: u8,
-) -> (String, usize) {
-    let instructions: Vec<Instruction> = input.iter().map(String::to_instruction).collect();
+pub fn order_and_duration(input: &[&str], worker_count: u8, base_duration: u8) -> (String, usize) {
+    let instructions: Vec<Instruction> = input.iter().map(|&s| s.to_instruction()).collect();
     // println!("{} instructions", instructions.len());
     let unique_steps: HashSet<Step> = instructions
         .iter()
@@ -159,7 +166,7 @@ fn get_next_step(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::parse;
 
     #[test]
     fn test_to_index() {
@@ -181,27 +188,21 @@ Step F must be finished before step E can begin.";
 
     #[test]
     fn example_1() {
-        assert_eq!("CABDFE", order_of_steps(&read_str_to_lines(EXAMPLE1)));
+        assert_eq!("CABDFE", order_of_steps(&parse(EXAMPLE1)));
     }
 
     #[test]
     fn part_1() {
-        assert_eq!(
-            "JNOIKSYABEQRUVWXGTZFDMHLPC",
-            order_of_steps(&read_file_to_lines("input/day07.txt"))
-        );
+        assert_eq!("JNOIKSYABEQRUVWXGTZFDMHLPC", day7_part1());
     }
 
     #[test]
     fn part_2_example_1() {
-        assert_eq!(15, count_seconds(&read_str_to_lines(EXAMPLE1), 2, 0));
+        assert_eq!(15, count_seconds(&parse(EXAMPLE1), 2, 0));
     }
 
     #[test]
     fn part_2() {
-        assert_eq!(
-            1099,
-            count_seconds(&read_file_to_lines("input/day07.txt"), 5, 60)
-        );
+        assert_eq!(1_099, day7_part2());
     }
 }

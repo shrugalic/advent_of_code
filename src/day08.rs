@@ -1,10 +1,22 @@
+use crate::parse;
+
 type Entry = usize;
 type NodeCount = Entry;
 type DataCount = Entry;
 type Metadata = Entry;
 type ChildValue = Entry;
 
-pub(crate) fn input_metadata_sum(input: &str) -> Metadata {
+const INPUT: &str = include_str!("../input/day08.txt");
+
+pub(crate) fn day8_part1() -> Metadata {
+    input_metadata_sum(parse(INPUT)[0])
+}
+
+pub(crate) fn day8_part2() -> Metadata {
+    input_value(parse(INPUT)[0])
+}
+
+fn input_metadata_sum(input: &str) -> Metadata {
     let entries: Vec<Entry> = to_vec(input);
     entries_metadata_sum(&entries, 1)
 }
@@ -39,7 +51,7 @@ fn node_metadata_sum(data_len: DataCount, tail: &[Entry]) -> (Metadata, &[Entry]
     (metadata.iter().sum(), tail)
 }
 
-pub(crate) fn input_value(input: &str) -> Metadata {
+fn input_value(input: &str) -> Metadata {
     let entries: Vec<Entry> = to_vec(input);
     entries_value(&entries, 1)
 }
@@ -78,7 +90,7 @@ fn tree_value(entries: &[Entry], sibling_count: NodeCount) -> (Vec<ChildValue>, 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_file_to_lines;
+    use crate::parse;
 
     const EXAMPLE_1: &str = "2 3 0 3 10 11 12 1 1 0 1 99 2 1 1 2";
 
@@ -127,10 +139,7 @@ mod tests {
 
     #[test]
     fn part_1() {
-        assert_eq!(
-            42146,
-            input_metadata_sum(&read_file_to_lines("input/day08.txt")[0])
-        );
+        assert_eq!(42146, input_metadata_sum(&parse(INPUT)[0]));
     }
 
     #[test]
@@ -140,9 +149,6 @@ mod tests {
 
     #[test]
     fn part_2() {
-        assert_eq!(
-            26753,
-            input_value(&read_file_to_lines("input/day08.txt")[0])
-        );
+        assert_eq!(26753, input_value(&parse(INPUT)[0]));
     }
 }

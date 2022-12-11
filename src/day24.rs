@@ -1,5 +1,19 @@
 use std::cmp::Ordering;
 
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day24.txt");
+
+pub(crate) fn day24_part1() -> usize {
+    let lines = parse(INPUT);
+    fight_until_one_army_left(lines)
+}
+
+pub(crate) fn day24_part2() -> usize {
+    let lines = parse(INPUT);
+    fight_until_army1_wins_with_smallest_possible_boost(lines)
+}
+
 type GroupIdx = usize;
 type ArmyName = String;
 
@@ -129,8 +143,8 @@ struct Army {
     name: ArmyName,
     groups: Vec<Group>,
 }
-impl From<&[String]> for Army {
-    fn from(input: &[String]) -> Self {
+impl From<&[&str]> for Army {
+    fn from(input: &[&str]) -> Self {
         let name = input[0].trim_end_matches(':').to_string();
         let groups = input.iter().skip(1).map(Group::from).collect();
         Army { name, groups }
@@ -219,13 +233,13 @@ impl GroupId {
     }
 }
 
-pub(crate) fn fight_until_one_army_left(lines: Vec<String>) -> usize {
+fn fight_until_one_army_left(lines: Vec<&str>) -> usize {
     let (army1, army2) = parse_input(lines);
     fight_armies_until_only_one_left(army1, army2).unit_count()
 }
 
 #[allow(unused)]
-pub(crate) fn fight_until_army1_wins_with_smallest_possible_boost(lines: Vec<String>) -> usize {
+fn fight_until_army1_wins_with_smallest_possible_boost(lines: Vec<&str>) -> usize {
     let (orig_army1, orig_army2) = parse_input(lines);
     let mut damage_boost = 1;
     loop {
@@ -240,13 +254,13 @@ pub(crate) fn fight_until_army1_wins_with_smallest_possible_boost(lines: Vec<Str
 }
 
 #[allow(unused)]
-fn fight_until_one_army_left_with_boost(lines: Vec<String>, army1_damage_boost: usize) -> usize {
+fn fight_until_one_army_left_with_boost(lines: Vec<&str>, army1_damage_boost: usize) -> usize {
     let (mut army1, army2) = parse_input(lines);
     army1.apply_damage_boost(army1_damage_boost);
     fight_armies_until_only_one_left(army1, army2).unit_count()
 }
 
-fn parse_input(lines: Vec<String>) -> (Army, Army) {
+fn parse_input(lines: Vec<&str>) -> (Army, Army) {
     let (army1, army2) = lines.split_at(lines.iter().position(|s| s.is_empty()).unwrap());
     let (army1, army2) = (Army::from(army1), Army::from(&army2[1..]));
     (army1, army2)
@@ -406,8 +420,9 @@ fn mut_group_of<'a, 'b>(
 
 #[cfg(test)]
 mod tests {
+    use crate::parse;
+
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
 
     #[test]
     fn parse_group() {
@@ -437,35 +452,28 @@ Infection:
 
     #[test]
     fn part1_example() {
-        let lines = read_str_to_lines(EXAMPLE);
+        let lines = parse(EXAMPLE);
         let unit_count_of_winning_army = fight_until_one_army_left(lines);
         assert_eq!(782 + 4434, unit_count_of_winning_army);
     }
 
     #[test]
     fn part1_input() {
-        let lines = read_file_to_lines("input/day24.txt");
-        let unit_count_of_winning_army = fight_until_one_army_left(lines);
         assert_eq!(
             3186 + 1252 + 2241 + 2590 + 1650 + 7766 + 1790 + 264 + 2257, // 22996
-            unit_count_of_winning_army
+            day24_part1()
         );
     }
 
     #[test]
     fn part2_example() {
-        let lines = read_str_to_lines(EXAMPLE);
+        let lines = parse(EXAMPLE);
         let unit_count_of_winning_army = fight_until_one_army_left_with_boost(lines, 1570);
         assert_eq!(51, unit_count_of_winning_army);
     }
 
     #[test]
-    fn part2_input() {
-        let lines = read_file_to_lines("input/day24.txt");
-        let unit_count_of_winning_army = fight_until_army1_wins_with_smallest_possible_boost(lines);
-        assert_eq!(
-            935 + 857 + 2535, // 4327
-            unit_count_of_winning_army
-        );
+    fn part2() {
+        assert_eq!(935 + 857 + 2535 /* 4327 */, day24_part2());
     }
 }

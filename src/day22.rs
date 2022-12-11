@@ -3,6 +3,14 @@ use std::collections::{BinaryHeap, HashMap};
 use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
 
+pub(crate) fn day22_part1() -> RiskLevel {
+    full_cave().risk_level()
+}
+
+pub(crate) fn day22_part2() -> usize {
+    full_cave().shortest_path_len()
+}
+
 const DEPTH: usize = 3066;
 const TARGET: (Coord, Coord) = (13, 726);
 
@@ -392,9 +400,8 @@ M=.|=.|.|=.|=|=.
     }
 
     #[test]
-    fn part1_risk_level() {
-        let mut cave = full_cave();
-        assert_eq!(10115, cave.risk_level());
+    fn part1() {
+        assert_eq!(10_115, day22_part1());
     }
 
     #[test]
@@ -404,9 +411,8 @@ M=.|=.|.|=.|=|=.
     }
 
     #[test]
-    fn part2_shortest_path_len() {
-        let mut cave = full_cave();
-        assert_eq!(990, cave.shortest_path_len());
+    fn part2() {
+        assert_eq!(990, day22_part2());
     }
 
     #[test]

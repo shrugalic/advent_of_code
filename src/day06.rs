@@ -1,5 +1,16 @@
+use crate::parse;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
+
+pub(crate) fn day6_part1() -> usize {
+    size_of_largest_finite_area(parse(INPUT))
+}
+
+pub(crate) fn day6_part2() -> usize {
+    size_of_area_with_max_total_distance_to_all_coords(parse(INPUT), 10_000)
+}
+
+const INPUT: &str = include_str!("../input/day06.txt");
 
 type X = usize;
 type Y = usize;
@@ -66,7 +77,7 @@ impl Loc {
     }
 }
 
-pub fn size_of_largest_finite_area(input: Vec<String>) -> usize {
+fn size_of_largest_finite_area(input: Vec<&str>) -> usize {
     let coords: Vec<_> = input.iter().map(Loc::from).collect();
     let (min, max) = (Loc::min(&coords), Loc::max(&coords));
     // println!("min = {}, max = {}", min, max);
@@ -145,10 +156,7 @@ fn index_of_closest_coord(distances: &[(Distance, Index)]) -> Option<Index> {
     }
 }
 
-pub fn size_of_area_with_max_total_distance_to_all_coords(
-    input: Vec<String>,
-    total: Distance,
-) -> usize {
+fn size_of_area_with_max_total_distance_to_all_coords(input: Vec<&str>, total: Distance) -> usize {
     let coords: Vec<_> = input.iter().map(Loc::from).collect();
     let (min, max) = (Loc::min(&coords), Loc::max(&coords));
     count_locations_with_sum_of_distances_to_all_cords_within_total(&coords, &min, &max, total)
@@ -176,7 +184,7 @@ fn sum_of_distances_to_coords(x: X, y: Y, coords: &[Loc]) -> Distance {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::parse;
 
     const EXAMPLE1: &str = "1, 1
 1, 6
@@ -187,22 +195,19 @@ mod tests {
 
     #[test]
     fn example1() {
-        assert_eq!(17, size_of_largest_finite_area(read_str_to_lines(EXAMPLE1)));
+        assert_eq!(17, size_of_largest_finite_area(parse(EXAMPLE1)));
     }
 
     #[test]
     fn part1() {
-        assert_eq!(
-            4589,
-            size_of_largest_finite_area(read_file_to_lines("input/day06.txt"))
-        );
+        assert_eq!(4589, size_of_largest_finite_area(parse(INPUT)));
     }
 
     #[test]
     fn part2_example1() {
         assert_eq!(
             16,
-            size_of_area_with_max_total_distance_to_all_coords(read_str_to_lines(EXAMPLE1), 32)
+            size_of_area_with_max_total_distance_to_all_coords(parse(EXAMPLE1), 32)
         );
     }
 
@@ -210,10 +215,7 @@ mod tests {
     fn part2() {
         assert_eq!(
             40252,
-            size_of_area_with_max_total_distance_to_all_coords(
-                read_file_to_lines("input/day06.txt"),
-                10_000
-            )
+            size_of_area_with_max_total_distance_to_all_coords(parse(INPUT), 10_000)
         );
     }
 }

@@ -1,6 +1,14 @@
 use rayon::prelude::*;
 use std::ops::RangeInclusive;
 
+pub(crate) fn day11_part1() -> (PowerLevel, Coord, Coord) {
+    largest_total_power_3x3_square(8199)
+}
+
+pub(crate) fn day11_part2() -> (PowerLevel, Coord, Coord, usize) {
+    largest_total_power_variable_size_square(8199)
+}
+
 type Coord = usize;
 type GridSerial = usize;
 type PowerLevel = isize;
@@ -77,7 +85,8 @@ impl PowerLevelSquare {
     }
 
     fn total_power(&self, xs: &[Coord], ys: &[Coord]) -> PowerLevel {
-        if false {
+        let run_slowly = false;
+        if run_slowly {
             // This version is considerably slower than the one below:
             // Size range 30..=30 takes ~5s, 50 ~13s, 100 ~32s, 150 ~42s (single core)
             xs.iter()
@@ -129,7 +138,7 @@ impl PowerLevelSquare {
     }
 }
 
-pub(crate) fn largest_total_power_3x3_square(sn: GridSerial) -> (PowerLevel, Coord, Coord) {
+fn largest_total_power_3x3_square(sn: GridSerial) -> (PowerLevel, Coord, Coord) {
     let power_levels = PowerLevelSquare::new(sn);
     let three_hundred: Vec<Coord> = (1..=300).into_iter().collect();
     three_hundred
@@ -145,9 +154,7 @@ pub(crate) fn largest_total_power_3x3_square(sn: GridSerial) -> (PowerLevel, Coo
         .unwrap()
 }
 
-pub(crate) fn largest_total_power_variable_size_square(
-    sn: GridSerial,
-) -> (PowerLevel, Coord, Coord, usize) {
+fn largest_total_power_variable_size_square(sn: GridSerial) -> (PowerLevel, Coord, Coord, usize) {
     let power_levels = PowerLevelSquare::new(sn);
     let three_hundred = (1..=300).into_iter().collect::<Vec<Coord>>();
     SIZE_RANGE
@@ -216,7 +223,7 @@ mod tests {
 
     #[test]
     fn part1() {
-        assert_eq!((28, 235, 87), largest_total_power_3x3_square(8199));
+        assert_eq!((28, 235, 87), day11_part1());
     }
 
     #[test] // Slow, ~5 minutes
@@ -237,9 +244,6 @@ mod tests {
 
     #[test] // Slow, ~5 minutes
     fn part2() {
-        assert_eq!(
-            (119, 234, 272, 18),
-            largest_total_power_variable_size_square(8199)
-        );
+        assert_eq!((119, 234, 272, 18), day11_part2());
     }
 }

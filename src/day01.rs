@@ -1,10 +1,21 @@
+use crate::parse;
 use std::collections::HashSet;
 
-pub(crate) fn cumulate_frequency_adjustments(input: &[String]) -> isize {
+const INPUT: &str = include_str!("../input/day01.txt");
+
+pub(crate) fn day1_part1() -> isize {
+    cumulate_frequency_adjustments(&parse(INPUT))
+}
+
+pub(crate) fn day1_part2() -> isize {
+    find_first_repeated_frequency(&parse(INPUT))
+}
+
+fn cumulate_frequency_adjustments(input: &[&str]) -> isize {
     input.iter().map(|s| s.parse::<isize>().unwrap()).sum()
 }
 
-pub(crate) fn find_first_repeated_frequency(input: &[String]) -> isize {
+pub(crate) fn find_first_repeated_frequency(input: &[&str]) -> isize {
     let adjustments: Vec<isize> = input.iter().map(|s| s.parse().unwrap()).collect();
     let mut seen: HashSet<isize> = HashSet::new();
     let mut freq = 0;
@@ -23,42 +34,30 @@ pub(crate) fn find_first_repeated_frequency(input: &[String]) -> isize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::parse;
 
-    const EXAMPLE_1: &str = "1
+    const EXAMPLE: &str = "1
 -2
 +3
 +1";
 
     #[test]
     fn example_1() {
-        assert_eq!(
-            cumulate_frequency_adjustments(&read_str_to_lines(EXAMPLE_1)),
-            3
-        );
+        assert_eq!(cumulate_frequency_adjustments(&parse(EXAMPLE)), 3);
     }
 
     #[test]
     fn part_1() {
-        assert_eq!(
-            cumulate_frequency_adjustments(&read_file_to_lines("input/day01.txt")),
-            454
-        );
+        assert_eq!(454, day1_part1());
     }
 
     #[test]
     fn part_2_example_1() {
-        assert_eq!(
-            find_first_repeated_frequency(&read_str_to_lines(EXAMPLE_1)),
-            2
-        );
+        assert_eq!(find_first_repeated_frequency(&parse(EXAMPLE)), 2);
     }
 
     #[test]
     fn part_2() {
-        assert_eq!(
-            find_first_repeated_frequency(&read_file_to_lines("input/day01.txt")),
-            566
-        );
+        assert_eq!(566, day1_part2());
     }
 }

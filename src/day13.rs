@@ -1,5 +1,16 @@
+use crate::parse;
 use std::cmp::Ordering;
 use std::convert::TryFrom;
+
+const INPUT: &str = include_str!("../input/day13.txt");
+
+pub(crate) fn day13_part1() -> Location {
+    location_of_first_crash(&parse(INPUT))
+}
+
+pub(crate) fn day13_part2() -> Location {
+    location_of_last_cart(&parse(INPUT))
+}
 
 type Coord = isize;
 type Location = (Coord, Coord);
@@ -24,7 +35,7 @@ impl From<char> for Track {
     }
 }
 impl Track {
-    fn from_location(loc: &Location, lines: &[String]) -> Track {
+    fn from_location(loc: &Location, lines: &[&str]) -> Track {
         let track_char = lines[loc.1 as usize].chars().nth(loc.0 as usize).unwrap();
         Track::from(track_char)
     }
@@ -125,15 +136,15 @@ impl Choice {
     }
 }
 
-pub(crate) fn location_of_first_crash(lines: &[String]) -> Location {
+pub(crate) fn location_of_first_crash(lines: &[&str]) -> Location {
     location_of_cart(lines, true)
 }
 
-pub(crate) fn location_of_last_cart(lines: &[String]) -> Location {
+pub(crate) fn location_of_last_cart(lines: &[&str]) -> Location {
     location_of_cart(lines, false)
 }
 
-pub(crate) fn location_of_cart(lines: &[String], return_on_first_collision: bool) -> Location {
+pub(crate) fn location_of_cart(lines: &[&str], return_on_first_collision: bool) -> Location {
     let mut carts = initial_cart_locations(lines);
     loop {
         let mut handled_carts: Vec<Cart> = Vec::new();
@@ -173,7 +184,7 @@ pub(crate) fn location_of_cart(lines: &[String], return_on_first_collision: bool
     }
 }
 
-fn initial_cart_locations(lines: &[String]) -> Vec<Cart> {
+fn initial_cart_locations(lines: &[&str]) -> Vec<Cart> {
     lines
         .iter()
         .enumerate()
@@ -194,7 +205,7 @@ fn initial_cart_locations(lines: &[String]) -> Vec<Cart> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::parse;
 
     // The double backslashes are escaped single backslashes,
     // and the \n\ prevents IntelliJ from trimming the end of the line
@@ -208,7 +219,8 @@ mod tests {
 
     #[test]
     fn example_joined_lines_from_file_match_const_str() {
-        let lines = read_file_to_lines("input/day13example.txt").join("\n");
+        const EXAMPLE1_FILE: &str = include_str!("../input/day13/day13example.txt");
+        let lines = parse(EXAMPLE1_FILE).join("\n");
         assert_eq!(EXAMPLE_1, lines);
     }
 
@@ -222,7 +234,7 @@ v
 |
 ^
 |";
-        assert_eq!((0, 3), location_of_first_crash(&read_str_to_lines(track)));
+        assert_eq!((0, 3), location_of_first_crash(&parse(track)));
     }
 
     #[test]
@@ -232,23 +244,17 @@ v
     |
     ^
     |";
-        assert_eq!((4, 0), location_of_first_crash(&read_str_to_lines(track)));
+        assert_eq!((4, 0), location_of_first_crash(&parse(track)));
     }
 
     #[test]
     fn example() {
-        assert_eq!(
-            (7, 3),
-            location_of_first_crash(&read_str_to_lines(EXAMPLE_1))
-        );
+        assert_eq!((7, 3), location_of_first_crash(&parse(EXAMPLE_1)));
     }
 
     #[test]
     fn part1() {
-        assert_eq!(
-            (102, 114),
-            location_of_first_crash(&read_file_to_lines("input/day13.txt"))
-        );
+        assert_eq!((102, 114), day13_part1());
     }
 
     // The double backslashes are escaped single backslashes,
@@ -264,14 +270,11 @@ v
 
     #[test]
     fn part2_example() {
-        assert_eq!((6, 4), location_of_last_cart(&read_str_to_lines(EXAMPLE_2)));
+        assert_eq!((6, 4), location_of_last_cart(&parse(EXAMPLE_2)));
     }
 
     #[test]
     fn part2() {
-        assert_eq!(
-            (146, 87),
-            location_of_last_cart(&read_file_to_lines("input/day13.txt"))
-        );
+        assert_eq!((146, 87), day13_part2());
     }
 }

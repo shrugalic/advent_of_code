@@ -1,15 +1,26 @@
+use crate::parse;
 use std::cmp::min;
 use std::collections::HashMap;
 
-pub(crate) fn product_of_2_and_3_counts(input: &[String]) -> usize {
+const INPUT: &str = include_str!("../input/day02.txt");
+
+pub(crate) fn day2_part1() -> usize {
+    product_of_2_and_3_counts(&parse(INPUT))
+}
+
+pub(crate) fn day2_part2() -> String {
+    differing_letters_of_correct_boxes(&parse(INPUT))
+}
+
+fn product_of_2_and_3_counts(input: &[&str]) -> usize {
     let (twos, threes) = input
-        .iter()
-        .map(count_2_and_3_identical_letters)
+        .into_iter()
+        .map(|&line| count_2_and_3_identical_letters(line))
         .fold((0, 0), |(a, b), (c, d)| (a + c, b + d));
     twos * threes
 }
 
-fn count_2_and_3_identical_letters(line: &String) -> (usize, usize) {
+fn count_2_and_3_identical_letters(line: &str) -> (usize, usize) {
     let mut count_by_letter: HashMap<char, usize> = HashMap::new();
     line.chars().for_each(|c| {
         *count_by_letter.entry(c).or_insert(0) += 1;
@@ -23,7 +34,7 @@ fn count_2_and_3_identical_letters(line: &String) -> (usize, usize) {
     (min(1, count_of(2)), min(1, count_of(3)))
 }
 
-pub(crate) fn differing_letters_of_correct_boxes(input: &[String]) -> String {
+fn differing_letters_of_correct_boxes(input: &[&str]) -> String {
     let mut strings = input.to_vec();
     strings.sort();
     strings
@@ -48,7 +59,7 @@ pub(crate) fn differing_letters_of_correct_boxes(input: &[String]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::parse;
 
     #[test]
     fn count_one_of_each() {
@@ -69,15 +80,12 @@ ababab
 
     #[test]
     fn example_1() {
-        assert_eq!(product_of_2_and_3_counts(&read_str_to_lines(EXAMPLE1)), 12);
+        assert_eq!(product_of_2_and_3_counts(&parse(EXAMPLE1)), 12);
     }
 
     #[test]
     fn part_1() {
-        assert_eq!(
-            product_of_2_and_3_counts(&read_file_to_lines("input/day02.txt")),
-            7936
-        );
+        assert_eq!(7936, day2_part1());
     }
 
     const EXAMPLE2: &str = "abcde
@@ -91,17 +99,11 @@ wvxyz
 
     #[test]
     fn example_2() {
-        assert_eq!(
-            differing_letters_of_correct_boxes(&read_str_to_lines(EXAMPLE2)),
-            "fgij"
-        );
+        assert_eq!(differing_letters_of_correct_boxes(&parse(EXAMPLE2)), "fgij");
     }
 
     #[test]
     fn part_2() {
-        assert_eq!(
-            differing_letters_of_correct_boxes(&read_file_to_lines("input/day02.txt")),
-            "lnfqdscwjyteorambzuchrgpx"
-        );
+        assert_eq!("lnfqdscwjyteorambzuchrgpx", day2_part2());
     }
 }

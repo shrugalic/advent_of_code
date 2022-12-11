@@ -1,9 +1,21 @@
-pub fn remaining_units_after_reaction(input: &str) -> usize {
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day05.txt");
+
+pub(crate) fn day5_part1() -> usize {
+    remaining_units_after_reaction(&parse(INPUT)[0])
+}
+
+pub(crate) fn day5_part2() -> usize {
+    length_of_shortest_possible_polymer(&parse(INPUT)[0])
+}
+
+fn remaining_units_after_reaction(input: &str) -> usize {
     let polymer: Vec<_> = input.chars().map(Some).collect();
     remaining_units_after_fully_reacting(polymer)
 }
 
-pub fn length_of_shortest_possible_polymer(input: &str) -> usize {
+fn length_of_shortest_possible_polymer(input: &str) -> usize {
     let polymer: Vec<_> = input.chars().map(Some).collect();
     // let unique_chars: HashSet<char> = polymer.iter().map(|c| c.unwrap()).collect();
     // println!("{} unique chars {:?}", unique_chars.len(), unique_chars);
@@ -51,7 +63,7 @@ fn are_same_char_different_case(a: char, b: char) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::parse;
 
     const EXAMPLE1: &str = "dabAcCaCBAcCcaDA";
 
@@ -64,33 +76,21 @@ mod tests {
 
     #[test]
     fn example1_part1() {
-        assert_eq!(
-            10,
-            remaining_units_after_reaction(&read_str_to_lines(EXAMPLE1)[0])
-        );
+        assert_eq!(10, remaining_units_after_reaction(&parse(EXAMPLE1)[0]));
     }
 
     #[test]
     fn part1() {
-        assert_eq!(
-            9462,
-            remaining_units_after_reaction(&read_file_to_lines("input/day05.txt")[0])
-        );
+        assert_eq!(9462, remaining_units_after_reaction(&parse(INPUT)[0]));
     }
 
     #[test]
     fn example1_part2() {
-        assert_eq!(
-            4,
-            length_of_shortest_possible_polymer(&read_str_to_lines(EXAMPLE1)[0])
-        );
+        assert_eq!(4, length_of_shortest_possible_polymer(&parse(EXAMPLE1)[0]));
     }
 
     #[test]
     fn part2() {
-        assert_eq!(
-            4952,
-            length_of_shortest_possible_polymer(&read_file_to_lines("input/day05.txt")[0])
-        );
+        assert_eq!(4952, length_of_shortest_possible_polymer(&parse(INPUT)[0]));
     }
 }

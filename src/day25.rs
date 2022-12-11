@@ -1,3 +1,11 @@
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day25.txt");
+
+pub(crate) fn day25_part1() -> usize {
+    number_of_constellations(parse(INPUT))
+}
+
 type Coord = isize;
 struct Point {
     x: Coord,
@@ -6,8 +14,8 @@ struct Point {
     t: Coord,
 }
 
-impl From<&String> for Point {
-    fn from(s: &String) -> Self {
+impl From<&str> for Point {
+    fn from(s: &str) -> Self {
         let n: Vec<isize> = s.split(',').map(|c| c.parse().unwrap()).collect();
         assert_eq!(n.len(), 4);
         Point {
@@ -58,8 +66,8 @@ impl Constellation {
     }
 }
 
-pub(crate) fn number_of_constellations(input: &[String]) -> usize {
-    let mut points: Vec<Point> = input.iter().map(Point::from).collect();
+fn number_of_constellations(input: Vec<&str>) -> usize {
+    let mut points: Vec<Point> = input.into_iter().map(Point::from).collect();
 
     let mut cons: Vec<Constellation> = vec![];
     while let Some(point) = points.pop() {
@@ -74,13 +82,13 @@ pub(crate) fn number_of_constellations(input: &[String]) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::parse;
 
     #[test]
     fn part1_example1() {
         assert_eq!(
             2,
-            number_of_constellations(&read_str_to_lines(
+            number_of_constellations(parse(
                 "\
 0,0,0,0
 3,0,0,0
@@ -98,7 +106,7 @@ mod tests {
     fn part1_example2() {
         assert_eq!(
             4,
-            number_of_constellations(&read_str_to_lines(
+            number_of_constellations(parse(
                 "\
 -1,2,2,0
 0,0,2,-2
@@ -118,7 +126,7 @@ mod tests {
     fn part1_example3() {
         assert_eq!(
             3,
-            number_of_constellations(&read_str_to_lines(
+            number_of_constellations(parse(
                 "\
 1,-1,0,1
 2,0,-1,0
@@ -138,7 +146,7 @@ mod tests {
     fn part1_example4() {
         assert_eq!(
             8,
-            number_of_constellations(&read_str_to_lines(
+            number_of_constellations(parse(
                 "\
 1,-1,-1,-2
 -2,-2,0,1
@@ -156,9 +164,6 @@ mod tests {
 
     #[test]
     fn part1() {
-        assert_eq!(
-            399,
-            number_of_constellations(&read_file_to_lines("input/day25.txt"))
-        );
+        assert_eq!(399, day25_part1());
     }
 }

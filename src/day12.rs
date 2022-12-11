@@ -1,5 +1,16 @@
 use crate::day12::Pot::HasPlant;
+use crate::parse;
 use std::collections::VecDeque;
+
+const INPUT: &str = include_str!("../input/day12.txt");
+
+pub(crate) fn day12_part1() -> isize {
+    number_of_plants_after_20_gens(parse(INPUT))
+}
+
+pub(crate) fn day12_part2() -> isize {
+    number_of_plants_after_generations(parse(INPUT), 50_000_000_000)
+}
 
 #[derive(Copy, Clone, PartialEq)]
 enum Pot {
@@ -18,7 +29,7 @@ impl Pot {
 impl From<char> for Pot {
     fn from(c: char) -> Self {
         match c {
-            '#' => Pot::HasPlant,
+            '#' => HasPlant,
             '.' => Pot::IsEmpty,
             c => panic!("Invalid state '{}'", c),
         }
@@ -117,7 +128,7 @@ fn combination_to_number(combination: Combination) -> usize {
     let binary_string = combination
         .iter()
         .map(|c| match c {
-            Pot::HasPlant => '1',
+            HasPlant => '1',
             Pot::IsEmpty => '0',
         })
         .collect::<String>();
@@ -142,18 +153,18 @@ impl ToString for Rules {
             .collect::<String>()
     }
 }
-impl From<&[String]> for Rules {
-    fn from(notes: &[String]) -> Self {
+impl From<&[&str]> for Rules {
+    fn from(notes: &[&str]) -> Self {
         let mut plant_producing_inputs = [Pot::IsEmpty; 32];
-        notes.iter().for_each(|note: &String| {
+        notes.iter().for_each(|note: &&str| {
             // Example note:
             // ...## => #
             let pots = note[..5].chars().map(Pot::from).collect::<Vec<_>>();
             let combination = &[&pots[0], &pots[1], &pots[2], &pots[3], &pots[4]];
             let result = Pot::from(note[9..].chars().next().unwrap());
-            if matches!(result, Pot::HasPlant) {
+            if matches!(result, HasPlant) {
                 let index = combination_to_number(combination);
-                plant_producing_inputs[index] = Pot::HasPlant;
+                plant_producing_inputs[index] = HasPlant;
             }
         });
         Rules {
@@ -162,11 +173,11 @@ impl From<&[String]> for Rules {
     }
 }
 
-pub(crate) fn number_of_plants_after_20_gens(input: &[String]) -> isize {
+pub(crate) fn number_of_plants_after_20_gens(input: Vec<&str>) -> isize {
     number_of_plants_after_generations(input, 20)
 }
 
-pub(crate) fn number_of_plants_after_generations(input: &[String], total_gens: usize) -> isize {
+pub(crate) fn number_of_plants_after_generations(input: Vec<&str>, total_gens: usize) -> isize {
     let mut pots = Pots::from(input[0].strip_prefix("initial state: ").unwrap());
     let notes = &input[2..];
     let rules = Rules::from(notes);
@@ -186,7 +197,8 @@ pub(crate) fn number_of_plants_after_generations(input: &[String], total_gens: u
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::parse;
+    use Pot::IsEmpty;
 
     const EXAMPLE: &str = "initial state: #..#.#..##......###...###
 
@@ -209,40 +221,22 @@ mod tests {
     fn convert_combination_to_number() {
         assert_eq!(
             3,
-            combination_to_number(&[
-                &Pot::IsEmpty,
-                &Pot::IsEmpty,
-                &Pot::IsEmpty,
-                &Pot::HasPlant,
-                &Pot::HasPlant
-            ])
+            combination_to_number(&[&IsEmpty, &IsEmpty, &IsEmpty, &HasPlant, &HasPlant])
         );
     }
 
     #[test]
     fn example() {
-        assert_eq!(
-            325,
-            number_of_plants_after_20_gens(&read_str_to_lines(EXAMPLE))
-        );
+        assert_eq!(325, number_of_plants_after_20_gens(parse(EXAMPLE)));
     }
 
     #[test]
     fn part1() {
-        assert_eq!(
-            2063,
-            number_of_plants_after_20_gens(&read_file_to_lines("input/day12.txt"))
-        );
+        assert_eq!(2_063, day12_part1());
     }
 
     #[test]
     fn part2() {
-        assert_eq!(
-            1_600_000_000_328,
-            number_of_plants_after_generations(
-                &read_file_to_lines("input/day12.txt"),
-                50_000_000_000
-            )
-        );
+        assert_eq!(1_600_000_000_328, day12_part2());
     }
 }

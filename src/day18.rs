@@ -1,8 +1,26 @@
-use std::collections::hash_map::Entry::Vacant;
-use std::collections::hash_map::{DefaultHasher, Entry};
+use std::collections::hash_map::{DefaultHasher, Entry, Entry::Vacant};
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day18.txt");
+
+pub(crate) fn day18_part1() -> usize {
+    let mut grid = LumberCollectionArea::from(parse(INPUT));
+    grid.run(10);
+    let (trees, lumberyards) = grid.tree_and_lumberyard_count();
+    let result = trees * lumberyards;
+    result
+}
+
+pub(crate) fn day18_part2() -> usize {
+    let mut grid = LumberCollectionArea::from(parse(INPUT));
+    grid.run(1_000_000_000);
+    let (trees, lumberyards) = grid.tree_and_lumberyard_count();
+    let result2 = trees * lumberyards;
+    result2
+}
 type RuntimeMinutes = usize;
 type Coord = usize;
 type X = Coord;
@@ -70,8 +88,8 @@ pub(crate) struct LumberCollectionArea<T: Hash> {
     grid: Vec<Vec<T>>, // rows of T, indexed by [y][x]
 }
 
-impl From<&[String]> for LumberCollectionArea<Acre> {
-    fn from(input: &[String]) -> Self {
+impl From<Vec<&str>> for LumberCollectionArea<Acre> {
+    fn from(input: Vec<&str>) -> Self {
         let grid = input
             .iter()
             .map(|line| line.chars().map(Acre::from).collect())
@@ -150,7 +168,7 @@ impl LumberCollectionArea<Acre> {
             .sum()
     }
 
-    pub(crate) fn tree_and_lumberyard_count(&self) -> (usize, usize) {
+    fn tree_and_lumberyard_count(&self) -> (usize, usize) {
         let trees = self.count(&Acre::Trees);
         let lumberyards = self.count(&Acre::Lumberyard);
         (trees, lumberyards)
@@ -159,18 +177,19 @@ impl LumberCollectionArea<Acre> {
 
 #[cfg(test)]
 mod tests {
+    use crate::parse;
+
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
 
     #[test]
     fn example_to_string() {
-        let grid = LumberCollectionArea::from(read_str_to_lines(EXAMPLE[0]).as_slice());
+        let grid = LumberCollectionArea::from(parse(EXAMPLE[0]));
         assert_eq!(grid.to_string(), EXAMPLE[0]);
     }
 
     #[test]
     fn check_example_every_minute_for_10_minutes() {
-        let mut grid = LumberCollectionArea::from(read_str_to_lines(EXAMPLE[0]).as_slice());
+        let mut grid = LumberCollectionArea::from(parse(EXAMPLE[0]));
         for expected in EXAMPLE.iter().skip(1) {
             grid.run_1_minute();
             assert_eq!(grid.to_string(), *expected);
@@ -179,25 +198,19 @@ mod tests {
 
     #[test]
     fn example_value_after_10_minutes() {
-        let mut grid = LumberCollectionArea::from(read_str_to_lines(EXAMPLE[0]).as_slice());
+        let mut grid = LumberCollectionArea::from(parse(EXAMPLE[0]));
         grid.run(10);
         assert_eq!((37, 31), grid.tree_and_lumberyard_count());
     }
 
     #[test]
     fn part1() {
-        let mut grid = LumberCollectionArea::from(read_file_to_lines("input/day18.txt").as_slice());
-        grid.run(10);
-        let (trees, lumberyards) = grid.tree_and_lumberyard_count();
-        assert_eq!(605_154, trees * lumberyards);
+        assert_eq!(605_154, day18_part1());
     }
 
     #[test]
     fn part2() {
-        let mut grid = LumberCollectionArea::from(read_file_to_lines("input/day18.txt").as_slice());
-        grid.run(1_000_000_000);
-        let (trees, lumberyards) = grid.tree_and_lumberyard_count();
-        assert_eq!(200_364, trees * lumberyards);
+        assert_eq!(200_364, day18_part2());
     }
 
     const EXAMPLE: [&str; 11] = [

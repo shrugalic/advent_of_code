@@ -1,4 +1,16 @@
+use crate::parse;
 use std::fmt::{Debug, Display, Formatter};
+
+const INPUT: &str = include_str!("../input/day15.txt");
+
+pub(crate) fn day15_part1() -> usize {
+    Grid::from(&parse(INPUT)).play_until_no_enemies_remain()
+}
+
+pub(crate) fn day15_part2() -> usize {
+    Grid::from(&parse(INPUT))
+        .play_with_increasing_elf_attack_power_until_elves_win_without_a_single_loss()
+}
 
 type TileRows = Vec<Vec<Tile>>;
 type RoundCount = usize;
@@ -327,8 +339,8 @@ impl Display for Grid {
     }
 }
 
-impl From<&Vec<String>> for Grid {
-    fn from(input: &Vec<String>) -> Self {
+impl From<&Vec<&str>> for Grid {
+    fn from(input: &Vec<&str>) -> Self {
         let grid = input
             .iter()
             .map(|row| row.chars().map(Tile::from).collect())
@@ -425,7 +437,7 @@ impl Tile {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::parse;
 
     const SIMPLE_GRID: &str = "\
 ####
@@ -447,7 +459,7 @@ mod tests {
             vec![Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall],
         ];
         assert_eq!(
-            Grid::from(&read_str_to_lines(SIMPLE_GRID)),
+            Grid::from(&parse(SIMPLE_GRID)),
             Grid {
                 rows: grid,
                 rounds: 0
@@ -479,25 +491,25 @@ mod tests {
     #[test]
     fn unit_positions() {
         // See SIMPLE_GRID picture above
-        let grid = Grid::from(&read_str_to_lines(SIMPLE_GRID));
+        let grid = Grid::from(&parse(SIMPLE_GRID));
         assert_eq!(grid.unit_locations(), vec![Loc::new(2, 1), Loc::new(1, 2),]);
     }
 
     #[test]
     fn goblins() {
-        let grid = Grid::from(&read_str_to_lines(SIMPLE_GRID));
+        let grid = Grid::from(&parse(SIMPLE_GRID));
         assert_eq!(grid.goblins(), vec![Loc::new(2, 1)]);
     }
 
     #[test]
     fn elves() {
-        let grid = Grid::from(&read_str_to_lines(SIMPLE_GRID));
+        let grid = Grid::from(&parse(SIMPLE_GRID));
         assert_eq!(grid.elves(), vec![Loc::new(1, 2),]);
     }
 
     #[test]
     fn enemies() {
-        let grid = Grid::from(&read_str_to_lines(SIMPLE_GRID));
+        let grid = Grid::from(&parse(SIMPLE_GRID));
         let elf_loc = Loc::new(1, 2);
         let goblin_loc = Loc::new(2, 1);
         assert_eq!(grid.enemies_of(&elf_loc), vec![goblin_loc.clone()]);
@@ -506,7 +518,7 @@ mod tests {
 
     #[test]
     fn loc_is_in_range_of_any_units() {
-        let grid = Grid::from(&read_str_to_lines(PATH_FINDING_GRID));
+        let grid = Grid::from(&parse(PATH_FINDING_GRID));
         // Locations in range are marked as ? in the picture below.
         // All locations are checked: even though walls and units aren't suitable
         // open spots, their location might still be in range of a unit.
@@ -545,7 +557,7 @@ mod tests {
 
     #[test]
     fn open_squares_adjacent_to_any_goblins() {
-        let grid = Grid::from(&read_str_to_lines(PATH_FINDING_GRID));
+        let grid = Grid::from(&parse(PATH_FINDING_GRID));
         let goblins = grid.goblins();
         let expected_open_squares = vec![
             Loc::new(3, 1),
@@ -563,7 +575,7 @@ mod tests {
 
     #[test]
     fn open_neighbors_top_left() {
-        let grid = Grid::from(&read_str_to_lines(PATH_FINDING_GRID));
+        let grid = Grid::from(&parse(PATH_FINDING_GRID));
         assert_eq!(
             grid.open_neighbors_of(&Loc::new(1, 1)),
             vec![Loc::new(2, 1), Loc::new(1, 2)]
@@ -571,7 +583,7 @@ mod tests {
     }
     #[test]
     fn open_neighbors_top_right() {
-        let grid = Grid::from(&read_str_to_lines(PATH_FINDING_GRID));
+        let grid = Grid::from(&parse(PATH_FINDING_GRID));
         assert_eq!(
             grid.open_neighbors_of(&Loc::new(5, 1)),
             vec![Loc::new(5, 2)]
@@ -579,7 +591,7 @@ mod tests {
     }
     #[test]
     fn open_neighbors_bottom_left() {
-        let grid = Grid::from(&read_str_to_lines(PATH_FINDING_GRID));
+        let grid = Grid::from(&parse(PATH_FINDING_GRID));
         assert_eq!(
             grid.open_neighbors_of(&Loc::new(1, 3)),
             vec![Loc::new(1, 2)]
@@ -587,7 +599,7 @@ mod tests {
     }
     #[test]
     fn open_neighbors_bottom_right() {
-        let grid = Grid::from(&read_str_to_lines(PATH_FINDING_GRID));
+        let grid = Grid::from(&parse(PATH_FINDING_GRID));
         assert_eq!(
             grid.open_neighbors_of(&Loc::new(5, 3)),
             vec![Loc::new(5, 2)]
@@ -595,7 +607,7 @@ mod tests {
     }
     #[test]
     fn open_neighbors_somewhat_center() {
-        let grid = Grid::from(&read_str_to_lines(PATH_FINDING_GRID));
+        let grid = Grid::from(&parse(PATH_FINDING_GRID));
         assert_eq!(
             grid.open_neighbors_of(&Loc::new(2, 2)),
             vec![Loc::new(2, 1), Loc::new(1, 2), Loc::new(3, 2)]
@@ -604,7 +616,7 @@ mod tests {
 
     #[test]
     fn reachable_locations() {
-        let grid = Grid::from(&read_str_to_lines(PATH_FINDING_GRID));
+        let grid = Grid::from(&parse(PATH_FINDING_GRID));
         let elf = Loc::new(1, 1);
         let open_squares = grid.open_squares_adjacent_to_any(&grid.goblins());
         // In range:     Reachable:
@@ -623,7 +635,7 @@ mod tests {
     }
     #[test]
     fn nearest_reachable_locations() {
-        let grid = Grid::from(&read_str_to_lines(PATH_FINDING_GRID));
+        let grid = Grid::from(&parse(PATH_FINDING_GRID));
         let elf = Loc::new(1, 1);
         let open_squares = grid.open_squares_adjacent_to_any(&grid.goblins());
         // Reachable:    Nearest:
@@ -637,7 +649,7 @@ mod tests {
     }
     #[test]
     fn chosen_nearest_location() {
-        let grid = Grid::from(&read_str_to_lines(PATH_FINDING_GRID));
+        let grid = Grid::from(&parse(PATH_FINDING_GRID));
         let elf = Loc::new(1, 1);
         let open_squares = grid.open_squares_adjacent_to_any(&grid.goblins());
         // Reachable:    Nearest:      Chosen:
@@ -660,7 +672,7 @@ mod tests {
 #######";
     #[test]
     fn first_steps() {
-        let grid = Grid::from(&read_str_to_lines(CHOSEN_PATH_GRID));
+        let grid = Grid::from(&parse(CHOSEN_PATH_GRID));
         // In range:       Nearest:      Chosen:       Distance:     Step:
         //   0123456
         // 0 #######       #######       #######       #######       #######
@@ -718,7 +730,7 @@ mod tests {
 #########";
     #[test]
     fn movement_example() {
-        let mut grid = Grid::from(&read_str_to_lines(MOVEMENT_EXAMPLE_INITIAL));
+        let mut grid = Grid::from(&parse(MOVEMENT_EXAMPLE_INITIAL));
 
         grid.play_round();
         assert_eq!(
@@ -757,7 +769,7 @@ mod tests {
 
     #[test]
     fn combat_example() {
-        let mut grid = Grid::from(&read_str_to_lines(COMBAT_EXAMPLE));
+        let mut grid = Grid::from(&parse(COMBAT_EXAMPLE));
         let sum_of_remaining_hit_points = grid.play_until_no_enemies_remain();
         assert_eq!(27_730, sum_of_remaining_hit_points);
     }
@@ -766,7 +778,7 @@ mod tests {
     fn combat_example_2() {
         assert_eq!(
             36_334,
-            Grid::from(&read_str_to_lines(
+            Grid::from(&parse(
                 "\
 #######
 #G..#E#
@@ -784,7 +796,7 @@ mod tests {
     fn combat_example_3() {
         assert_eq!(
             39_514,
-            Grid::from(&read_str_to_lines(
+            Grid::from(&parse(
                 "\
 #######
 #E..EG#
@@ -802,7 +814,7 @@ mod tests {
     fn combat_example_4() {
         assert_eq!(
             27_755,
-            Grid::from(&read_str_to_lines(
+            Grid::from(&parse(
                 "\
 #######
 #E.G#.#
@@ -820,7 +832,7 @@ mod tests {
     fn combat_example_5() {
         assert_eq!(
             28_944,
-            Grid::from(&read_str_to_lines(
+            Grid::from(&parse(
                 "\
 #######
 #.E...#
@@ -838,7 +850,7 @@ mod tests {
     fn combat_example_6() {
         assert_eq!(
             18_740,
-            Grid::from(&read_str_to_lines(
+            Grid::from(&parse(
                 "\
 #########
 #G......#
@@ -856,17 +868,14 @@ mod tests {
 
     #[test] // pretty slow at 16s
     fn part1() {
-        assert_eq!(
-            207_059,
-            Grid::from(&read_file_to_lines("input/day15.txt")).play_until_no_enemies_remain()
-        );
+        assert_eq!(207_059, day15_part1());
     }
 
     #[test]
     fn part2_summarized_combat_example1() {
         assert_eq!(
             4_988,
-            Grid::from(&read_str_to_lines(
+            Grid::from(&parse(
                 "\
 #######
 #.G...#
@@ -884,7 +893,7 @@ mod tests {
     fn part2_summarized_combat_example2() {
         assert_eq!(
             31_284,
-            Grid::from(&read_str_to_lines(
+            Grid::from(&parse(
                 "\
 #######
 #E..EG#
@@ -902,7 +911,7 @@ mod tests {
     fn part2_summarized_combat_example3() {
         assert_eq!(
             3_478,
-            Grid::from(&read_str_to_lines(
+            Grid::from(&parse(
                 "\
 #######
 #E.G#.#
@@ -920,7 +929,7 @@ mod tests {
     fn part2_summarized_combat_example4() {
         assert_eq!(
             6_474,
-            Grid::from(&read_str_to_lines(
+            Grid::from(&parse(
                 "\
 #######
 #.E...#
@@ -938,7 +947,7 @@ mod tests {
     fn part2_summarized_combat_example5() {
         assert_eq!(
             1_140,
-            Grid::from(&read_str_to_lines(
+            Grid::from(&parse(
                 "\
 #########
 #G......#
@@ -956,10 +965,6 @@ mod tests {
 
     #[test] // pretty slow at 2min 44s
     fn part2() {
-        assert_eq!(
-            49_120,
-            Grid::from(&read_file_to_lines("input/day15.txt"))
-                .play_with_increasing_elf_attack_power_until_elves_win_without_a_single_loss()
-        );
+        assert_eq!(49_120, day15_part2());
     }
 }

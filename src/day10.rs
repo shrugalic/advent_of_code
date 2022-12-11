@@ -1,5 +1,8 @@
+use crate::parse;
 use reformation::Reformation;
 use std::ops::RangeInclusive;
+
+const INPUT: &str = include_str!("../input/day10.txt");
 
 type Coord = isize;
 
@@ -27,7 +30,11 @@ impl Point {
     }
 }
 
-pub(crate) fn message(input: &[String]) -> (String, usize) {
+pub(crate) fn day10_part1() -> usize {
+    message(&parse(INPUT)).1
+}
+
+fn message(input: &[&str]) -> (String, usize) {
     let mut points = to_points(input);
     let mut seconds = 0;
     while !has_many_vertically_aligned_points(&points) {
@@ -50,7 +57,7 @@ fn iterate(mut points: Vec<Point>) -> Vec<Point> {
     points
 }
 
-fn to_points(input: &[String]) -> Vec<Point> {
+fn to_points(input: &[&str]) -> Vec<Point> {
     input
         .iter()
         .map(|line| Point::parse(line).unwrap())
@@ -92,7 +99,7 @@ fn get_y_range(points: &[Point]) -> RangeInclusive<isize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
+    use crate::parse;
 
     #[test]
     fn parse_lines() {
@@ -114,19 +121,19 @@ mod tests {
 
     #[test]
     fn part_1() {
-        let input = &read_file_to_lines("input/day10.txt");
+        let input = &parse(INPUT);
         assert_eq!((PART_1_MESSAGE.to_string(), 10511), message(input));
     }
 
     #[test]
     fn example_message() {
-        let input = &read_str_to_lines(EXAMPLE_POINTS);
+        let input = &parse(EXAMPLE_POINTS);
         assert_eq!((EXAMPLE_MESSAGE.to_string(), 3), message(input));
     }
 
     #[test]
     fn before_and_after_iterations() {
-        let mut points = to_points(&read_str_to_lines(EXAMPLE_POINTS));
+        let mut points = to_points(&parse(EXAMPLE_POINTS));
         assert_eq!(INITIAL, to_string(&points));
         points = iterate(points);
         assert_eq!(AFTER_1_ITERATION, to_string(&points));

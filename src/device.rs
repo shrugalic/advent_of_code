@@ -16,7 +16,7 @@ impl Default for Device {
 const UNLIMITED: InstrPointer = usize::MAX;
 
 impl Device {
-    pub(crate) fn run_program(&mut self, input: &[String]) -> Number {
+    pub(crate) fn run_program(&mut self, input: &[&str]) -> Number {
         *self
             .halting_values(input, UNLIMITED, 0, UNLIMITED)
             .first()
@@ -26,7 +26,7 @@ impl Device {
     /// Return the value of `register[halting_reg]` when the instruction pointer reaches `halting_ip`
     pub(crate) fn halting_values(
         &mut self,
-        input: &[String],
+        input: &[&str],
         halting_ip: InstrPointer,
         halting_reg: RegisterIndex,
         limit: usize,
@@ -56,13 +56,13 @@ impl Device {
         halting_values
     }
 
-    fn parse_input(input: &&[String]) -> (usize, Vec<(Op, (usize, usize, usize))>) {
+    fn parse_input(input: &[&str]) -> (usize, Vec<(Op, (usize, usize, usize))>) {
         let binding: InstrPointerBinding = input[0].trim_start_matches("#ip ").parse().unwrap();
         let program = Device::parse_program(&input[1..]);
         (binding, program)
     }
 
-    fn parse_program(program: &[String]) -> Vec<Instruction> {
+    fn parse_program(program: &[&str]) -> Vec<Instruction> {
         program
             .iter()
             .filter_map(|line| {

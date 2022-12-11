@@ -1,4 +1,7 @@
+use crate::parse;
 use std::collections::HashMap;
+
+const INPUT: &str = include_str!("../input/day03.txt");
 
 type Coordinate = (usize, usize);
 
@@ -41,13 +44,21 @@ impl<T: AsRef<str>> From<T> for Claim {
     }
 }
 
-pub(crate) fn overlapping_claim_count(input: &[String]) -> usize {
+pub(crate) fn day3_part1() -> usize {
+    overlapping_claim_count(&parse(INPUT))
+}
+
+fn overlapping_claim_count(input: &[&str]) -> usize {
     let claims: Vec<_> = input.iter().map(Claim::from).collect();
     let count_by_coordinate = get_counts_by_coordinate(&claims);
     count_by_coordinate.values().filter(|v| v > &&1).count()
 }
 
-pub(crate) fn id_of_non_overlapping_claim(input: &[String]) -> usize {
+pub(crate) fn day3_part2() -> usize {
+    id_of_non_overlapping_claim(&parse(INPUT))
+}
+
+fn id_of_non_overlapping_claim(input: &[&str]) -> usize {
     let claims: Vec<_> = input.iter().map(Claim::from).collect();
     let count_by_coordinate = get_counts_by_coordinate(&claims);
     claims
@@ -76,9 +87,8 @@ fn get_counts_by_coordinate(claims: &Vec<Claim>) -> HashMap<Coordinate, usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::{read_file_to_lines, read_str_to_lines};
 
-    const EXAMPLE1: &str = "#1 @ 1,3: 4x4
+    const EXAMPLE: &str = "#1 @ 1,3: 4x4
 #2 @ 3,1: 4x4
 #3 @ 5,5: 2x2";
 
@@ -97,28 +107,22 @@ mod tests {
     }
 
     #[test]
-    fn example_1() {
-        assert_eq!(overlapping_claim_count(&read_str_to_lines(EXAMPLE1)), 4);
+    fn part1_example() {
+        assert_eq!(4, overlapping_claim_count(&parse(EXAMPLE)));
     }
 
     #[test]
     fn part_1() {
-        assert_eq!(
-            overlapping_claim_count(&read_file_to_lines("input/day03.txt")),
-            113576
-        );
+        assert_eq!(113_576, day3_part1());
     }
 
     #[test]
-    fn example_1_part_2() {
-        assert_eq!(id_of_non_overlapping_claim(&read_str_to_lines(EXAMPLE1)), 3);
+    fn part2_example() {
+        assert_eq!(3, id_of_non_overlapping_claim(&parse(EXAMPLE)));
     }
 
     #[test]
     fn part_2() {
-        assert_eq!(
-            id_of_non_overlapping_claim(&read_file_to_lines("input/day03.txt")),
-            825
-        );
+        assert_eq!(825, day3_part2());
     }
 }
