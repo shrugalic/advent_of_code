@@ -1,14 +1,16 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::fmt::{Debug, Display, Formatter};
 
+const INPUT: &str = include_str!("../input/day18.txt");
+
 pub(crate) fn day18_part1() -> usize {
-    count_steps_to_collect_every_key(read_file_to_lines("input/day18.txt"))
+    count_steps_to_collect_every_key(parse(INPUT))
 }
 
 pub(crate) fn day18_part2() -> usize {
-    count_steps_to_collect_every_key_part2(read_file_to_lines("input/day18.txt"))
+    count_steps_to_collect_every_key_part2(parse(INPUT))
 }
 
 type Idx = u8;
@@ -166,7 +168,7 @@ impl Display for BoolArrayKeys {
 }
 
 // This can be used to solve part 1 – it's faster than the alternative below
-fn count_steps_to_collect_every_key(input: Vec<String>) -> Steps {
+fn count_steps_to_collect_every_key(input: Vec<&str>) -> Steps {
     let vault = Vault::from(input);
     // println!("Vault:\n{}", vault.to_string());
 
@@ -237,7 +239,7 @@ fn explore(vault: &Vault, start: Loc) -> (Keys, Steps) {
 
 // This can also be used to solve part 1, but it's slower than the alternative above
 #[allow(unused)]
-fn count_steps_to_collect_every_key_part1(input: Vec<String>) -> Steps {
+fn count_steps_to_collect_every_key_part1(input: Vec<&str>) -> Steps {
     let vault = Vault::from(input);
     // println!("Vault:\n{}", vault.to_string());
 
@@ -250,7 +252,7 @@ fn count_steps_to_collect_every_key_part1(input: Vec<String>) -> Steps {
     )
 }
 
-fn count_steps_to_collect_every_key_part2(input: Vec<String>) -> Steps {
+fn count_steps_to_collect_every_key_part2(input: Vec<&str>) -> Steps {
     let mut vault = Vault::from(input);
     vault.replace_single_entrance_with_four_entrances();
     // println!("Vault:\n{}", vault.to_string());
@@ -498,8 +500,8 @@ struct Vault {
     grid: Grid,
 }
 
-impl From<Vec<String>> for Vault {
-    fn from(input: Vec<String>) -> Self {
+impl From<Vec<&str>> for Vault {
+    fn from(input: Vec<&str>) -> Self {
         let grid = input
             .iter()
             .map(|line| line.chars().map(Tile::from).collect())
@@ -607,7 +609,7 @@ impl Loc {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     #[test]
     fn key_for_door() {
@@ -618,7 +620,7 @@ mod tests {
     fn example_1_small() {
         assert_eq!(
             8,
-            count_steps_to_collect_every_key(read_str_to_lines(
+            count_steps_to_collect_every_key(parse(
                 "\
 #########
 #b.A.@.a#
@@ -631,7 +633,7 @@ mod tests {
     fn example_2_larger() {
         assert_eq!(
             86,
-            count_steps_to_collect_every_key(read_str_to_lines(
+            count_steps_to_collect_every_key(parse(
                 "\
 ########################
 #f.D.E.e.C.b.A.@.a.B.c.#
@@ -646,7 +648,7 @@ mod tests {
     fn example_3() {
         assert_eq!(
             132,
-            count_steps_to_collect_every_key(read_str_to_lines(
+            count_steps_to_collect_every_key(parse(
                 "\
 ########################
 #...............b.C.D.f#
@@ -663,7 +665,7 @@ mod tests {
     fn example_4() {
         assert_eq!(
             136,
-            count_steps_to_collect_every_key(read_str_to_lines(
+            count_steps_to_collect_every_key(parse(
                 "\
 #################
 #i.G..c...e..H.p#
@@ -682,7 +684,7 @@ mod tests {
     fn example_5() {
         assert_eq!(
             81,
-            count_steps_to_collect_every_key(read_str_to_lines(
+            count_steps_to_collect_every_key(parse(
                 "\
 ########################
 #@..............ac.GI.b#
@@ -704,7 +706,7 @@ mod tests {
     fn part2_example_1() {
         assert_eq!(
             8,
-            count_steps_to_collect_every_key_part2(read_str_to_lines(
+            count_steps_to_collect_every_key_part2(parse(
                 "\
 #######
 #a.#Cd#
@@ -721,7 +723,7 @@ mod tests {
     fn part2_example_2() {
         assert_eq!(
             24,
-            count_steps_to_collect_every_key_part2(read_str_to_lines(
+            count_steps_to_collect_every_key_part2(parse(
                 "\
 ###############
 #d.ABC.#.....a#
@@ -738,7 +740,7 @@ mod tests {
     fn part2_example_3() {
         assert_eq!(
             32,
-            count_steps_to_collect_every_key_part2(read_str_to_lines(
+            count_steps_to_collect_every_key_part2(parse(
                 "\
 #############
 #DcBa.#.GhKl#
@@ -755,7 +757,7 @@ mod tests {
     fn part2_example_4() {
         assert_eq!(
             72,
-            count_steps_to_collect_every_key_part2(read_str_to_lines(
+            count_steps_to_collect_every_key_part2(parse(
                 "\
 #############
 #g#f.D#..h#l#

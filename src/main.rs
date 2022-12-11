@@ -1,3 +1,7 @@
+fn parse(input: &str) -> Vec<&str> {
+    input.lines().collect()
+}
+
 #[macro_use]
 extern crate lazy_static;
 

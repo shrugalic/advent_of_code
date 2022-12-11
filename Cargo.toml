@@ -12,4 +12,3 @@ regex = "1.5.4"
 num-format = "0.4.0"
 permutohedron = "0.2.4"
 intcode = { path = "intcode"}
-line_reader = { path = "../advent_of_code/2020/line_reader" }

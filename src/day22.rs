@@ -1,12 +1,14 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::mem::swap;
+
+const INPUT: &str = include_str!("../input/day22.txt");
 
 const PART1_DECK_SIZE: usize = 10_007;
 const PART2_DECK_SIZE: usize = 119_315_717_514_047;
 const PART2_SHUFFLE_COUNT: usize = 101_741_582_076_661;
 
 pub(crate) fn day22_part1() -> usize {
-    let input = read_file_to_lines("input/day22.txt");
+    let input = parse(INPUT);
     let track_single_card_only = true;
     if track_single_card_only {
         let mut deck = SingleCardPosTrackingDeck::new(2019, PART1_DECK_SIZE);
@@ -48,7 +50,7 @@ pub(crate) fn day22_part2() -> usize {
 
 fn shuffle_n_times(initial: usize, size: usize, n: usize) -> Vec<usize> {
     let mut deck = SingleCardPosTrackingDeck::new(initial, size);
-    let input = read_file_to_lines("input/day22.txt");
+    let input = parse(INPUT);
     let techniques = parse_shuffle_techniques(input);
     let inverted = invert(deck.size, techniques);
 
@@ -177,14 +179,14 @@ fn modular_power(base: usize, exp: usize, size: usize) -> usize {
     result
 }
 
-fn shuffle_deck(size: usize, input: Vec<String>) -> FullDeck {
+fn shuffle_deck(size: usize, input: Vec<&str>) -> FullDeck {
     let mut deck: Vec<_> = (0..size).into_iter().collect();
     let techniques = parse_shuffle_techniques(input);
     deck.shuffle_with(&techniques);
     deck
 }
 
-fn parse_shuffle_techniques(input: Vec<String>) -> Vec<ShuffleTechnique> {
+fn parse_shuffle_techniques(input: Vec<&str>) -> Vec<ShuffleTechnique> {
     input.into_iter().map(ShuffleTechnique::from).collect()
 }
 
@@ -223,8 +225,8 @@ impl ShuffleTechnique {
         }
     }
 }
-impl From<String> for ShuffleTechnique {
-    fn from(s: String) -> Self {
+impl From<&str> for ShuffleTechnique {
+    fn from(s: &str) -> Self {
         let parts = s.split_ascii_whitespace().collect::<Vec<_>>();
         if parts[0] == "deal" {
             if parts[1] == "with" {
@@ -304,7 +306,7 @@ impl Shuffle for FullDeck {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     #[test]
     fn deal_into_new_stack() {
@@ -363,7 +365,7 @@ cut -1";
 
     #[test]
     fn example_1_full_deck() {
-        let deck = shuffle_deck(10, read_str_to_lines(EXAMPLE1));
+        let deck = shuffle_deck(10, parse(EXAMPLE1));
         assert_eq!(vec![0, 3, 6, 9, 2, 5, 8, 1, 4, 7], deck);
     }
 
@@ -379,7 +381,7 @@ cut -1";
     }
     #[test]
     fn example_2() {
-        let deck = shuffle_deck(10, read_str_to_lines(EXAMPLE2));
+        let deck = shuffle_deck(10, parse(EXAMPLE2));
         assert_eq!(vec![3, 0, 7, 4, 1, 8, 5, 2, 9, 6], deck);
     }
 
@@ -396,7 +398,7 @@ cut -1";
 
     #[test]
     fn example_3() {
-        let deck = shuffle_deck(10, read_str_to_lines(EXAMPLE3));
+        let deck = shuffle_deck(10, parse(EXAMPLE3));
         assert_eq!(vec![6, 3, 0, 7, 4, 1, 8, 5, 2, 9], deck);
     }
 
@@ -413,7 +415,7 @@ cut -1";
 
     #[test]
     fn example_4() {
-        let deck = shuffle_deck(10, read_str_to_lines(EXAMPLE4));
+        let deck = shuffle_deck(10, parse(EXAMPLE4));
         assert_eq!(vec![9, 2, 5, 8, 1, 4, 7, 0, 3, 6], deck);
     }
 
@@ -461,7 +463,7 @@ cut -1";
     }
 
     fn test_reverse(input: &'static str) {
-        let techniques = parse_shuffle_techniques(read_str_to_lines(input));
+        let techniques = parse_shuffle_techniques(parse(input));
         // println!("tech {:?}", techniques);
         let mut decks = create_single_card_tracking_test_decks();
         shuffle(&mut decks, &techniques);
@@ -483,7 +485,7 @@ cut -1";
     fn shuffle_10_single_card_tracking_decks(
         input: &'static str,
     ) -> Vec<SingleCardPosTrackingDeck> {
-        let techniques = parse_shuffle_techniques(read_str_to_lines(input));
+        let techniques = parse_shuffle_techniques(parse(input));
         let mut decks = create_single_card_tracking_test_decks();
         shuffle(&mut decks, &techniques);
         decks
@@ -541,7 +543,7 @@ cut -1";
     #[test]
     fn part1_reverse() {
         let mut deck = SingleCardPosTrackingDeck::new(2519, PART1_DECK_SIZE);
-        let input = read_file_to_lines("input/day22.txt");
+        let input = parse(INPUT);
         let techniques = parse_shuffle_techniques(input);
         let inverted_techniques = invert(deck.size, techniques);
         deck.shuffle_with(&inverted_techniques);

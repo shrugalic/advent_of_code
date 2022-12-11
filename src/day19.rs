@@ -1,6 +1,8 @@
 use intcode::IntCodeComputer;
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::cmp::Ordering;
+
+const INPUT: &str = include_str!("../input/day19.txt");
 
 pub(crate) fn day19_part1() -> usize {
     count_1s_in_50x50_tractor_beam_picture()
@@ -106,7 +108,7 @@ fn print(picture: &[Vec<usize>]) {
 }
 
 fn intcode_computer_from_puzzle_input() -> IntCodeComputer {
-    let input = read_file_to_lines("input/day19.txt");
+    let input = parse(INPUT);
     let instr = input[0].split(',').map(|n| n.parse().unwrap()).collect();
     intcode::IntCodeComputer::new(instr)
 }

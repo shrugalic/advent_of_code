@@ -1,5 +1,7 @@
 use intcode::IntCodeComputer;
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day21.txt");
 
 pub(crate) fn day21_part1() -> usize {
     run_springscript(WALK_AND_JUMP_OVER_ANY_HOLE)
@@ -61,7 +63,7 @@ fn run_springscript(program: &str) -> usize {
 }
 
 fn intcode_computer_from_puzzle_input() -> IntCodeComputer {
-    let input = read_file_to_lines("input/day21.txt");
+    let input = parse(INPUT);
     let instr = input[0].split(',').map(|n| n.parse().unwrap()).collect();
     intcode::IntCodeComputer::new(instr)
 }

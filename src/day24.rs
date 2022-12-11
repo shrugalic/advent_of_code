@@ -1,22 +1,21 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 
+const INPUT: &str = include_str!("../input/day24.txt");
+
 pub(crate) fn day24_part1() -> usize {
-    let mut grid = Grid::from(read_puzzle_input());
+    let mut grid = Grid::from(parse(INPUT));
     grid.iterate_until_pattern_repeats();
     grid.biodiversity_rating()
 }
 
 pub(crate) fn day24_part2() -> usize {
-    let mut grids = Grids::from(read_puzzle_input());
+    let mut grids = Grids::from(parse(INPUT));
     grids.iterate(200);
     grids.total_bug_count()
 }
 
-fn read_puzzle_input() -> Vec<String> {
-    read_file_to_lines("input/day24.txt")
-}
 
 #[derive(Debug, PartialEq, Clone)]
 struct Grids {
@@ -120,8 +119,8 @@ impl Grids {
     }
 }
 
-impl From<Vec<String>> for Grids {
-    fn from(s: Vec<String>) -> Self {
+impl From<Vec<&str>> for Grids {
+    fn from(s: Vec<&str>) -> Self {
         let center = Grid::from(s);
         Grids {
             center,
@@ -141,8 +140,8 @@ impl Default for Grid {
         Grid { grid }
     }
 }
-impl From<Vec<String>> for Grid {
-    fn from(s: Vec<String>) -> Self {
+impl From<Vec<&str>> for Grid {
+    fn from(s: Vec<&str>) -> Self {
         let mut grid = Grid::default();
         s.iter().enumerate().for_each(|(y, line)| {
             line.chars()
@@ -312,7 +311,7 @@ impl Grid {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE_STABLE: &str = "\
 .....
@@ -330,13 +329,13 @@ mod tests {
 
     #[test]
     fn test_biodiversity_rating() {
-        let area = Grid::from(read_str_to_lines(EXAMPLE_STABLE));
+        let area = Grid::from(parse(EXAMPLE_STABLE));
         assert_eq!(2129920, area.biodiversity_rating());
     }
 
     #[test]
     fn test_iterate_until_pattern_repeats() {
-        let mut area = Grid::from(read_str_to_lines(EXAMPLE_INITIAL));
+        let mut area = Grid::from(parse(EXAMPLE_INITIAL));
         area.iterate_until_pattern_repeats();
         println!("{}", area);
         assert_eq!(2129920, area.biodiversity_rating());
@@ -344,11 +343,11 @@ mod tests {
 
     #[test]
     fn test_iterate() {
-        let mut area = Grid::from(read_str_to_lines(EXAMPLE_INITIAL));
+        let mut area = Grid::from(parse(EXAMPLE_INITIAL));
         area.iterate();
         assert_eq!(
             area,
-            Grid::from(read_str_to_lines(
+            Grid::from(parse(
                 "\
 #..#.
 ####.
@@ -360,7 +359,7 @@ mod tests {
         area.iterate();
         assert_eq!(
             area,
-            Grid::from(read_str_to_lines(
+            Grid::from(parse(
                 "\
 #####
 ....#
@@ -372,7 +371,7 @@ mod tests {
         area.iterate();
         assert_eq!(
             area,
-            Grid::from(read_str_to_lines(
+            Grid::from(parse(
                 "\
 #....
 ####.
@@ -384,7 +383,7 @@ mod tests {
         area.iterate();
         assert_eq!(
             area,
-            Grid::from(read_str_to_lines(
+            Grid::from(parse(
                 "\
 ####.
 ....#
@@ -402,7 +401,7 @@ mod tests {
 
     #[test]
     fn part2_example_step() {
-        let mut grids = Grids::from(read_str_to_lines(EXAMPLE_INITIAL));
+        let mut grids = Grids::from(parse(EXAMPLE_INITIAL));
         grids.step();
         assert_eq!(
             /*center*/ 15 + /*outer*/3 +  /*inner*/9,
@@ -412,7 +411,7 @@ mod tests {
 
     #[test]
     fn part2_example_iterate() {
-        let mut grids = Grids::from(read_str_to_lines(EXAMPLE_INITIAL));
+        let mut grids = Grids::from(parse(EXAMPLE_INITIAL));
         grids.iterate(10);
         assert_eq!(99, grids.total_bug_count());
     }

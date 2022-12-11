@@ -1,17 +1,19 @@
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::fmt::{Debug, Display, Formatter};
 
+const INPUT: &str = include_str!("../input/day20.txt");
+
 pub(crate) fn day20_part1() -> usize {
-    shortest_path(read_file_to_lines("input/day20.txt"), Part::One)
+    shortest_path(parse(INPUT), Part::One)
 }
 
 pub(crate) fn day20_part2() -> usize {
-    shortest_path(read_file_to_lines("input/day20.txt"), Part::Two)
+    shortest_path(parse(INPUT), Part::Two)
 }
 
-fn shortest_path(input: Vec<String>, part: Part) -> usize {
+fn shortest_path(input: Vec<&str>, part: Part) -> usize {
     let maze = Maze::from(input);
     maze.length_of_shortest_path_from_start_to_end(part)
 }
@@ -60,8 +62,8 @@ impl Loc {
 struct Maze {
     grid: Grid,
 }
-impl From<Vec<String>> for Maze {
-    fn from(input: Vec<String>) -> Self {
+impl From<Vec<&str>> for Maze {
+    fn from(input: Vec<&str>) -> Self {
         let mut door_locations = vec![];
         let grid: Grid = input
             .iter()
@@ -310,7 +312,7 @@ impl Tile {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use line_reader::read_str_to_lines;
+    use crate::parse;
 
     const EXAMPLE: &str = "         A         
          A         
@@ -372,7 +374,7 @@ YN......#               VT..#....QG
 
     #[test]
     fn example_parse() {
-        let maze = Maze::from(read_str_to_lines(EXAMPLE));
+        let maze = Maze::from(parse(EXAMPLE));
 
         assert_eq!(&maze.grid[0][9], &Tile::Door('A'));
         assert_eq!(&maze.grid[1][9], &Tile::Door('A'));
@@ -396,7 +398,7 @@ YN......#               VT..#....QG
 
     #[test]
     fn part1_example() {
-        let maze = Maze::from(read_str_to_lines(EXAMPLE));
+        let maze = Maze::from(parse(EXAMPLE));
         assert_eq!(
             23,
             maze.length_of_shortest_path_from_start_to_end(Part::One)
@@ -405,7 +407,7 @@ YN......#               VT..#....QG
 
     #[test]
     fn part1_larger_example() {
-        let maze = Maze::from(read_str_to_lines(LARGER_EXAMPLE));
+        let maze = Maze::from(parse(LARGER_EXAMPLE));
         assert_eq!(
             58,
             maze.length_of_shortest_path_from_start_to_end(Part::One)
@@ -457,7 +459,7 @@ RE....#.#                           #......RF
 
     #[test]
     fn part2_interesting_example() {
-        let maze = Maze::from(read_str_to_lines(PART2_INTERESTING_EXAMPLE));
+        let maze = Maze::from(parse(PART2_INTERESTING_EXAMPLE));
         assert_eq!(
             396,
             maze.length_of_shortest_path_from_start_to_end(Part::Two)

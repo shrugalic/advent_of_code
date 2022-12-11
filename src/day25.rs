@@ -1,7 +1,9 @@
 use intcode::IntCodeComputer;
-use line_reader::read_file_to_lines;
+use crate::parse;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};
+
+const INPUT: &str = include_str!("../input/day25.txt");
 
 pub(crate) fn day25_part1() -> usize {
     let explore = false;
@@ -286,7 +288,7 @@ impl ToString for Dir {
 }
 
 fn parse_software_from_puzzle_input() -> Vec<isize> {
-    let input = read_file_to_lines("input/day25.txt");
+    let input = parse(INPUT);
     input[0].split(',').map(|n| n.parse().unwrap()).collect()
 }
 

@@ -1,5 +1,7 @@
 use intcode::{IntCodeComputer, State};
-use line_reader::read_file_to_lines;
+use crate::parse;
+
+const INPUT: &str = include_str!("../input/day23.txt");
 
 const DEFAULT_INPUT: isize = -1;
 pub(crate) fn day23_part1() -> isize {
@@ -73,7 +75,7 @@ fn initialize_computers() -> Vec<IntCodeComputer> {
 }
 
 fn parse_software_from_puzzle_input() -> Vec<isize> {
-    let input = read_file_to_lines("input/day23.txt");
+    let input = parse(INPUT);
     input[0].split(',').map(|n| n.parse().unwrap()).collect()
 }
 
