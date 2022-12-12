@@ -6,12 +6,12 @@ const INPUT: &str = include_str!("../input/day12.txt");
 
 pub(crate) fn day12_part1() -> usize {
     let mut map = HeightMap::from(INPUT);
-    map.step_count_of_shortest_path_from_start()
+    map.step_count_of_shortest_path_from_start_to_end()
 }
 
 pub(crate) fn day12_part2() -> usize {
     let map = HeightMap::from(INPUT);
-    map.step_count_of_shortest_path_starting_at_any_low_point()
+    map.step_count_of_shortest_path_from_end_to_any_lowest_point()
 }
 
 type Elevation = u8;
@@ -53,37 +53,37 @@ struct HeightMap {
     grid: Vec<Vec<char>>,
 }
 impl HeightMap {
-    fn step_count_of_shortest_path_from_start(&mut self) -> usize {
-        self.step_count_of_shortest_path(self.start()).unwrap()
+    fn step_count_of_shortest_path_from_start_to_end(mut self) -> usize {
+        self.step_count_of_shortest_path('S', &['E'], |diff| diff <= 1)
     }
-    fn step_count_of_shortest_path_starting_at_any_low_point(mut self: HeightMap) -> usize {
-        self.lowest_points()
-            .into_iter()
-            .filter_map(|start| self.step_count_of_shortest_path(start))
-            .min()
-            .unwrap()
+    fn step_count_of_shortest_path_from_end_to_any_lowest_point(mut self) -> usize {
+        self.step_count_of_shortest_path('E', &['a', 'S'], |diff| diff >= -1)
     }
-    fn step_count_of_shortest_path(&mut self, start: Pos) -> Option<usize> {
+    fn step_count_of_shortest_path(
+        &mut self,
+        start: char,
+        targets: &[char],
+        is_valid: fn(diff: i8) -> bool,
+    ) -> usize {
         let mut candidates = BinaryHeap::new();
-        let end = self.end();
-        candidates.push(Reverse(State::new(start)));
+        let start_pos = *self.find_pos_of(&[start]).first().unwrap();
+        candidates.push(Reverse(State::new(start_pos)));
         let mut visited = HashSet::new();
         visited.insert(self.start());
         while let Some(Reverse(curr)) = candidates.pop() {
-            if curr.pos.eq(&end) {
-                return Some(curr.step_count);
+            if targets.contains(self.char_at(&curr.pos)) {
+                return curr.step_count;
             }
             let curr_elevation = self.elevation(&curr.pos);
             for next_pos in self.neighbors(&curr.pos) {
-                if self.elevation(&next_pos) > curr_elevation + 1 {
-                    continue;
-                }
-                if visited.insert(next_pos) {
+                let next_elevation = self.elevation(&next_pos);
+                let elevation_diff = next_elevation as i8 - curr_elevation as i8;
+                if is_valid(elevation_diff) && visited.insert(next_pos) {
                     candidates.push(Reverse(curr.moved_to(next_pos)))
                 }
             }
         }
-        None
+        unreachable!()
     }
     fn neighbors(&self, pos: &Pos) -> Vec<(usize, usize)> {
         [(-1, 0), (0, -1), (0, 1), (1, 0)]
@@ -99,12 +99,6 @@ impl HeightMap {
     fn start(&self) -> Pos {
         *self.find_pos_of(&['a']).first().unwrap()
     }
-    fn lowest_points(&self) -> Vec<Pos> {
-        self.find_pos_of(&['S', 'a'])
-    }
-    fn end(&self) -> Pos {
-        *self.find_pos_of(&['E']).first().unwrap()
-    }
     fn find_pos_of(&self, wanted: &[char]) -> Vec<Pos> {
         let mut matches = vec![];
         for y in 0..self.grid.len() {
@@ -117,7 +111,10 @@ impl HeightMap {
         matches
     }
     fn elevation(&self, pos: &Pos) -> Elevation {
-        self.grid[pos.1][pos.0].to_elevation()
+        self.char_at(pos).to_elevation()
+    }
+    fn char_at(&self, pos: &Pos) -> &char {
+        &self.grid[pos.1][pos.0]
     }
 }
 impl From<&str> for HeightMap {
@@ -158,8 +155,8 @@ abdefghi";
 
     #[test]
     fn part1_example() {
-        let mut map = HeightMap::from(EXAMPLE);
-        assert_eq!(31, map.step_count_of_shortest_path_from_start());
+        let map = HeightMap::from(EXAMPLE);
+        assert_eq!(31, map.step_count_of_shortest_path_from_start_to_end());
     }
 
     #[test]
@@ -172,7 +169,7 @@ abdefghi";
         let map = HeightMap::from(EXAMPLE);
         assert_eq!(
             29,
-            map.step_count_of_shortest_path_starting_at_any_low_point()
+            map.step_count_of_shortest_path_from_end_to_any_lowest_point()
         );
     }
 
