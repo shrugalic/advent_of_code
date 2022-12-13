@@ -83,36 +83,39 @@ struct Packet {
 }
 impl From<&str> for Packet {
     fn from(s: &str) -> Self {
-        let mut contents_stack = vec![];
-        for part in s.split(',') {
-            let mut i = 0;
-            while i < part.len() {
-                match &part[i..=i] {
-                    "[" => {
-                        contents_stack.push(vec![]);
-                        i += 1;
-                    }
-                    "]" => {
-                        let contents = contents_stack.pop().unwrap();
-                        if contents_stack.is_empty() {
-                            // This was the outer-most/last list, and thus the packet is done
-                            return Packet { contents };
-                        }
-                        let list = List(contents);
-                        contents_stack.last_mut().unwrap().push(list);
-                        i += 1;
-                    }
-                    _ => {
-                        let start = i;
-                        i += 1;
-                        while i < part.len() && !["[", "]"].contains(&&part[i..=i]) {
-                            i += 1;
-                        }
-                        let num: u8 = part[start..i].parse().unwrap();
-                        contents_stack.last_mut().unwrap().push(Integer(num));
-                    }
+        let mut contents_stack = vec![vec![]];
+        let mut i = 1;
+        let mut start = i;
+        while i < s.len() {
+            let c = &s[i..=i].chars().next().unwrap();
+            match c {
+                '[' => {
+                    contents_stack.push(vec![]);
                 }
+                ']' => {
+                    if let Ok(num) = &s[start..i].parse() {
+                        contents_stack.last_mut().unwrap().push(Integer(*num));
+                    }
+                    let list = contents_stack.pop().unwrap();
+                    if contents_stack.is_empty() {
+                        // This was the outer-most/last list, and thus the packet is done
+                        return Packet { contents: list };
+                    }
+                    let list = List(list);
+                    contents_stack.last_mut().unwrap().push(list);
+                }
+                ',' => {
+                    if let Ok(num) = &s[start..i].parse() {
+                        contents_stack.last_mut().unwrap().push(Integer(*num));
+                    }
+                    start = i;
+                }
+                _ => { /* digit */ }
             }
+            if !c.is_ascii_digit() {
+                start += 1;
+            }
+            i += 1;
         }
         unreachable!();
     }
