@@ -1,136 +1,105 @@
 use std::cmp::Ordering;
-use Element::*;
+use PacketData::*;
 
 const INPUT: &str = include_str!("../input/day13.txt");
 
 pub(crate) fn day13_part1() -> usize {
-    let elements = parse_elements(INPUT);
-    sum_of_indices_of_pairs_in_the_right_order(elements)
+    let packets = parse_packets(INPUT);
+    sum_of_indices_of_pairs_in_the_right_order(packets)
 }
 
 pub(crate) fn day13_part2() -> usize {
-    let elements = parse_elements(INPUT);
-    calculate_decoder_key(elements)
+    let packets = parse_packets(INPUT);
+    calculate_decoder_key(packets)
 }
 
-fn parse_elements(input: &str) -> Vec<Element> {
+fn parse_packets(input: &str) -> Vec<Packet> {
     input
         .lines()
         .filter(|line| !line.is_empty())
-        .map(Element::from)
+        .map(Packet::from)
         .collect()
 }
 
-fn sum_of_indices_of_pairs_in_the_right_order(elements: Vec<Element>) -> usize {
-    elements
+fn sum_of_indices_of_pairs_in_the_right_order(packets: Vec<Packet>) -> usize {
+    packets
         .chunks(2)
         .enumerate()
-        .filter(|(_, c)| (&c[0], &c[1]).is_in_right_order())
+        .filter(|(_, c)| c[0].cmp(&c[1]).is_in_right_order())
         .map(|(i, _)| i + 1)
         .sum()
 }
 
-fn calculate_decoder_key(mut elements: Vec<Element>) -> usize {
-    let divider1 = Element::from("[[2]]");
-    let divider2 = Element::from("[[6]]");
-    elements.push(divider1);
-    elements.push(divider2);
-    elements.sort_unstable();
-    // println!("elements {:?}", elements);
-    let divider1 = Element::from("[[2]]");
-    let divider2 = Element::from("[[6]]");
-    let pos1 = elements.iter().position(|e| e == &divider1).unwrap() + 1;
-    let pos2 = elements.iter().position(|e| e == &divider2).unwrap() + 1;
+fn calculate_decoder_key(mut packets: Vec<Packet>) -> usize {
+    let divider1 = Packet::from("[[2]]");
+    let divider2 = Packet::from("[[6]]");
+    packets.push(divider1.clone());
+    packets.push(divider2.clone());
+    packets.sort_unstable();
+    // println!("packets {:?}", packets);
+    let pos1 = packets.iter().position(|e| e == &divider1).unwrap() + 1;
+    let pos2 = packets.iter().position(|e| e == &divider2).unwrap() + 1;
     pos1 * pos2
 }
 
 trait IsInRightOrder {
     fn is_in_right_order(&self) -> bool;
 }
-impl IsInRightOrder for (&Element, &Element) {
+impl IsInRightOrder for Ordering {
     fn is_in_right_order(&self) -> bool {
-        match self.0.cmp(self.1) {
+        match self {
             Ordering::Less => true,
             Ordering::Greater => false,
-            Ordering::Equal => unreachable!("unless there are two equal elements"),
+            Ordering::Equal => unreachable!("unless there are two equal packets"),
         }
     }
 }
 
-impl PartialOrd<Self> for Element {
+#[derive(Debug, PartialEq, Eq, Clone)]
+enum PacketData {
+    Integer(u8),
+    List(Vec<PacketData>),
+}
+impl Ord for PacketData {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // println!("left {:?} right {:?}", left, right);
+        match (self, other) {
+            (Integer(l), Integer(r)) => l.cmp(r),
+            (List(l), List(r)) => l.cmp(r),
+            (l @ List(_), Integer(r)) => l.cmp(&List(vec![Integer(*r)])),
+            (Integer(l), r @ List(_)) => List(vec![Integer(*l)]).cmp(r),
+        }
+    }
+}
+impl PartialOrd<Self> for PacketData {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for Element {
-    fn cmp(&self, other: &Self) -> Ordering {
-        let left = self;
-        let right = other;
-        // println!("left {:?} right {:?}", left, right);
-        match (left, right) {
-            (Integer(l), Integer(r)) => l.cmp(r),
-            (l @ List(_), Integer(r)) => l.cmp(&List(vec![Integer(*r)])),
-            (Integer(l), r @ List(_)) => List(vec![Integer(*l)]).cmp(r),
-            (List(left), List(right)) => {
-                let (mut l, mut r) = (0, 0);
-                while l < left.len() && r < right.len() {
-                    match &left[l].cmp(&right[r]) {
-                        Ordering::Less => {
-                            return Ordering::Less;
-                        }
-                        Ordering::Greater => {
-                            return Ordering::Greater;
-                        }
-                        Ordering::Equal => {
-                            // continue
-                        }
-                    }
-                    l += 1;
-                    r += 1;
-                }
-                if l == left.len() && r < right.len() {
-                    // println!("Left side ran out of items");
-                    Ordering::Less
-                } else if r == right.len() && l < left.len() {
-                    // println!("Right side ran out of items");
-                    Ordering::Greater
-                } else {
-                    Ordering::Equal
-                }
-            }
-        }
-    }
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
+struct Packet {
+    contents: Vec<PacketData>,
 }
-
-/*
-Vec<Element>
-*/
-
-#[derive(Debug, PartialEq, Eq)]
-enum Element {
-    Integer(u8),
-    List(Vec<Element>),
-}
-impl From<&str> for Element {
+impl From<&str> for Packet {
     fn from(s: &str) -> Self {
-        let mut element_lists = vec![];
+        let mut contents_stack = vec![];
         for part in s.split(',') {
             let mut i = 0;
             while i < part.len() {
                 match &part[i..=i] {
                     "[" => {
-                        element_lists.push(vec![]);
+                        contents_stack.push(vec![]);
                         i += 1;
                     }
                     "]" => {
-                        let elements = element_lists.pop().unwrap();
-                        let list = List(elements);
-                        if element_lists.is_empty() {
-                            // This was the last list, and thus we closed the outer-most list
-                            return list;
+                        let contents = contents_stack.pop().unwrap();
+                        if contents_stack.is_empty() {
+                            // This was the outer-most/last list, and thus the packet is done
+                            return Packet { contents };
                         }
-                        element_lists.last_mut().unwrap().push(list);
+                        let list = List(contents);
+                        contents_stack.last_mut().unwrap().push(list);
                         i += 1;
                     }
                     _ => {
@@ -140,7 +109,7 @@ impl From<&str> for Element {
                             i += 1;
                         }
                         let num: u8 = part[start..i].parse().unwrap();
-                        element_lists.last_mut().unwrap().push(Integer(num));
+                        contents_stack.last_mut().unwrap().push(Integer(num));
                     }
                 }
             }
@@ -186,141 +155,122 @@ mod tests {
     }
 
     #[test]
-    fn element_from_pair_1() {
+    fn packet_from_pair_1() {
         let (left, right) = parse(EXAMPLE)[0];
-        let left = Element::from(left);
-        let right = Element::from(right);
+        let left = Packet::from(left).contents;
+        let right = Packet::from(right).contents;
         assert_eq!(
-            List(vec![
-                Integer(1),
-                Integer(1),
-                Integer(3),
-                Integer(1),
-                Integer(1),
-            ]),
+            vec![Integer(1), Integer(1), Integer(3), Integer(1), Integer(1)],
             left
         );
         assert_eq!(
-            List(vec![
-                Integer(1),
-                Integer(1),
-                Integer(5),
-                Integer(1),
-                Integer(1),
-            ]),
+            vec![Integer(1), Integer(1), Integer(5), Integer(1), Integer(1)],
             right
         );
     }
     #[test]
-    fn element_from_pair_2() {
+    fn packet_from_pair_2() {
         let (left, right) = parse(EXAMPLE)[1];
-        let left = Element::from(left);
-        let right = Element::from(right);
+        let left = Packet::from(left).contents;
+        let right = Packet::from(right).contents;
         assert_eq!(
-            List(vec![
+            vec![
                 List(vec![Integer(1)]),
                 List(vec![Integer(2), Integer(3), Integer(4)])
-            ]),
+            ],
             left
         );
-        assert_eq!(List(vec![List(vec![Integer(1)]), Integer(4)]), right);
+        assert_eq!(vec![List(vec![Integer(1)]), Integer(4)], right);
     }
     #[test]
-    fn element_from_pair_3() {
+    fn packet_from_pair_3() {
         let (left, right) = parse(EXAMPLE)[2];
-        let left = Element::from(left);
-        let right = Element::from(right);
-        assert_eq!(List(vec![Integer(9)]), left);
-        assert_eq!(
-            List(vec![List(vec![Integer(8), Integer(7), Integer(6)])]),
-            right
-        );
+        let left = Packet::from(left).contents;
+        let right = Packet::from(right).contents;
+        assert_eq!(vec![Integer(9)], left);
+        assert_eq!(vec![List(vec![Integer(8), Integer(7), Integer(6)])], right);
     }
     #[test]
-    fn element_from_pair_4() {
+    fn packet_from_pair_4() {
         let (left, right) = parse(EXAMPLE)[3];
-        let left = Element::from(left);
-        let right = Element::from(right);
+        let left = Packet::from(left).contents;
+        let right = Packet::from(right).contents;
         assert_eq!(
-            List(vec![
-                List(vec![Integer(4), Integer(4)]),
-                Integer(4),
-                Integer(4)
-            ]),
+            vec![List(vec![Integer(4), Integer(4)]), Integer(4), Integer(4)],
             left
         );
         assert_eq!(
-            List(vec![
+            vec![
                 List(vec![Integer(4), Integer(4)]),
                 Integer(4),
                 Integer(4),
                 Integer(4)
-            ]),
+            ],
             right
         );
     }
 
     #[test]
-    fn is_in_right_order_work_for_element_pair_1() {
+    fn is_in_right_order_work_for_packet_pair_1() {
         let (left, right) = parse(EXAMPLE)[0];
-        let left = Element::from(left);
-        let right = Element::from(right);
-        assert!((&left, &right).is_in_right_order());
+        let left = Packet::from(left).contents;
+        let right = Packet::from(right).contents;
+        assert!(left.cmp(&right).is_in_right_order());
     }
     #[test]
-    fn is_in_right_order_work_for_element_pair_2() {
+    fn is_in_right_order_work_for_packet_pair_2() {
         let (left, right) = parse(EXAMPLE)[1];
-        let left = Element::from(left);
-        let right = Element::from(right);
-        assert!((&left, &right).is_in_right_order());
+        let left = Packet::from(left).contents;
+        let right = Packet::from(right).contents;
+        assert!(left.cmp(&right).is_in_right_order());
     }
     #[test]
-    fn is_in_right_order_work_for_element_pair_3() {
+    fn is_in_right_order_work_for_packet_pair_3() {
         let (left, right) = parse(EXAMPLE)[2];
-        let left = Element::from(left);
-        let right = Element::from(right);
-        assert!(!(&left, &right).is_in_right_order());
+        let left = Packet::from(left).contents;
+        let right = Packet::from(right).contents;
+        assert!(!left.cmp(&right).is_in_right_order());
     }
     #[test]
-    fn is_in_right_order_work_for_element_pair_4() {
+    fn is_in_right_order_work_for_packet_pair_4() {
         let (left, right) = parse(EXAMPLE)[3];
-        let left = Element::from(left);
-        let right = Element::from(right);
-        assert!((&left, &right).is_in_right_order());
+        let left = Packet::from(left).contents;
+        let right = Packet::from(right).contents;
+        assert!(left.cmp(&right).is_in_right_order());
     }
     #[test]
-    fn is_in_right_order_work_for_element_pair_5() {
+    fn is_in_right_order_work_for_packet_pair_5() {
         let (left, right) = parse(EXAMPLE)[4];
-        let left = Element::from(left);
-        let right = Element::from(right);
-        assert!(!(&left, &right).is_in_right_order());
+        let left = Packet::from(left).contents;
+        let right = Packet::from(right).contents;
+        assert!(!left.cmp(&right).is_in_right_order());
     }
     #[test]
-    fn is_in_right_order_work_for_element_pair_6() {
+    fn is_in_right_order_work_for_packet_pair_6() {
         let (left, right) = parse(EXAMPLE)[5];
-        let left = Element::from(left);
-        let right = Element::from(right);
-        assert!((&left, &right).is_in_right_order());
+        let left = Packet::from(left).contents;
+        let right = Packet::from(right).contents;
+        assert!(left.cmp(&right).is_in_right_order());
     }
     #[test]
-    fn is_in_right_order_work_for_element_pair_7() {
+    fn is_in_right_order_work_for_packet_pair_7() {
         let (left, right) = parse(EXAMPLE)[6];
-        let left = Element::from(left);
-        let right = Element::from(right);
-        assert!(!(&left, &right).is_in_right_order());
+        let left = Packet::from(left).contents;
+        let right = Packet::from(right).contents;
+        assert!(!left.cmp(&right).is_in_right_order());
     }
     #[test]
-    fn is_in_right_order_work_for_element_pair_8() {
+    fn is_in_right_order_work_for_packet_pair_8() {
         let (left, right) = parse(EXAMPLE)[7];
-        let left = Element::from(left);
-        let right = Element::from(right);
-        assert!(!(&left, &right).is_in_right_order());
+        let left = Packet::from(left).contents;
+        let right = Packet::from(right).contents;
+        assert!(!left.cmp(&right).is_in_right_order());
     }
 
     #[test]
     fn part1_example() {
-        let elements = parse_elements(EXAMPLE);
-        assert_eq!(13, sum_of_indices_of_pairs_in_the_right_order(elements));
+        let packets = parse_packets(EXAMPLE);
+        assert_eq!(13, sum_of_indices_of_pairs_in_the_right_order(packets));
     }
 
     #[test]
@@ -330,8 +280,8 @@ mod tests {
 
     #[test]
     fn part2_example() {
-        let elements = parse_elements(EXAMPLE);
-        assert_eq!(140, calculate_decoder_key(elements));
+        let packets = parse_packets(EXAMPLE);
+        assert_eq!(140, calculate_decoder_key(packets));
     }
 
     #[test]
