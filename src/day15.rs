@@ -82,27 +82,36 @@ impl ScanResult {
             .filter_map(|sig| sig.no_beacon_bounds_at_y(y))
             .collect()
     }
-    fn tuning_frequency_of_distress_beacon(&mut self, xy_max: Coord) -> isize {
-        'outer: for y in 0..=xy_max {
+    fn tuning_frequency_of_distress_beacon(&mut self, limit: Coord) -> isize {
+        let (x, y) = self.find_point_by_considering_range_boundaries_on_each_line(limit);
+        x * 4_000_000 + y
+    }
+    /// Looking at all points on a line takes way too long. The result must be just 1 beyond
+    /// the start/end of a range. So let's only consider boundaries while scanning a line.
+    fn find_point_by_considering_range_boundaries_on_each_line(
+        &mut self,
+        limit: Coord,
+    ) -> (Coord, Coord) {
+        'y_loop: for y in 0..=limit {
             let mut x_ranges = self.no_beacon_x_ranges_at_y(y);
             x_ranges.sort_unstable_by_key(|r| *r.start());
-            let mut candidates = x_ranges.as_slice();
             let mut x = 0;
-            while x <= xy_max {
-                if let Some(idx) = candidates.iter().position(|r| r.start() > &x) {
-                    let lower_ranges = &candidates[..idx];
-                    candidates = &candidates[idx..];
-                    if let Some(&max) = lower_ranges.iter().map(|r| r.end()).max() {
-                        if max >= xy_max {
-                            continue 'outer;
+            let mut right_ranges = x_ranges.as_slice();
+            loop {
+                if let Some(idx) = right_ranges.iter().position(|r| r.start() > &x) {
+                    let left_ranges = &right_ranges[..idx];
+                    right_ranges = &right_ranges[idx..];
+                    if let Some(&max) = left_ranges.iter().map(|r| r.end()).max() {
+                        if max >= limit {
+                            continue 'y_loop;
                         }
                         x = max + 1;
-                        if !candidates.is_empty() && !candidates.iter().any(|r| r.contains(&x)) {
-                            return x * 4_000_000 + y;
+                        if !right_ranges.iter().any(|r| r.contains(&x)) {
+                            return (x, y);
                         }
                     }
                 } else {
-                    continue 'outer;
+                    continue 'y_loop;
                 }
             }
         }
