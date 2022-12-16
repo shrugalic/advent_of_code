@@ -107,7 +107,7 @@ use crate::day16::{day16_part1, day16_part2};
 mod day16;
 fn day16() {
     assert_eq!(1_488, day16_part1());
-    assert_eq!(1, day16_part2());
+    assert_eq!(2_111, day16_part2());
 }
 
 fn main() {
