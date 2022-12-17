@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::ops::RangeInclusive;
 use Direction::*;
 use Shape::*;
 
@@ -16,35 +17,55 @@ pub(crate) fn day17_part2() -> usize {
     tower_height(directions, P2_ROUNDS)
 }
 
+struct Floor {
+    y: Y,
+    count: usize,
+    desc: String,
+}
+
 type X = usize;
 type Y = usize;
 fn tower_height(directions: Vec<Direction>, rock_count: usize) -> usize {
-    let initial_x = 2 + 1;
+    // Our chamber looks like this:
+    // …       …
+    // |       | 2
+    // |       | 1
+    // +-------+ 0
+    // 012345678
     let initial_y = 3 + 1;
-    let mut tower_top = 0;
-    let mut wall_height = tower_top + initial_y - 1;
+    let mut tower_height = 0;
+    let mut wall_height = tower_height + initial_y - 1;
     let mut shapes = [HBar, Cross, LeftL, VBar, Square].iter().cycle();
     let mut directions = directions.iter().cycle();
+    let mut extra_height = 0;
 
+    // Init floor
+    let mut floors = vec![Floor {
+        y: 0,
+        count: 0,
+        desc: "+-------+".to_string(),
+    }];
+
+    // Init occupied positions with walls
     let mut occupied_positions: HashSet<(X, Y)> = (0..=9).into_iter().map(|x| (x, 0)).collect();
     (1..=wall_height).into_iter().for_each(|y| {
         occupied_positions.insert((0, y));
         occupied_positions.insert((8, y));
     });
 
-    // |       |
-    // +-------+
-    // 012345678
-    for _ in 0..rock_count {
+    // Simulate all the rocks
+    let mut count = 0;
+    while count < rock_count {
+        count += 1;
         let mut rock = Rock {
             shape: shapes.next().unwrap(),
-            left: initial_x,
-            bottom: tower_top + initial_y,
+            left: 2 + 1,
+            bottom: tower_height + initial_y,
         };
 
-        // Extend walls for collision tests
+        // Extend walls to cover the rock height for collision tests
         let old_wall_height = wall_height;
-        wall_height = tower_top + initial_y - 1 + rock.shape.height();
+        wall_height = tower_height + initial_y - 1 + rock.shape.height();
         (old_wall_height + 1..=wall_height)
             .into_iter()
             .for_each(|y| {
@@ -52,34 +73,81 @@ fn tower_height(directions: Vec<Direction>, rock_count: usize) -> usize {
                 occupied_positions.insert((8, y));
             });
 
+        // Let the rock do it's thing until it can't drop any more
         loop {
             // draw(&rock, &occupied_positions);
-
             let direction = directions.next().unwrap();
-            if !rock.offset_by(direction).overlaps(&occupied_positions) {
+
+            let can_move = !rock.offset_by(direction).overlaps(&occupied_positions);
+            if can_move {
                 rock.move_in(direction);
             }
 
-            let can_drop = rock.bottom > 0 && !rock.dropped_by_1().overlaps(&occupied_positions);
-            if can_drop {
+            let can_fall = !rock.dropped_by_1().overlaps(&occupied_positions);
+            if can_fall {
                 rock.drop_1_unit();
             } else {
                 break;
             }
         }
-        // Store shape
+
+        // Store the landed rock in occupied positions
         for pos in rock.occupied_positions() {
             occupied_positions.insert(pos);
         }
-        // Recalculate tower height
-        tower_top = occupied_positions
+
+        // Recalculate new tower height
+        tower_height = occupied_positions
             .iter()
             .filter(|(x, _)| (1..8).contains(x))
             .map(|&(_, y)| y)
             .max()
             .unwrap();
+
+        // Check for new floors, where rocks cover the full width of the chamber
+        let last_floor_y = *floors.last().map(|Floor { y, .. }| y).unwrap();
+        if let Some(y) = (last_floor_y + 1..=tower_height).into_iter().find(|y| {
+            (1..8)
+                .into_iter()
+                .all(|x| occupied_positions.contains(&(x, *y)))
+        }) {
+            let desc = gen_floor_desc(&occupied_positions, last_floor_y..=y);
+            if extra_height == 0 {
+                if let Some(prev) = floors.iter().find(|Floor { desc: d, .. }| desc.eq(d)) {
+                    let period = count - prev.count;
+                    let floor_height = y - prev.y;
+
+                    let mut multi = 0;
+                    let old_count = count;
+                    while count + period < rock_count {
+                        count += period;
+                        multi += 1;
+                    }
+                    extra_height = multi * floor_height;
+                    println!(
+                        "Floor @ {y} with count {old_count} is a repeat of floor @ {} with count {}",
+                        prev.y, prev.count
+                    );
+                    println!(
+                        "Period {period}, floor_height {floor_height}, extra_height {extra_height}"
+                    );
+
+                    // println!("floor:\n{}\n", desc);
+                    // draw(&rock, &occupied_positions);
+                }
+                floors.push(Floor { y, desc, count });
+            }
+        }
     }
-    tower_top
+
+    // dbg!(floors.iter().map(|Floor { y, .. }| y).collect::<Vec<_>>());
+    // if !floors.is_empty() {
+    //     let diffs: Vec<_> = floors.windows(2).map(|a| a[1].y - a[0].y).collect();
+    //     for Floor { y, desc, count } in floors {
+    //         println!("floor at {y} with {count}:\n{desc}\n");
+    //     }
+    // }
+    tower_height + extra_height
 }
 
 #[allow(unused)]
@@ -95,8 +163,8 @@ fn draw(rock: &Rock, occupied_positions: &HashSet<(X, Y)>) {
         "\n{}",
         (0..=max_y)
             .into_iter()
-            .map(|top| {
-                let y = max_y - top;
+            .rev()
+            .map(|y| {
                 (0..9usize)
                     .into_iter()
                     .map(|x| {
@@ -105,8 +173,8 @@ fn draw(rock: &Rock, occupied_positions: &HashSet<(X, Y)>) {
                         } else if occupied_positions.contains(&(x, y)) {
                             match (x, y) {
                                 (0, 0) | (8, 0) => '+',
-                                (_, 0) => '-',
                                 (0, _) | (8, _) => '|',
+                                (_, 0) => '-',
                                 _ => '#',
                             }
                         } else {
@@ -118,6 +186,31 @@ fn draw(rock: &Rock, occupied_positions: &HashSet<(X, Y)>) {
             .collect::<Vec<_>>()
             .join("\n")
     );
+}
+
+fn gen_floor_desc(occupied_positions: &HashSet<(X, Y)>, y_range: RangeInclusive<Y>) -> String {
+    y_range
+        .into_iter()
+        .rev()
+        .map(|y| {
+            (0..9usize)
+                .into_iter()
+                .map(|x| {
+                    if occupied_positions.contains(&(x, y)) {
+                        match (x, y) {
+                            (0, 0) | (8, 0) => '+',
+                            (0, _) | (8, _) => '|',
+                            (_, 0) => '-',
+                            _ => '#',
+                        }
+                    } else {
+                        '.'
+                    }
+                })
+                .collect::<String>()
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 enum Direction {
@@ -224,22 +317,19 @@ mod tests {
         let directions = parse(EXAMPLE);
         assert_eq!(3_068, tower_height(directions, P1_ROUNDS));
     }
-
     #[test]
     fn part1() {
         assert_eq!(3_071, day17_part1());
     }
 
-    #[ignore]
     #[test]
     fn part2_example() {
         let directions = parse(EXAMPLE);
         assert_eq!(1514285714288, tower_height(directions, P2_ROUNDS));
     }
 
-    #[ignore]
     #[test]
     fn part2() {
-        assert_eq!(1, day17_part2());
+        assert_eq!(1_523_615_160_362, day17_part2());
     }
 }
