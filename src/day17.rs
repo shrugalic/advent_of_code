@@ -226,9 +226,6 @@ struct Rock<'a> {
     bottom: usize,
 }
 impl<'a> Rock<'a> {
-    fn right(&self) -> usize {
-        self.left + self.shape.width() - 1
-    }
     fn move_in(&mut self, direction: &Direction) {
         match direction {
             Left => self.left -= 1,
@@ -278,15 +275,6 @@ enum Shape {
     Square,
 }
 impl Shape {
-    fn width(&self) -> usize {
-        match self {
-            HBar => 4,
-            Cross => 3,
-            LeftL => 3,
-            VBar => 1,
-            Square => 2,
-        }
-    }
     fn height(&self) -> usize {
         match self {
             HBar => 1,
