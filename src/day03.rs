@@ -1,11 +1,28 @@
 const INPUT: &str = include_str!("../input/day03.txt");
 
-pub(crate) fn day03_part1() -> u32 {
+#[cfg(feature = "dhat-heap")]
+#[global_allocator]
+static ALLOC: dhat::Alloc = dhat::Alloc;
+
+/// run this with
+/// ```sh
+/// cargo run --bin day03 --release --features dhat-heap
+/// ```
+/// to see the heap output
+#[allow(unused)]
+fn main() {
+    #[cfg(feature = "dhat-heap")]
+    let _profiler = dhat::Profiler::new_heap();
+
+    assert_eq!(day03_part1(), 284 * 3811);
+}
+
+pub fn day03_part1() -> u32 {
     let numbers = parse(INPUT);
     gamma_times_epsilon(numbers)
 }
 
-pub(crate) fn day03_part2() -> u32 {
+pub fn day03_part2() -> u32 {
     let numbers = parse(INPUT);
     reduce_numbers(numbers)
 }
@@ -47,7 +64,7 @@ fn reduce(mut numbers: Vec<Vec<bool>>, wanted: Filter) -> u32 {
 
 fn to_decimal(bits: &[bool]) -> u32 {
     bits.iter()
-        .map(|&is_one| if is_one { 1 } else { 0 })
+        .map(|&on| u32::from(on))
         .fold(0, |a, i| (a << 1) + i)
 }
 
