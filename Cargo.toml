@@ -10,6 +10,7 @@ name = "day03"
 path = "src/day03.rs"
 
 [dependencies]
+bitvec = "1.0.1"
 dhat = { version = "0.3.2" }
 
 [features]

@@ -1,3 +1,6 @@
+use bitvec::macros::internal::funty::Fundamental;
+use bitvec::prelude::*;
+
 const INPUT: &str = include_str!("../input/day03.txt");
 
 #[cfg(feature = "dhat-heap")]
@@ -27,9 +30,9 @@ pub fn day03_part2() -> u32 {
     reduce_numbers(numbers)
 }
 
-fn gamma_times_epsilon(numbers: Vec<Vec<bool>>) -> u32 {
+fn gamma_times_epsilon(numbers: Vec<BitVec>) -> u32 {
     let len = numbers[0].len();
-    let mut gamma = Vec::with_capacity(len);
+    let mut gamma = BitVec::with_capacity(len);
     for i in 0..len {
         let (ones, zeroes) = count_ones_and_zeroes_at_index(&numbers, i);
         gamma.push(ones >= zeroes);
@@ -39,20 +42,20 @@ fn gamma_times_epsilon(numbers: Vec<Vec<bool>>) -> u32 {
     gamma * epsilon
 }
 
-fn count_ones_and_zeroes_at_index(numbers: &[Vec<bool>], i: usize) -> (usize, usize) {
+fn count_ones_and_zeroes_at_index(numbers: &[BitVec], i: usize) -> (usize, usize) {
     let ones = numbers.iter().filter(|bits| bits[i]).count();
     let zeroes = numbers.len() - ones;
     (ones, zeroes)
 }
 
-fn reduce_numbers(numbers: Vec<Vec<bool>>) -> u32 {
+fn reduce_numbers(numbers: Vec<BitVec>) -> u32 {
     let og_rating = reduce(numbers.clone(), |ones, zeroes| ones >= zeroes);
     let cs_rating = reduce(numbers, |ones, zeroes| ones < zeroes);
     og_rating * cs_rating
 }
 
 type Filter = fn(usize, usize) -> bool;
-fn reduce(mut numbers: Vec<Vec<bool>>, wanted: Filter) -> u32 {
+fn reduce(mut numbers: Vec<BitVec>, wanted: Filter) -> u32 {
     let mut i = 0;
     while numbers.len() > 1 {
         let (ones, zeroes) = count_ones_and_zeroes_at_index(&numbers, i);
@@ -62,17 +65,17 @@ fn reduce(mut numbers: Vec<Vec<bool>>, wanted: Filter) -> u32 {
     to_decimal(&numbers[0])
 }
 
-fn to_decimal(bits: &[bool]) -> u32 {
+fn to_decimal(bits: &BitVec) -> u32 {
     bits.iter()
-        .map(|&on| u32::from(on))
+        .map(|bit| bit.as_u32())
         .fold(0, |a, i| (a << 1) + i)
 }
 
-fn parse(input: &str) -> Vec<Vec<bool>> {
+fn parse(input: &str) -> Vec<BitVec> {
     input
         .trim()
         .lines()
-        .map(|s| s.chars().map(|c| c == '1').collect::<Vec<_>>())
+        .map(|s| s.chars().map(|c| c == '1').collect::<BitVec>())
         .collect()
 }
 
