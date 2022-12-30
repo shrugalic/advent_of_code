@@ -21,62 +21,80 @@ fn main() {
 }
 
 pub fn day03_part1() -> u32 {
-    let numbers = parse(INPUT);
-    gamma_times_epsilon(numbers)
+    let (width, bits) = parse(INPUT);
+    gamma_times_epsilon(width, bits)
 }
 
 pub fn day03_part2() -> u32 {
-    let numbers = parse(INPUT);
-    reduce_numbers(numbers)
+    let (width, bits) = parse(INPUT);
+    reduce_bits(width, bits)
 }
 
-fn gamma_times_epsilon(numbers: Vec<BitVec>) -> u32 {
-    let len = numbers[0].len();
-    let mut gamma = BitVec::with_capacity(len);
-    for i in 0..len {
-        let (ones, zeroes) = count_ones_and_zeroes_at_index(&numbers, i);
+fn gamma_times_epsilon(width: usize, bits: BitVec) -> u32 {
+    let mut gamma = BitVec::with_capacity(width as usize);
+    for i in 0..width {
+        let (ones, zeroes) = count_ones_and_zeroes_at_index(width, &bits, i);
         gamma.push(ones >= zeroes);
     }
     let gamma = to_decimal(&gamma);
-    let epsilon = (1 << len) - 1 - gamma; // complement of gamma
+    let epsilon = (1 << width) - 1 - gamma; // complement of gamma
     gamma * epsilon
 }
 
-fn count_ones_and_zeroes_at_index(numbers: &[BitVec], i: usize) -> (usize, usize) {
-    let ones = numbers.iter().filter(|bits| bits[i]).count();
-    let zeroes = numbers.len() - ones;
+fn count_ones_and_zeroes_at_index(width: usize, bits: &BitSlice, i: usize) -> (usize, usize) {
+    let ones = bits.chunks(width).filter(|&bits| bits[i]).count();
+    let zeroes = bits.len() / width - ones;
     (ones, zeroes)
 }
 
-fn reduce_numbers(numbers: Vec<BitVec>) -> u32 {
-    let og_rating = reduce(numbers.clone(), |ones, zeroes| ones >= zeroes);
-    let cs_rating = reduce(numbers, |ones, zeroes| ones < zeroes);
+fn reduce_bits(width: usize, bits: BitVec) -> u32 {
+    let og_rating = reduce(width, bits.clone(), |ones, zeroes| ones >= zeroes);
+    let cs_rating = reduce(width, bits, |ones, zeroes| ones < zeroes);
     og_rating * cs_rating
 }
 
 type Filter = fn(usize, usize) -> bool;
-fn reduce(mut numbers: Vec<BitVec>, wanted: Filter) -> u32 {
+fn reduce(width: usize, mut bits: BitVec, wanted: Filter) -> u32 {
     let mut i = 0;
-    while numbers.len() > 1 {
-        let (ones, zeroes) = count_ones_and_zeroes_at_index(&numbers, i);
-        numbers.retain(|bits| bits[i] == wanted(ones, zeroes));
+    let mut start;
+    let mut end = bits.len();
+    while end > width {
+        let (ones, zeroes) = count_ones_and_zeroes_at_index(width, &bits[0..end], i);
+        start = 0;
+        while start < end {
+            if bits[start + i] == wanted(ones, zeroes) {
+                // good -> keep this chunk, and check the next
+                start += width;
+            } else {
+                // bad -> move the end one chunk to the left, and make sure this chunk is after it
+                // (if it's not already the last one, swap it with the one after the new end)
+                end -= width;
+                if start < end {
+                    for k in 0..width {
+                        bits.swap(start + k, end + k);
+                    }
+                }
+            }
+        }
         i += 1;
     }
-    to_decimal(&numbers[0])
+    to_decimal(&bits[0..end])
 }
 
-fn to_decimal(bits: &BitVec) -> u32 {
+fn to_decimal(bits: &BitSlice) -> u32 {
     bits.iter()
         .map(|bit| bit.as_u32())
         .fold(0, |a, i| (a << 1) + i)
 }
 
-fn parse(input: &str) -> Vec<BitVec> {
-    input
-        .trim()
-        .lines()
-        .map(|s| s.chars().map(|c| c == '1').collect::<BitVec>())
-        .collect()
+fn parse(input: &str) -> (usize, BitVec) {
+    let mut lines_iter = input.trim().lines().peekable();
+    let width = lines_iter.peek().unwrap().chars().count();
+    let bits = lines_iter
+        .flat_map(|line| line.chars())
+        .map(|c| c == '1')
+        .collect::<BitVec>();
+    (width, bits)
 }
 
 #[cfg(test)]
@@ -99,14 +117,14 @@ mod tests {
 
     #[test]
     fn example1() {
-        let numbers = parse(EXAMPLE);
-        assert_eq!(22 * 9, gamma_times_epsilon(numbers));
+        let (width, bits) = parse(EXAMPLE);
+        assert_eq!(22 * 9, gamma_times_epsilon(width, bits));
     }
 
     #[test]
     fn example2() {
-        let numbers = parse(EXAMPLE);
-        assert_eq!(23 * 10, reduce_numbers(numbers));
+        let (width, bits) = parse(EXAMPLE);
+        assert_eq!(23 * 10, reduce_bits(width, bits));
     }
 
     #[test]
