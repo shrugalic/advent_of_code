@@ -1,1 +1,1 @@
-input/day*.txt filter=git-crypt diff=git-crypt
+**/input/day*.txt filter=git-crypt diff=git-crypt
