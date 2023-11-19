@@ -65,7 +65,7 @@ fn run_springscript(program: &str) -> usize {
 fn intcode_computer_from_puzzle_input() -> IntCodeComputer {
     let input = parse(INPUT);
     let instr = input[0].split(',').map(|n| n.parse().unwrap()).collect();
-    intcode::IntCodeComputer::new(instr)
+    IntCodeComputer::new(instr)
 }
 
 #[cfg(test)]

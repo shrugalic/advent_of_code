@@ -120,7 +120,8 @@ fn modular_multiply(x: usize, y: usize, size: usize) -> usize {
 /// Calculate f2 = 1 / f1 in a modular way. f2 = modular_inverse(f1, size) means
 /// finding an f2 such that f1 * f2 % size == 1.
 fn modular_inverse(f1: usize, size: usize) -> usize {
-    if false {
+    let naive = false;
+    if naive {
         // Naive version
         let mut f2 = 1;
         while f2 % f1 != 0 {
