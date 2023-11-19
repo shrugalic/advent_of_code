@@ -58,11 +58,11 @@ impl<'a> Program<'a> {
             match instr {
                 Snd(Register(x)) => {
                     self.instr_ptr += 1;
-                    return State::SentOutput(self.registers[x.to_idx()]);
+                    return SentOutput(self.registers[x.to_idx()]);
                 }
                 Snd(Number(x)) => {
                     self.instr_ptr += 1;
-                    return State::SentOutput(x);
+                    return SentOutput(x);
                 }
                 Set(x, Register(y)) => {
                     self.registers[x.to_idx()] = self.registers[y.to_idx()];
@@ -105,59 +105,59 @@ impl<'a> Program<'a> {
                     if self.registers[x.to_idx()] > 0 {
                         self.instr_ptr =
                             (self.instr_ptr as isize + self.registers[y.to_idx()]) as usize;
-                        return State::Running;
+                        return Running;
                     }
                 }
                 Jgz(Register(x), Number(y)) => {
                     if self.registers[x.to_idx()] > 0 {
                         self.instr_ptr = (self.instr_ptr as isize + y) as usize;
-                        return State::Running;
+                        return Running;
                     }
                 }
                 Jgz(Number(x), Register(y)) => {
                     if x > 0 {
                         self.instr_ptr =
                             (self.instr_ptr as isize + self.registers[y.to_idx()]) as usize;
-                        return State::Running;
+                        return Running;
                     }
                 }
                 Jgz(Number(x), Number(y)) => {
                     if x > 0 {
                         self.instr_ptr = (self.instr_ptr as isize + y) as usize;
-                        return State::Running;
+                        return Running;
                     }
                 }
                 Jnz(Register(x), Register(y)) => {
                     if self.registers[x.to_idx()] != 0 {
                         self.instr_ptr =
                             (self.instr_ptr as isize + self.registers[y.to_idx()]) as usize;
-                        return State::Running;
+                        return Running;
                     }
                 }
                 Jnz(Register(x), Number(y)) => {
                     if self.registers[x.to_idx()] != 0 {
                         self.instr_ptr = (self.instr_ptr as isize + y) as usize;
-                        return State::Running;
+                        return Running;
                     }
                 }
                 Jnz(Number(x), Register(y)) => {
                     if x != 0 {
                         self.instr_ptr =
                             (self.instr_ptr as isize + self.registers[y.to_idx()]) as usize;
-                        return State::Running;
+                        return Running;
                     }
                 }
                 Jnz(Number(x), Number(y)) => {
                     if x != 0 {
                         self.instr_ptr = (self.instr_ptr as isize + y) as usize;
-                        return State::Running;
+                        return Running;
                     }
                 }
             }
             self.instr_ptr += 1;
-            State::Running
+            Running
         } else {
-            State::Terminated
+            Terminated
         }
     }
 }
@@ -171,9 +171,9 @@ pub(crate) enum Value {
 impl From<&str> for Value {
     fn from(value: &str) -> Self {
         if let Ok(number) = value.parse() {
-            Value::Number(number)
+            Number(number)
         } else {
-            Value::Register(value.chars().next().unwrap())
+            Register(value.chars().next().unwrap())
         }
     }
 }
@@ -196,15 +196,15 @@ impl From<&str> for Instr {
         let s: Vec<&str> = instr.split_ascii_whitespace().collect();
         let r = s[1].chars().next().unwrap();
         match s[0] {
-            "snd" => Instr::Snd(Value::from(s[1])),
-            "set" => Instr::Set(r, Value::from(s[2])),
-            "add" => Instr::Add(r, Value::from(s[2])),
-            "sub" => Instr::Sub(r, Value::from(s[2])),
-            "mul" => Instr::Mul(r, Value::from(s[2])),
-            "mod" => Instr::Mod(r, Value::from(s[2])),
-            "rcv" => Instr::Rcv(r),
-            "jgz" => Instr::Jgz(Value::from(s[1]), Value::from(s[2])),
-            "jnz" => Instr::Jnz(Value::from(s[1]), Value::from(s[2])),
+            "snd" => Snd(Value::from(s[1])),
+            "set" => Set(r, Value::from(s[2])),
+            "add" => Add(r, Value::from(s[2])),
+            "sub" => Sub(r, Value::from(s[2])),
+            "mul" => Mul(r, Value::from(s[2])),
+            "mod" => Mod(r, Value::from(s[2])),
+            "rcv" => Rcv(r),
+            "jgz" => Jgz(Value::from(s[1]), Value::from(s[2])),
+            "jnz" => Jnz(Value::from(s[1]), Value::from(s[2])),
             _ => panic!("Invalid instruction '{}'", instr),
         }
     }
