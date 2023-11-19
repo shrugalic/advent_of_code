@@ -1,0 +1,21 @@
+[package]
+name = "advent_of_code_2021"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "day03"
+path = "src/day03.rs"
+
+[dependencies]
+bitvec = "1.0.1"
+dhat = { version = "0.3.2" }
+
+[features]
+dhat-heap = []    # if you are doing heap profiling
+#dhat-ad-hoc = []  # if you are doing ad hoc profiling
+
+[profile.release]
+debug = 1
