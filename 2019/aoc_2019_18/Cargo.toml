@@ -1,0 +1,11 @@
+[package]
+name = "aoc_2019-12-18"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+coffee = { version = "0.3.2", features = ["opengl"] }
+itertools = "0.8.2"
+rayon = "1.3.0"
