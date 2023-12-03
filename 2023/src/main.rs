@@ -1,16 +1,15 @@
-mod day01;
-fn day01() {
-    println!("day 1 part 1: {}", day01::part1());
-    println!("day 1 part 2: {}", day01::part2());
-}
+use std::fmt::Display;
 
+mod day01;
 mod day02;
-fn day02() {
-    println!("day 2 part 1: {}", day02::part1());
-    println!("day 2 part 2: {}", day02::part2());
-}
+mod day03;
 
 fn main() {
-    day01();
-    day02();
+    print_result(1, day01::part1(), day01::part2());
+    print_result(2, day02::part1(), day02::part2());
+    print_result(3, day03::part1(), day03::part2());
+}
+
+fn print_result(day: i32, part1: impl Display, part2: impl Display) {
+    println!("2023 day {day}:\n- part 1: {part1}\n- part 2: {part2}");
 }
