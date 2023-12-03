@@ -51,25 +51,19 @@ fn number_from_first_and_last_possibly_spelled_out_digit(line: &str) -> usize {
         ("eight", 8),
         ("nine", 9),
     ];
-    let mut left: usize = usize::MAX;
-    let mut right: usize = usize::MIN;
-    let mut first_digit = 0;
-    let mut last_digit = 0;
-    for (s, v) in string_value_pairs {
-        if let Some(i) = line.find(s) {
-            if i <= left {
-                left = i;
-                first_digit = v;
+    let mut first_digit = None;
+    let mut last_digit = None;
+    for i in 0..line.len() {
+        for (s, v) in string_value_pairs {
+            if first_digit.is_none() && line[i..].starts_with(s) {
+                first_digit = Some(v);
             }
-        }
-        if let Some(i) = line.rfind(s) {
-            if i >= right {
-                right = i;
-                last_digit = v;
+            if last_digit.is_none() && line[..line.len() - i].ends_with(s) {
+                last_digit = Some(v);
             }
         }
     }
-    first_digit * 10 + last_digit
+    10 * first_digit.unwrap() + last_digit.unwrap()
 }
 
 #[cfg(test)]
