@@ -19,11 +19,12 @@ fn count_ways_to_go_farther_in_the_same_time(input: &str) -> usize {
     let races = parse(input);
     let concatenate =
         |left: usize, right: usize| left * 10usize.pow(right.to_string().len() as u32) + right;
-    let race = races.into_iter().fold(Race::default(), |total, race| {
-        let time = concatenate(total.time, race.time);
-        let distance = concatenate(total.distance, race.distance);
-        Race { time, distance }
-    });
+    let race = races
+        .into_iter()
+        .fold(Race::default(), |accumulated, race| Race {
+            total_time: concatenate(accumulated.total_time, race.total_time),
+            distance: concatenate(accumulated.distance, race.distance),
+        });
     race.count_ways_to_go_farther_in_the_same_time()
 }
 
@@ -47,22 +48,33 @@ fn parse(input: &str) -> Vec<Race> {
     times
         .into_iter()
         .zip(distances.into_iter())
-        .map(|(time, distance)| Race { time, distance })
+        .map(|(total_time, distance)| Race {
+            total_time,
+            distance,
+        })
         .collect()
 }
 
 #[derive(PartialEq, Debug, Default)]
 struct Race {
-    time: usize,
+    total_time: usize,
     distance: usize,
 }
 
 impl Race {
     fn count_ways_to_go_farther_in_the_same_time(&self) -> usize {
-        (1usize..self.time)
-            .map(|time_and_speed| (self.time - time_and_speed) * time_and_speed)
-            .filter(|distance| distance > &self.distance)
-            .count()
+        let min_charge_time = (1usize..self.total_time)
+            .find(|charge_time| self.travels_farther(*charge_time))
+            .unwrap();
+        let max_charge_time = (1usize..self.total_time)
+            .rfind(|charge_time| self.travels_farther(*charge_time))
+            .unwrap();
+        max_charge_time - min_charge_time + 1
+    }
+    fn travels_farther(&self, charge_time: usize) -> bool {
+        let speed = charge_time;
+        let race_time = self.total_time - charge_time;
+        race_time * speed > self.distance
     }
 }
 
