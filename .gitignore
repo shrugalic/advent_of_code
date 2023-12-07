@@ -13,3 +13,5 @@
 **/.idea
 **/.DS_Store
 **/dhat-heap.json
+**/template.rs
+
