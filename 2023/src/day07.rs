@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
-use Ordering::*;
-
+use std::mem;
 use Label::*;
+use Ordering::*;
 use Type::*;
 
 const INPUT: &str = include_str!("../input/day07.txt");
@@ -15,28 +15,20 @@ pub(crate) fn part2() -> usize {
 }
 
 fn sum_of_winnings_part1(input: &str) -> usize {
-    let mut hands = parse(input);
-    hands.sort_unstable_by(HandWithBid::ordering_without_jokers);
-    sum_of_winnings(hands)
+    CamelCards::from(input).sum_of_winnings()
 }
 
 fn sum_of_winnings_part2(input: &str) -> usize {
-    let mut hands = parse(input);
-    hands.sort_unstable_by(HandWithBid::ordering_with_jokers);
-    sum_of_winnings(hands)
+    CamelCards::from(input)
+        .jacks_replaced_with_jokers()
+        .sum_of_winnings()
 }
 
-fn parse(input: &str) -> Vec<HandWithBid> {
-    input.trim().lines().map(HandWithBid::from).collect()
+struct CamelCards {
+    hands: Vec<HandWithBid>,
 }
 
-fn sum_of_winnings(hands: Vec<HandWithBid>) -> usize {
-    let rank = |i| -> usize { i + 1 };
-    let winnings = |(i, line): (usize, HandWithBid)| -> usize { rank(i) * line.bid };
-    hands.into_iter().enumerate().map(winnings).sum()
-}
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Ord, PartialOrd)]
 struct HandWithBid {
     hand: Hand,
     bid: usize,
@@ -59,8 +51,9 @@ enum Type {
     FiveOfAKind,
 }
 
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Clone, Copy)]
+#[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
 enum Label {
+    Joker,
     Two,
     Three,
     Four,
@@ -76,6 +69,13 @@ enum Label {
     A,
 }
 
+impl From<&str> for CamelCards {
+    fn from(input: &str) -> Self {
+        let hands = input.trim().lines().map(HandWithBid::from).collect();
+        CamelCards { hands }
+    }
+}
+
 impl From<&str> for HandWithBid {
     fn from(s: &str) -> Self {
         let (hand, bid) = s.split_once(" ").expect("two parts per line");
@@ -88,8 +88,8 @@ impl From<&str> for HandWithBid {
 impl From<&str> for Hand {
     fn from(hand: &str) -> Self {
         let cards: Vec<_> = hand.chars().map(Label::from).collect();
-        let hand_type = Hand::type_without_jokers_of(&cards);
-        Hand { cards, hand_type }
+        let hand_type = Hand::hand_type_of(&cards);
+        Hand { hand_type, cards }
     }
 }
 
@@ -114,24 +114,35 @@ impl From<char> for Label {
     }
 }
 
-impl HandWithBid {
-    fn ordering_without_jokers(left: &HandWithBid, right: &HandWithBid) -> Ordering {
-        left.hand.cmp(&right.hand)
+impl CamelCards {
+    fn sum_of_winnings(&mut self) -> usize {
+        self.hands.sort_unstable();
+        let rank = |i| -> usize { i + 1 };
+        let winnings = |(i, line): (usize, &HandWithBid)| -> usize { rank(i) * line.bid };
+        self.hands.iter().enumerate().map(winnings).sum()
     }
-    fn ordering_with_jokers(left: &HandWithBid, right: &HandWithBid) -> Ordering {
-        Hand::ordering_with_jokers(&left.hand, &right.hand)
+    fn jacks_replaced_with_jokers(mut self) -> Self {
+        self.hands.iter_mut().for_each(HandWithBid::use_jokers);
+        self
+    }
+}
+
+impl HandWithBid {
+    fn use_jokers(&mut self) {
+        self.hand.use_jokers();
+    }
+    fn with_jokers(mut self) -> Self {
+        self.hand = self.hand.with_jokers();
+        self
     }
 }
 
 impl Hand {
-    fn type_without_jokers(&self) -> Type {
-        Hand::type_without_jokers_of(&self.cards)
-    }
-    fn type_without_jokers_of(cards: &[Label]) -> Type {
-        let mut l: Vec<_> = cards.iter().cloned().collect();
+    fn base_hand_type(cards: &[Label]) -> Type {
+        let mut l: Vec<_> = cards.iter().collect();
         l.sort_unstable();
 
-        if l[0] == l[4] {
+        let base_hand_type = if l[0] == l[4] {
             FiveOfAKind
         } else if l[0] == l[3] || l[1] == l[4] {
             FourOfAKind
@@ -145,14 +156,16 @@ impl Hand {
             OnePair
         } else {
             HighCard
-        }
+        };
+        base_hand_type
     }
-    fn type_with_jokers(&self) -> Type {
-        let joker_count = self.cards.iter().filter(|label| label == &&J).count();
+    fn hand_type_of(cards: &[Label]) -> Type {
+        let base_hand_type = Self::base_hand_type(cards);
+        let joker_count = cards.iter().filter(|label| label == &&Joker).count();
         if joker_count == 0 {
-            return self.type_without_jokers();
+            return base_hand_type;
         }
-        match self.type_without_jokers() {
+        match base_hand_type {
             // 1 <= joker_count <= 5
             FiveOfAKind => FiveOfAKind,
             // 1 <= joker_count <= 4
@@ -206,32 +219,16 @@ impl Hand {
             HighCard => OnePair,
         }
     }
-    fn ordering_with_jokers(left: &Hand, right: &Hand) -> Ordering {
-        let ordering_by_type = left.type_with_jokers().cmp(&right.type_with_jokers());
-        match ordering_by_type {
-            Less | Greater => ordering_by_type,
-            Equal => Hand::ordering_by_cards(left, right),
-        }
+    fn with_jokers(mut self) -> Self {
+        self.use_jokers();
+        self
     }
-    fn ordering_by_cards(left: &Hand, right: &Hand) -> Ordering {
-        left.cards
-            .iter()
-            .zip(right.cards.iter())
-            .map(Label::compare_with_jokers)
-            .filter(|o| o != &Equal)
-            .next()
-            .unwrap_or(Equal)
-    }
-}
-
-impl Label {
-    fn compare_with_jokers((left, right): (&Label, &Label)) -> Ordering {
-        match (left == &J, right == &J) {
-            (true, false) => Less,
-            (false, true) => Greater,
-            (false, false) => left.cmp(right),
-            (true, true) => Equal,
-        }
+    fn use_jokers(&mut self) {
+        self.cards
+            .iter_mut()
+            .filter(|label| label == &&J)
+            .for_each(|jack| mem::swap(jack, &mut Joker));
+        self.hand_type = Hand::hand_type_of(&self.cards);
     }
 }
 
@@ -248,7 +245,7 @@ QQQJA 483
 ";
 
     #[test]
-    fn test_label_order() {
+    fn test_label_sort_order() {
         let mut labels: Vec<_> = "4T29J8Q7K6A35".chars().map(Label::from).collect();
         labels.sort_unstable();
         assert_eq!(
@@ -269,49 +266,55 @@ QQQJA 483
 
     #[test]
     fn test_example_hands_without_jokers_have_base_type() {
-        let hand1 = Hand::from("32T3K");
-        assert_eq!(hand1.type_with_jokers(), hand1.type_without_jokers());
+        assert_eq!(Hand::from("32T3K"), Hand::from("32T3K").with_jokers());
+        assert_eq!(Hand::from("KK677"), Hand::from("KK677").with_jokers());
+    }
 
-        let hand2 = Hand::from("KK677");
-        assert_eq!(hand2.type_with_jokers(), hand2.type_without_jokers());
+    #[test]
+    fn test_replace_jacks_with_jokers() {
+        assert_eq!(
+            Hand::from("T55J5").with_jokers().cards,
+            vec![T, Five, Five, Joker, Five]
+        );
     }
 
     #[test]
     fn test_example_hands_with_jokers_are_four_of_a_kind() {
-        assert_eq!(Hand::from("T55J5").type_with_jokers(), FourOfAKind);
-        assert_eq!(Hand::from("KTJJT").type_with_jokers(), FourOfAKind);
-        assert_eq!(Hand::from("QQQJA").type_with_jokers(), FourOfAKind);
+        ["T55J5", "KTJJT", "QQQJA"]
+            .into_iter()
+            .map(Hand::from)
+            .map(Hand::with_jokers)
+            .for_each(|hand| assert_eq!(hand.hand_type, FourOfAKind));
     }
 
     #[test]
     fn test_part2_example_order() {
-        let mut hands = parse(EXAMPLE);
-        hands.sort_unstable_by(|a, b| Hand::ordering_with_jokers(&a.hand, &b.hand));
+        let mut hands: Vec<_> = CamelCards::from(EXAMPLE).jacks_replaced_with_jokers().hands;
+        hands.sort_unstable();
         assert_eq!(
             hands,
             vec![
-                HandWithBid::from("32T3K 765"),
-                HandWithBid::from("KK677 28"),
-                HandWithBid::from("T55J5 684"),
-                HandWithBid::from("QQQJA 483"),
-                HandWithBid::from("KTJJT 220"),
+                HandWithBid::from("32T3K 765").with_jokers(),
+                HandWithBid::from("KK677 28").with_jokers(),
+                HandWithBid::from("T55J5 684").with_jokers(),
+                HandWithBid::from("QQQJA 483").with_jokers(),
+                HandWithBid::from("KTJJT 220").with_jokers(),
             ]
         );
     }
 
     #[test]
     fn test_joker_counts_as_literal_when_breaking_ties() {
-        assert_eq!(Hand::from("JKKK2").type_with_jokers(), FourOfAKind);
-        assert_eq!(Hand::from("QQQQ2").type_with_jokers(), FourOfAKind);
-        assert_eq!(
-            Hand::ordering_with_jokers(&Hand::from("JKKK2"), &Hand::from("QQQQ2")),
-            Less
-        );
+        let hand1 = Hand::from("JKKK2").with_jokers();
+        let hand2 = Hand::from("QQQQ2").with_jokers();
+        assert_eq!(hand1.hand_type, FourOfAKind);
+        assert_eq!(hand2.hand_type, FourOfAKind);
+        assert_eq!(hand1.cmp(&hand2), Less);
     }
 
     #[test]
     fn test_multiple_jokers() {
-        assert_eq!(Hand::from("QJJQ2").type_with_jokers(), FourOfAKind);
+        assert_eq!(Hand::from("QJJQ2").with_jokers().hand_type, FourOfAKind);
     }
 
     #[test]
