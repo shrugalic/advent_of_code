@@ -30,26 +30,27 @@ fn parse_history(line: &str) -> History {
 }
 
 fn predict_next_value(history: History) -> Number {
-    let mut lasts = vec![];
-    let mut deltas = history;
-    while !deltas.iter().all(|n| n == &0) {
-        lasts.push(*deltas.last().unwrap());
-        deltas = deltas.windows(2).map(|pair| pair[1] - pair[0]).collect();
-    }
-    lasts.iter().sum::<Number>()
+    let (_, last_numbers) = calculate_deltas_for(history);
+    last_numbers.iter().sum()
 }
 
 fn predict_previous_value(history: History) -> Number {
-    let mut firsts = vec![];
-    let mut deltas = history;
-    while !deltas.iter().all(|n| n == &0) {
-        firsts.push(*deltas.first().unwrap());
-        deltas = deltas.windows(2).map(|pair| pair[1] - pair[0]).collect();
-    }
-    firsts.iter().rev().fold(
+    let (first_numbers, _) = calculate_deltas_for(history);
+    first_numbers.iter().rev().fold(
         /* initial prediction */ 0,
         |prediction, first| first - prediction,
     )
+}
+
+fn calculate_deltas_for(history: History) -> (Vec<Number>, Vec<Number>) {
+    let mut deltas = history;
+    let (mut firsts, mut lasts) = (vec![], vec![]);
+    while !deltas.iter().all(|&n| n == 0) {
+        firsts.push(*deltas.first().unwrap());
+        lasts.push(*deltas.last().unwrap());
+        deltas = deltas.windows(2).map(|pair| pair[1] - pair[0]).collect();
+    }
+    (firsts, lasts)
 }
 
 #[cfg(test)]
