@@ -12,21 +12,15 @@ pub(crate) fn part2() -> Number {
 }
 
 fn solve_part1(input: &str) -> Number {
-    parse_histories(input)
-        .into_iter()
-        .map(predict_next_value)
-        .sum()
+    parse_histories(input).map(predict_next_value).sum()
 }
 
 fn solve_part2(input: &str) -> Number {
-    parse_histories(input)
-        .into_iter()
-        .map(predict_previous_value)
-        .sum()
+    parse_histories(input).map(predict_previous_value).sum()
 }
 
-fn parse_histories(input: &str) -> Vec<History> {
-    input.trim().lines().map(parse_history).collect()
+fn parse_histories(input: &str) -> impl Iterator<Item = History> + '_ {
+    input.trim().lines().map(parse_history)
 }
 
 fn parse_history(line: &str) -> History {
