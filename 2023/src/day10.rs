@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
 
 use Direction::*;
@@ -11,15 +11,15 @@ pub(crate) fn part1() -> usize {
 }
 
 pub(crate) fn part2() -> usize {
-    solve_part2(INPUT)
+    count_regions_unreachable_from_outside(INPUT)
 }
 
 fn count_steps_to_farthest_point(input: &str) -> usize {
     let grid = Grid::from(input);
     let start = grid.get_starting_position();
-    let starting_directions = grid.get_starting_directions(&start);
+    let directions_at_start = grid.get_directions_possible_at(&start);
 
-    let mut direction = starting_directions[0]; // either of the two directions is fine
+    let mut direction = directions_at_start[0]; // either of the two directions is fine
     let mut curr_pos = start;
     let mut step_count = 0;
     loop {
@@ -29,20 +29,20 @@ fn count_steps_to_farthest_point(input: &str) -> usize {
             return step_count / 2;
         }
         let next_tile = grid.tile_at(&curr_pos).expect("a tile at this position");
-        direction = next_tile.exit_dir_when_entered_from(&direction.from());
+        direction = next_tile.exit_direction_with_entry(&direction);
     }
 }
 
-fn solve_part2(input: &str) -> usize {
+fn count_regions_unreachable_from_outside(input: &str) -> usize {
     let mut grid = Grid::from(input);
     // println!("Original:\n{grid}\n");
 
     let start = grid.get_starting_position();
-    let starting_directions = grid.get_starting_directions(&start); // Replace start tile with actual tile
-    grid.replace_start_with_actual_tile(&start, &starting_directions);
+    let directions_at_start = grid.get_directions_possible_at(&start);
+    grid.replace_start_with_actual_tile(&start, &directions_at_start);
     // println!("Start replaced with actual tile:\n{grid}\n");
 
-    let direction = starting_directions[0]; // either of the two directions is fine
+    let direction = directions_at_start[0]; // either of the two directions is fine
     grid.replace_unconnected_pipes_with_ground(start, direction);
     // println!("Removed unconnected pipes:\n{grid}\n");
 
@@ -64,10 +64,7 @@ impl Pos {
     }
     fn step_in(&self, dir: &Direction) -> Pos {
         let (dx, dy) = dir.offset();
-        Pos {
-            x: self.x + dx,
-            y: self.y + dy,
-        }
+        self.offset_by(dx, dy)
     }
     fn offset_by(&self, dx: Coord, dy: Coord) -> Self {
         Self::new(self.x + dx, self.y + dy)
@@ -91,47 +88,21 @@ impl Direction {
             W => (-1, 0),
         }
     }
-    fn from(&self) -> Direction {
-        match self {
-            N => S,
-            S => N,
-            E => W,
-            W => E,
-        }
-    }
 }
 
 impl Tile {
-    fn allows_entry_from(&self, dir: &Direction) -> bool {
+    fn allows_entry_in(&self, dir: &Direction) -> bool {
         match self {
             Start => true,
             Ground => false,
-            pipe => pipe.connection().allows_entry_from(dir),
+            pipe => pipe.redirections().contains_key(dir),
         }
     }
-    fn connection(&self) -> Connection {
-        match self {
-            NS => Connection::new(N, S),
-            EW => Connection::new(E, W),
-            NE => Connection::new(N, E),
-            NW => Connection::new(N, W),
-            SW => Connection::new(S, W),
-            SE => Connection::new(S, E),
-            _ => panic!("No connection for {:?}", self),
-        }
-    }
-    fn exit_dir_when_entered_from(&self, from: &Direction) -> Direction {
-        if self == &NS || self == &EW {
-            return from.from();
-        }
-        let connection = self.connection();
-        if from == &connection.entry {
-            connection.exit
-        } else if from == &connection.exit {
-            connection.entry
-        } else {
-            panic!("Tile {self:?} does not allow entry from {from:?}");
-        }
+    fn exit_direction_with_entry(&self, dir: &Direction) -> Direction {
+        *self
+            .redirections()
+            .get(dir)
+            .expect("Tile does not allow entry in this direction")
     }
     fn to_char(&self) -> char {
         match self {
@@ -146,27 +117,22 @@ impl Tile {
             Outside => ' ',
         }
     }
-}
-
-#[derive(Debug)]
-struct Connection {
-    entry: Direction,
-    exit: Direction,
-}
-
-impl Connection {
-    fn new(from: Direction, to: Direction) -> Self {
-        Connection {
-            entry: from,
-            exit: to,
+    fn redirections(&self) -> HashMap<Direction, Direction> {
+        match self {
+            NS => [(N, N), (S, S)], // |
+            EW => [(E, E), (W, W)], // -
+            NE => [(S, E), (W, N)], // L
+            NW => [(S, W), (E, N)], // J
+            SW => [(E, S), (N, W)], // 7
+            SE => [(N, E), (W, S)], // F
+            Ground | Start | Outside => panic!("Unsupported tile {:?}", self),
         }
-    }
-    fn allows_entry_from(&self, dir: &Direction) -> bool {
-        &self.entry == dir || &self.exit == dir
+        .into_iter()
+        .collect()
     }
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 enum Direction {
     N,
     E,
@@ -214,13 +180,13 @@ impl Grid {
             .next()
             .expect("A line with a start tile")
     }
-    fn get_starting_directions(&self, start: &Pos) -> [Direction; 2] {
+    fn get_directions_possible_at(&self, start: &Pos) -> [Direction; 2] {
         let starting_directions: Vec<Direction> = [N, E, S, W]
             .into_iter()
             .filter(|direction| {
                 let next_pos = start.step_in(&direction);
                 self.tile_at(&next_pos)
-                    .is_some_and(|next_tile| next_tile.allows_entry_from(&direction.from()))
+                    .is_some_and(|next_tile| next_tile.allows_entry_in(&direction))
             })
             .collect();
         [starting_directions[0], starting_directions[1]]
@@ -228,9 +194,9 @@ impl Grid {
     fn replace_start_with_actual_tile(
         &mut self,
         start: &Pos,
-        starting_directions: &[Direction; 2],
+        directions_at_start: &[Direction; 2],
     ) {
-        let actual_tile = match (&starting_directions[0], &starting_directions[1]) {
+        let actual_tile = match (&directions_at_start[0], &directions_at_start[1]) {
             (N, S) | (S, N) => NS,
             (E, W) | (W, E) => EW,
             (N, E) | (E, N) => NE,
@@ -252,7 +218,7 @@ impl Grid {
                 break;
             }
             let next_tile = self.tile_at(&curr_pos).expect("valid tile");
-            direction = next_tile.exit_dir_when_entered_from(&direction.from());
+            direction = next_tile.exit_direction_with_entry(&direction);
         }
         for y in 0..self.height() {
             for x in 0..self.width() {
@@ -295,7 +261,7 @@ impl Grid {
             self.fill_ground_with_outside_marking(left_of_entrance.x, left_of_entrance.y);
 
             let tile = self.tile_at(&curr_pos).expect("valid_tile");
-            direction = tile.exit_dir_when_entered_from(&direction.from());
+            direction = tile.exit_direction_with_entry(&direction);
 
             let left_of_exit = curr_pos.left_of_path_in_regards_to(&direction);
             self.fill_ground_with_outside_marking(left_of_exit.x, left_of_exit.y);
@@ -486,17 +452,17 @@ L7JLJL-JLJLJL--JLJ.L
 
     #[test]
     fn test_part2_open_example() {
-        assert_eq!(4, solve_part2(EXAMPLE_2A));
+        assert_eq!(4, count_regions_unreachable_from_outside(EXAMPLE_2A));
     }
     #[test]
     fn test_part2_closed_examples() {
-        assert_eq!(4, solve_part2(EXAMPLE_2B));
-        assert_eq!(8, solve_part2(EXAMPLE_2C));
-        assert_eq!(10, solve_part2(EXAMPLE_2D));
+        assert_eq!(4, count_regions_unreachable_from_outside(EXAMPLE_2B));
+        assert_eq!(8, count_regions_unreachable_from_outside(EXAMPLE_2C));
+        assert_eq!(10, count_regions_unreachable_from_outside(EXAMPLE_2D));
     }
 
     #[test]
     fn test_part2() {
-        assert_eq!(589, solve_part2(INPUT));
+        assert_eq!(589, count_regions_unreachable_from_outside(INPUT));
     }
 }
