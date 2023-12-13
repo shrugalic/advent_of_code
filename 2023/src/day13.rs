@@ -234,4 +234,35 @@ mod tests {
         assert_eq!(1, grid.score());
         assert_eq!(5, grid.score_with_smudge_fixed());
     }
+
+    #[test]
+    fn sanity_check() {
+        let input = "\
+#....#.##
+...##.#.#
+###..#...
+#....#.##
+######...
+..##.##..
+..#...#.#
+..#...#.#
+..##.##..
+######...
+#....#.##
+###..#...
+...##.#.#
+#...##.##
+#...##.##";
+        let grid = Grid::from(input);
+        let original_rows = grid.rows_of_reflection();
+        let original_cols = grid.columns_of_reflection();
+
+        assert_eq!(*original_rows.iter().cloned().collect::<Vec<_>>(), vec![14]);
+        assert!(original_cols.is_empty());
+
+        let (new_rows, new_cols) = grid.rows_and_columns_of_reflection_with_smudge_fixed();
+
+        assert_eq!(new_rows.iter().cloned().collect::<Vec<_>>(), vec![7, 14]);
+        assert!(new_cols.is_empty());
+    }
 }
