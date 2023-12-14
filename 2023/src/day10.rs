@@ -241,7 +241,7 @@ impl Grid {
     }
     fn mark_areas_on_the_outside_of_the_loop_as_outside(&mut self) {
         // Find a new starting position next to a known "outside" area
-        let mut start = Pos::new(0, 1);
+        let mut start = Pos::new(0, (self.height() / 2) as Coord);
         while let Some(Outside) = self.tile_at(&start) {
             start.x += 1;
         }
