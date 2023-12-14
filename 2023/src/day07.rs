@@ -1,7 +1,6 @@
-use std::cmp::Ordering;
 use std::mem;
 use Label::*;
-use Ordering::*;
+
 use Type::*;
 
 const INPUT: &str = include_str!("../input/day07.txt");
@@ -235,6 +234,7 @@ impl Hand {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cmp::Ordering::Less;
 
     const EXAMPLE: &str = "\
 32T3K 765
