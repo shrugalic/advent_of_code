@@ -104,15 +104,13 @@ impl DigitPositions {
         Self { x_range: x..=x, y }
     }
     fn adjacent_positions(&self) -> impl Iterator<Item = Position> + '_ {
-        (self.x_range.start() - 1..=self.x_range.end() + 1)
-            .into_iter()
-            .flat_map(|x| {
-                [
-                    Position { x, y: self.y - 1 },
-                    Position { x, y: self.y },
-                    Position { x, y: self.y + 1 },
-                ]
-            })
+        (self.x_range.start() - 1..=self.x_range.end() + 1).flat_map(|x| {
+            [
+                Position { x, y: self.y - 1 },
+                Position { x, y: self.y },
+                Position { x, y: self.y + 1 },
+            ]
+        })
     }
     fn extend(self) -> Self {
         DigitPositions {

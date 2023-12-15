@@ -49,7 +49,6 @@ impl Universe {
             let min = *filled_positions.first().unwrap();
             let max = *filled_positions.last().unwrap();
             (min + 1..max)
-                .into_iter()
                 .filter(|x| !filled_positions.contains(x))
                 .collect()
         };
@@ -125,7 +124,6 @@ impl Display for Universe {
             ys.into_iter()
                 .map(|y| {
                     xs.clone()
-                        .into_iter()
                         .map(|x| {
                             if self.galaxies.contains(&Pos::new(x, y)) {
                                 '#'

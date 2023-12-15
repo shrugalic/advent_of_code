@@ -51,14 +51,12 @@ impl Grid {
         total_count: usize,
     ) -> BTreeSet<usize> {
         (1..total_count)
-            .into_iter()
             .filter_map(|next| {
                 let prev_count = next;
                 let next_count = total_count - prev_count;
                 let max_offset = min(prev_count, next_count);
                 let curr = next - 1;
                 let is_reflection = (0..max_offset)
-                    .into_iter()
                     .map(|offset| (self, (curr - offset, next + offset)))
                     .all(are_reflections);
                 is_reflection.then_some(prev_count)

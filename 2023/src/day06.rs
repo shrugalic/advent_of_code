@@ -47,7 +47,7 @@ fn parse(input: &str) -> Vec<Race> {
 
     times
         .into_iter()
-        .zip(distances.into_iter())
+        .zip(distances)
         .map(|(total_time, distance)| Race {
             total_time,
             distance,

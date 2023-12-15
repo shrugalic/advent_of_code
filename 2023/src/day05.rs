@@ -151,7 +151,7 @@ impl Map {
 
 impl Mapping {
     fn contains(&self, value: &Number) -> bool {
-        self.range.contains(&value)
+        self.range.contains(value)
     }
     fn map(&self, value: Number) -> Number {
         (value as Offset + self.offset) as Number

@@ -184,9 +184,9 @@ impl Grid {
         let starting_directions: Vec<Direction> = [N, E, S, W]
             .into_iter()
             .filter(|direction| {
-                let next_pos = start.step_in(&direction);
+                let next_pos = start.step_in(direction);
                 self.tile_at(&next_pos)
-                    .is_some_and(|next_tile| next_tile.allows_entry_in(&direction))
+                    .is_some_and(|next_tile| next_tile.allows_entry_in(direction))
             })
             .collect();
         [starting_directions[0], starting_directions[1]]
@@ -205,7 +205,7 @@ impl Grid {
             (S, E) | (E, S) => SE,
             (l, r) => panic!("No connection for {l:?} and {r:?}"),
         };
-        self.replace_tile(&start, actual_tile);
+        self.replace_tile(start, actual_tile);
     }
     fn replace_unconnected_pipes_with_ground(&mut self, start: Pos, mut direction: Direction) {
         let mut pipe_positions = HashSet::new();
@@ -223,7 +223,7 @@ impl Grid {
         for y in 0..self.height() {
             for x in 0..self.width() {
                 let pos = Pos::new(x as Coord, y as Coord);
-                if !pipe_positions.contains(&&pos) {
+                if !pipe_positions.contains(&pos) {
                     self.replace_tile(&pos, Ground);
                 }
             }
@@ -278,7 +278,7 @@ impl Grid {
                 for neighbor in [(-1, 0), (1, 0), (0, -1), (0, 1)]
                     .into_iter()
                     .map(|(dx, dy)| pos.offset_by(dx, dy))
-                    .filter(|pos| matches!(self.tile_at(&pos), Some(Ground)))
+                    .filter(|pos| matches!(self.tile_at(pos), Some(Ground)))
                 {
                     if !self.considered.contains(&neighbor) {
                         positions_to_consider.push(neighbor);

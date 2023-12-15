@@ -1,6 +1,4 @@
-use std::mem;
 use Label::*;
-
 use Type::*;
 
 const INPUT: &str = include_str!("../input/day07.txt");
@@ -77,7 +75,7 @@ impl From<&str> for CamelCards {
 
 impl From<&str> for HandWithBid {
     fn from(s: &str) -> Self {
-        let (hand, bid) = s.split_once(" ").expect("two parts per line");
+        let (hand, bid) = s.split_once(' ').expect("two parts per line");
         let hand = Hand::from(hand);
         let bid = bid.parse().expect("valid number as bid");
         HandWithBid { hand, bid }
@@ -130,6 +128,7 @@ impl HandWithBid {
     fn use_jokers(&mut self) {
         self.hand.use_jokers();
     }
+    #[cfg(test)]
     fn with_jokers(mut self) -> Self {
         self.hand = self.hand.with_jokers();
         self
@@ -141,7 +140,7 @@ impl Hand {
         let mut l: Vec<_> = cards.iter().collect();
         l.sort_unstable();
 
-        let base_hand_type = if l[0] == l[4] {
+        if l[0] == l[4] {
             FiveOfAKind
         } else if l[0] == l[3] || l[1] == l[4] {
             FourOfAKind
@@ -155,8 +154,7 @@ impl Hand {
             OnePair
         } else {
             HighCard
-        };
-        base_hand_type
+        }
     }
     fn hand_type_of(cards: &[Label]) -> Type {
         let base_hand_type = Self::base_hand_type(cards);
@@ -204,11 +202,9 @@ impl Hand {
                 }
             }
             OnePair => {
-                if joker_count == 2 {
-                    // The joker pair can become any of the other cards for a three-of-a-kind
-                    ThreeOfAKind
-                } else if joker_count == 1 {
-                    // The single joker can upgrade the pair to a three-of-a-kind
+                if joker_count == 2 || joker_count == 1 {
+                    // 2: The joker pair can become any of the other cards for a three-of-a-kind
+                    // 1: The single joker can upgrade the pair to a three-of-a-kind
                     ThreeOfAKind
                 } else {
                     unreachable!("Unexpected joker_count {joker_count} in a single pair");
@@ -218,6 +214,7 @@ impl Hand {
             HighCard => OnePair,
         }
     }
+    #[cfg(test)]
     fn with_jokers(mut self) -> Self {
         self.use_jokers();
         self
@@ -226,15 +223,16 @@ impl Hand {
         self.cards
             .iter_mut()
             .filter(|label| label == &&J)
-            .for_each(|jack| mem::swap(jack, &mut Joker));
+            .for_each(|jack| std::mem::swap(jack, &mut Joker));
         self.hand_type = Hand::hand_type_of(&self.cards);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::cmp::Ordering::Less;
+
+    use super::*;
 
     const EXAMPLE: &str = "\
 32T3K 765
