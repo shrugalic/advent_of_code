@@ -290,7 +290,7 @@ mod tests {
     fn test_part1_binary_heap_priority() {
         let lowest_heat_loss = Crucible::new(Right);
 
-        let mut increased_heat_loss = lowest_heat_loss.clone();
+        let mut increased_heat_loss = lowest_heat_loss;
         increased_heat_loss.total_heat_loss += 1;
 
         let mut queue = BinaryHeap::new();
