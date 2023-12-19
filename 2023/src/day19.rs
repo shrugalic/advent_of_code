@@ -1,10 +1,10 @@
 use std::collections::HashMap;
+use std::ops::RangeInclusive;
 
 use Category::*;
 use Inequality::*;
-
-const ACCEPTED: &str = "A";
-const REJECTED: &str = "R";
+use RuleResult::*;
+use RuleType::*;
 
 const INPUT: &str = include_str!("../input/day19.txt");
 
@@ -22,17 +22,21 @@ fn solve_part1(input: &'static str) -> usize {
     while let Some(part) = parts.pop() {
         let mut name = "in";
         while let Some(workflow) = workflows_by_name.get(&name) {
-            name = workflow
+            match workflow
                 .rules
                 .iter()
                 .find(|rule| rule.applies_to(&part))
-                .map(|rule| rule.target)
-                .unwrap_or(workflow.fallback);
-            if name == ACCEPTED {
-                accepted.push(part);
-                break;
-            } else if name == REJECTED {
-                break;
+                .map(|rule| rule.result)
+                .expect("fallback rule to always match")
+            {
+                Accepted => {
+                    accepted.push(part);
+                    break;
+                }
+                Rejected => break,
+                Workflow(id) => {
+                    name = id;
+                }
             }
         }
     }
@@ -41,68 +45,49 @@ fn solve_part1(input: &'static str) -> usize {
 
 fn solve_part2(input: &'static str) -> usize {
     let (mut workflows_by_name, _parts) = parse(input);
-
-    // Follow all paths of the tree from the root, and remember the conditions taken at each fork.
-    // If a path ends in an ACCEPTED node, it will be considered later
-
-    let mut accepted: Vec<_> = vec![];
-    let initial_conditions_by_rating = vec![vec![]; 4]; // (Category as usize) as index
-    let mut node_queue = vec![("in", initial_conditions_by_rating)];
-    while let Some((name, mut conditions)) = node_queue.pop() {
-        let mut add_to_queue_or_accepted = |target, conditions| {
-            if target == ACCEPTED {
-                accepted.push(conditions);
-            } else if target != REJECTED {
-                node_queue.push((target, conditions));
-            }
-        };
-        if let Some(workflow) = workflows_by_name.remove(&name) {
-            for rule in &workflow.rules {
-                // rule is matched -> continue at target workflow (with the matched condition added)
-                let mut match_conditions = conditions.clone();
-                match_conditions[rule.category as usize].push(rule.condition.clone());
-                add_to_queue_or_accepted(rule.target, match_conditions);
-
-                // rule is unmatched -> add negated condition and continue with next rule
-                conditions[rule.category as usize].push(rule.condition.negated());
-            }
-            // rules are exhausted -> go to fallback
-            add_to_queue_or_accepted(workflow.fallback, conditions);
-        } else {
-            unreachable!("There are multiple rules with target {name}!")
-        }
-    }
-
-    accepted
-        .into_iter()
-        .map(|conditions_by_rating| {
-            conditions_by_rating
-                .into_iter()
-                .map(convert_to_count_of_acceptable_ratings)
-                .product::<usize>()
-        })
-        .sum()
+    // Recursively traverse the full workflow tree, and narrow down the maximum ranges as we go
+    count_combinations("in", RangesByCategory::maximum(), &mut workflows_by_name)
 }
 
-fn convert_to_count_of_acceptable_ratings(mut conditions: Vec<Inequality>) -> usize {
-    if conditions.is_empty() {
-        return 4000;
+fn count_combinations(
+    id: WorkflowName,
+    mut possible_ranges: RangesByCategory,
+    workflows_by_name: &mut HashMap<WorkflowName, Workflow>,
+) -> usize {
+    let mut workflow = workflows_by_name
+        .remove(id)
+        .expect("single target pointing to workflow");
+    let mut combination_count = 0;
+    for rule in workflow.rules.drain(..) {
+        match &rule.rule_type {
+            Conditional {
+                category,
+                condition,
+            } => {
+                // Count matched -> continue at target workflow (with the matched condition applied)
+                let new_ranges = possible_ranges.narrowed_down_by(condition, category);
+                combination_count += match rule.result {
+                    Accepted => new_ranges.convert_to_count_of_acceptable_ratings(),
+                    Workflow(id) => count_combinations(id, new_ranges, workflows_by_name),
+                    Rejected => 0,
+                };
+
+                // Count unmatched -> apply negated condition and continue with next rule
+                let inequality = condition.negated();
+                possible_ranges.ranges[*category as usize].exclude(inequality);
+            }
+            UnconditionalFallBack => {
+                // No narrowing down any ranges on this last rule of a workflow
+                return combination_count
+                    + match rule.result {
+                        Accepted => possible_ranges.convert_to_count_of_acceptable_ratings(),
+                        Workflow(id) => count_combinations(id, possible_ranges, workflows_by_name),
+                        Rejected => 0,
+                    };
+            }
+        }
     }
-    conditions.push(GreaterThan(0));
-    conditions.push(LessThan(4001));
-    conditions.sort_unstable_by_key(|x| x.value());
-    // Sorted into something like this:
-    // [GreaterThan(0), LessThan(1000), GreaterThan(2000), LessThan(3000), LessThan(4001)]
-    // Then consolidated into a range by looking at neighboring pairs from left to right
-    // A pair of (LessThan, _) or (_, GreaterThan) means it was already included in a previous pair
-    // The above example resolves into the ranges 1..1000 and 2001..3000
-    conditions
-        .windows(2)
-        .filter_map(|w| match (&w[0], &w[1]) {
-            (LessThan(_), _) | (_, GreaterThan(_)) => None, // already included
-            (GreaterThan(below), LessThan(above)) => Some((above - below - 1) as usize),
-        })
-        .sum()
+    combination_count
 }
 
 fn parse(input: &'static str) -> (HashMap<WorkflowName, Workflow>, Vec<Part>) {
@@ -120,14 +105,28 @@ type WorkflowName<'a> = &'a str;
 struct Workflow<'a> {
     name: WorkflowName<'a>,
     rules: Vec<Rule<'a>>,
-    fallback: WorkflowName<'a>,
 }
 
 #[derive(Debug, PartialEq)]
 struct Rule<'a> {
-    category: Category,
-    condition: Inequality,
-    target: WorkflowName<'a>,
+    rule_type: RuleType,
+    result: RuleResult<'a>,
+}
+
+#[derive(Debug, PartialEq, Copy, Clone)]
+enum RuleResult<'a> {
+    Accepted,
+    Rejected,
+    Workflow(WorkflowName<'a>),
+}
+
+#[derive(Debug, PartialEq)]
+enum RuleType {
+    Conditional {
+        category: Category,
+        condition: Inequality,
+    },
+    UnconditionalFallBack,
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -138,7 +137,7 @@ enum Category {
     S,
 }
 
-#[derive(Debug, PartialEq, Clone, Ord, PartialOrd, Eq)]
+#[derive(Debug, PartialEq, Copy, Clone, Ord, PartialOrd, Eq)]
 enum Inequality {
     LessThan(Value),
     GreaterThan(Value),
@@ -154,13 +153,21 @@ struct Part {
 
 impl Rule<'_> {
     fn applies_to(&self, part: &Part) -> bool {
-        let value = &match self.category {
-            X => part.x,
-            M => part.m,
-            A => part.a,
-            S => part.s,
-        };
-        self.condition.holds_for(value)
+        match &self.rule_type {
+            Conditional {
+                category,
+                condition,
+            } => {
+                let value = &match category {
+                    X => part.x,
+                    M => part.m,
+                    A => part.a,
+                    S => part.s,
+                };
+                condition.holds_for(value)
+            }
+            UnconditionalFallBack => true,
+        }
     }
 }
 
@@ -169,12 +176,6 @@ impl Inequality {
         match self {
             LessThan(threshold) => value < threshold,
             GreaterThan(threshold) => value > threshold,
-        }
-    }
-    fn value(&self) -> Value {
-        *match self {
-            LessThan(value) => value,
-            GreaterThan(value) => value,
         }
     }
     fn negated(&self) -> Self {
@@ -191,31 +192,82 @@ impl Part {
     }
 }
 
+#[derive(Clone, Debug)]
+struct RangesByCategory {
+    // indexed by (Category as usize)
+    ranges: [RangeInclusive<Value>; 4],
+}
+
+impl RangesByCategory {
+    fn narrowed_down_by(&self, inequality: &Inequality, category: &Category) -> Self {
+        let mut new_ranges = self.clone();
+        new_ranges.ranges[*category as usize].exclude(*inequality);
+        new_ranges
+    }
+    fn convert_to_count_of_acceptable_ratings(self) -> usize {
+        self.ranges
+            .iter()
+            .map(RangeInclusive::len)
+            .product::<usize>()
+    }
+    fn maximum() -> Self {
+        Self {
+            ranges: [1..=4000, 1..=4000, 1..=4000, 1..=4000],
+        }
+    }
+}
+trait ExcludeRange {
+    fn exclude(&mut self, inequality: Inequality);
+}
+
+impl ExcludeRange for RangeInclusive<Value> {
+    fn exclude(&mut self, inequality: Inequality) {
+        match inequality {
+            LessThan(value) => {
+                if self.contains(&value) {
+                    *self = *self.start()..=(value - 1);
+                }
+            }
+            GreaterThan(value) => {
+                if self.contains(&value) {
+                    *self = value + 1..=*self.end();
+                }
+            }
+        }
+    }
+}
+
 impl From<&'static str> for Workflow<'_> {
     fn from(line: &'static str) -> Self {
         // px{a<2006:qkq,m>2090:A,rfg}
         let (name, rest) = line.strip_suffix('}').unwrap().split_once('{').unwrap();
-        let mut parts: Vec<_> = rest.split(',').collect();
-        let fallback = parts.remove(parts.len() - 1);
+        let parts: Vec<_> = rest.split(',').collect();
         let rules = parts.into_iter().map(Rule::from).collect();
-        Workflow {
-            name,
-            rules,
-            fallback,
-        }
+        Workflow { name, rules }
     }
 }
 impl From<&'static str> for Rule<'_> {
     fn from(line: &'static str) -> Self {
-        // a<2006:qkq
-        let (condition, target) = line.split_once(':').unwrap();
-        let category = Category::from(&condition[..1]);
-        let condition = Inequality::from(&condition[1..]);
-        Rule {
-            category,
-            condition,
-            target,
-        }
+        // a<2006:qkq or rfg
+        let (rule_type, target) = if let Some((condition, target)) = line.split_once(':') {
+            let category = Category::from(&condition[..1]);
+            let condition = Inequality::from(&condition[1..]);
+            (
+                Conditional {
+                    category,
+                    condition,
+                },
+                target,
+            )
+        } else {
+            (UnconditionalFallBack, line)
+        };
+        let result = match target {
+            "A" => Accepted,
+            "R" => Rejected,
+            id => Workflow(id),
+        };
+        Rule { rule_type, result }
     }
 }
 impl From<&str> for Category {
@@ -288,17 +340,24 @@ hdj{m>838:A,pv}
                 name: "px",
                 rules: vec![
                     Rule {
-                        category: A,
-                        condition: LessThan(2006),
-                        target: "qkq"
+                        rule_type: Conditional {
+                            category: A,
+                            condition: LessThan(2006)
+                        },
+                        result: Workflow("qkq")
                     },
                     Rule {
-                        category: M,
-                        condition: GreaterThan(2090),
-                        target: ACCEPTED
+                        rule_type: Conditional {
+                            category: M,
+                            condition: GreaterThan(2090)
+                        },
+                        result: Accepted
+                    },
+                    Rule {
+                        rule_type: UnconditionalFallBack,
+                        result: Workflow("rfg")
                     }
                 ],
-                fallback: "rfg"
             }
         );
     }
