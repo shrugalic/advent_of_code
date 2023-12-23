@@ -99,14 +99,16 @@ fn parse(input: &str) -> Vec<Brick> {
 }
 
 impl Brick {
+    #[cfg(test)]
     fn single(x: Coord, y: Coord, z: Coord) -> Self {
         Brick {
             top: Position { x, y, z },
             bottom: Position { x, y, z },
         }
     }
+    #[cfg(test)]
     fn new(x1: Coord, y1: Coord, z1: Coord, x2: Coord, y2: Coord, z2: Coord) -> Self {
-        if x1 == x2 && y1 == y2 || x1 == x2 && z1 == z2 || y1 == y2 && z1 == z2 {
+        if x1 == x2 && (y1 == y2 || z1 == z2) || y1 == y2 && z1 == z2 {
             let p1 = Position::new(x1, y1, z1);
             let p2 = Position::new(x2, y2, z2);
             let (top, bottom) = match p1.z > p2.z {
@@ -179,6 +181,7 @@ impl Ord for Brick {
 }
 
 impl Position {
+    #[cfg(test)]
     fn new(x: Coord, y: Coord, z: Coord) -> Self {
         Position { x, y, z }
     }
