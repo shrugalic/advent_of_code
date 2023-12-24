@@ -23,6 +23,7 @@ mod day20;
 mod day21;
 mod day22;
 mod day23;
+mod day24;
 
 fn main() {
     print_result(1, day01::part1(), day01::part2());
@@ -48,6 +49,7 @@ fn main() {
     print_result(21, day21::part1(), day21::part2());
     print_result(22, day22::part1(), day22::part2());
     print_result(23, day23::part1(), day23::part2());
+    print_result(24, day24::part1(), day24::part2());
 }
 
 fn print_result(day: i32, part1: impl Display, part2: impl Display) {

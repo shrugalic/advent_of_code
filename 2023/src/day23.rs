@@ -49,12 +49,6 @@ struct Grid {
     width: Coord,
 }
 
-#[derive(PartialEq)]
-enum Part {
-    One,
-    Two,
-}
-
 #[derive(Default, Debug, Eq, PartialEq, Clone)]
 struct Traveler {
     distance: usize,
