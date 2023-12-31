@@ -90,13 +90,14 @@ struct Graph {
 }
 
 impl Graph {
+    #[allow(dead_code)]
     fn longest_petgraph_path(&self) -> usize {
         let mut graph = DiGraph::<&Position, Cost>::new();
         let index_by_pos: HashMap<&Position, NodeIndex> = self
             .connections_by_node
             .keys()
             .chain(iter::once(&self.exit))
-            .map(|node| (node, graph.add_node(&node)))
+            .map(|node| (node, graph.add_node(node)))
             .collect();
         let pos_by_index: HashMap<NodeIndex, &Position> =
             index_by_pos.iter().map(|(node, i)| (*i, *node)).collect();
@@ -119,7 +120,7 @@ impl Graph {
         let mut totals = vec![];
         for way in ways {
             // println!("---");
-            let mut total = 0 as usize;
+            let mut total = 0_usize;
             for i in way.windows(2) {
                 let a = pos_by_index[&i[0]];
                 let b = pos_by_index[&i[1]];
@@ -282,6 +283,7 @@ impl Grid {
             exit,
         }
     }
+    #[allow(dead_code)]
     fn convert_to_optimized_graph(&self, is_part_2: bool) -> Graph {
         let mut connections_by_node = ConnectionsByNode::new();
         let start = Position::new(1, 0);
@@ -385,6 +387,7 @@ impl Grid {
             exit,
         }
     }
+    #[allow(dead_code)]
     fn longest_route(&self) -> usize {
         let start = Position::new(1, 0);
         let exit = Position::new(self.width - 2, self.height - 1);

@@ -1,6 +1,6 @@
-use std::collections::{HashMap, HashSet};
-
+#[allow(unused_imports)]
 use petgraph::{algo, Graph};
+use std::collections::{HashMap, HashSet};
 
 const INPUT: &str = include_str!("../input/day25.txt");
 
@@ -59,6 +59,7 @@ fn solve_part1_with_graphviz(input: &str) -> usize {
     unreachable!()
 }
 
+#[cfg(test)]
 fn solve_part1_brute_force_home_brew(input: &str) -> usize {
     let (nodes, edges) = parse(input);
     // let the index be the node index
@@ -275,6 +276,7 @@ fn solve_part1_brute_force_with_petgraph(input: &str) -> usize {
     unreachable!()
 }
 
+#[cfg(test)]
 fn visit<'a>(connections: &mut HashMap<&'a str, HashSet<&'a str>>, start: &'a str) -> usize {
     let mut visited = HashSet::new();
     let mut queue = vec![start];

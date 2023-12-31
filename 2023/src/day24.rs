@@ -1,6 +1,7 @@
 use std::ops::{Add, RangeInclusive, Sub};
 
 const INPUT: &str = include_str!("../input/day24.txt");
+#[cfg(test)]
 const EXAMPLE_INTERSECTION_BOUNDARY: RangeInclusive<f64> = 7.0..=27.0;
 const REAL_INTERSECTION_BOUNDARY: RangeInclusive<f64> =
     200_000_000_000_000.0..=400_000_000_000_000.0;
@@ -118,9 +119,7 @@ fn solve_part2(input: &str) -> Coord {
     let rock_velocity = (collision_at_t1_pos - collision_at_t2_pos).divide(t1 - t2);
     let rock_origin = collision_at_t1_pos - rock_velocity.multiply(t1);
 
-    (rock_origin.x + rock_origin.y + rock_origin.z)
-        .try_into()
-        .unwrap()
+    rock_origin.x + rock_origin.y + rock_origin.z
 }
 
 fn parse(input: &str) -> impl Iterator<Item = Hailstone> + '_ {
