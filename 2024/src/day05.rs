@@ -24,7 +24,7 @@ fn solve_part2(input: &str) -> u32 {
     let (rules, updates) = parse(input);
     updates
         .into_iter()
-        .filter(|update| update.is_invalid(&rules))
+        .filter(|update| !update.is_valid(&rules))
         .map(|update| update.make_valid(&rules))
         .map(get_middle_page)
         .sum()
@@ -72,25 +72,11 @@ impl From<&str> for PageOrderingRules {
 
 trait PageUpdateOrder {
     fn is_valid(&self, rules: &PageOrderingRules) -> bool;
-    fn is_invalid(&self, rules: &PageOrderingRules) -> bool;
     fn make_valid(self, rules: &PageOrderingRules) -> PageUpdate;
 }
 impl PageUpdateOrder for PageUpdate {
     fn is_valid(&self, rules: &PageOrderingRules) -> bool {
-        !self.is_invalid(rules)
-    }
-    fn is_invalid(&self, rules: &PageOrderingRules) -> bool {
-        self.iter().enumerate().any(|(i, page)| {
-            rules
-                .required_predecessors_by_page
-                .get(page)
-                .is_some_and(|required_predecessors| {
-                    let later_pages = &self[i + 1..];
-                    later_pages
-                        .iter()
-                        .any(|later_page| required_predecessors.contains(later_page))
-                })
-        })
+        self == &self.clone().make_valid(rules)
     }
     fn make_valid(mut self, rules: &PageOrderingRules) -> PageUpdate {
         self.sort_by(|page_a, page_b| {
