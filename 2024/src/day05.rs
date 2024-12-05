@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 const INPUT: &str = include_str!("../../2024/input/day05.txt");
 
@@ -51,21 +51,20 @@ fn get_middle_page(pages: PageUpdate) -> Page {
 }
 
 struct PageOrderingRules {
-    required_predecessors_by_page: HashMap<Page, HashSet<Page>>,
+    ordered_pairs: HashSet<(Page, Page)>,
 }
 impl From<&str> for PageOrderingRules {
     fn from(rules: &str) -> Self {
-        let mut required_predecessors_by_page: HashMap<Page, HashSet<Page>> = HashMap::new();
-        for rule in rules.lines().map(|line| line.split_once('|').unwrap()) {
-            let previous = rule.0.parse::<Page>().unwrap();
-            let page = rule.1.parse::<Page>().unwrap();
-            required_predecessors_by_page
-                .entry(page)
-                .or_default()
-                .insert(previous);
-        }
         PageOrderingRules {
-            required_predecessors_by_page,
+            ordered_pairs: rules
+                .lines()
+                .map(|line| {
+                    let pair = line.split_once('|').unwrap();
+                    let earlier = pair.0.parse::<Page>().unwrap();
+                    let later = pair.1.parse::<Page>().unwrap();
+                    (earlier, later)
+                })
+                .collect(),
         }
     }
 }
@@ -80,11 +79,7 @@ impl PageUpdateOrder for PageUpdate {
     }
     fn make_valid(mut self, rules: &PageOrderingRules) -> PageUpdate {
         self.sort_by(|page_a, page_b| {
-            if rules
-                .required_predecessors_by_page
-                .get(page_b)
-                .is_some_and(|required_predecessors| required_predecessors.contains(page_a))
-            {
+            if rules.ordered_pairs.contains(&(*page_a, *page_b)) {
                 Ordering::Less
             } else {
                 Ordering::Greater
