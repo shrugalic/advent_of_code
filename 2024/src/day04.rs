@@ -10,7 +10,7 @@ pub(crate) fn part2() -> usize {
 
 type Grid = Vec<Vec<char>>;
 
-#[allow(clippy::identity_op)] // I consider the + 0 helpful for readability
+#[expect(clippy::identity_op)] // I consider the + 0 helpful for readability
 fn solve_part1(input: &str) -> usize {
     let grid = parse(input);
 
@@ -66,7 +66,7 @@ fn solve_part1(input: &str) -> usize {
     horizontal_count + vertical_count + diagonal1_count + diagonal2_count
 }
 
-#[allow(clippy::identity_op)] // I consider the + 0 helpful for readability
+#[expect(clippy::identity_op)] // I consider the + 0 helpful for readability
 fn solve_part2(input: &str) -> usize {
     let grid = parse(input);
     let mut count = 0;
