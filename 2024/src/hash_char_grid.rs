@@ -1,4 +1,4 @@
-use crate::pos_2d::Position;
+use crate::vec_2d::Vec2D;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
@@ -6,13 +6,13 @@ use std::fmt::{Display, Formatter};
 pub(crate) struct HashCharGrid {
     width: usize,
     height: usize,
-    pub(crate) chars: HashMap<Position, char>,
+    pub(crate) chars: HashMap<Vec2D, char>,
 }
 
 pub(crate) trait CharGrid {
     fn width(&self) -> usize;
     fn height(&self) -> usize;
-    fn char_at(&self, pos: &Position) -> Option<&char>;
+    fn char_at(&self, pos: &Vec2D) -> Option<&char>;
 }
 
 impl CharGrid for HashCharGrid {
@@ -22,20 +22,20 @@ impl CharGrid for HashCharGrid {
     fn height(&self) -> usize {
         self.height
     }
-    fn char_at(&self, pos: &Position) -> Option<&char> {
+    fn char_at(&self, pos: &Vec2D) -> Option<&char> {
         self.chars.get(pos)
     }
 }
 
 pub(crate) trait GridContainsPosition {
-    fn contains(&self, pos: &Position) -> bool;
+    fn contains(&self, pos: &Vec2D) -> bool;
 }
 
 impl<T> GridContainsPosition for T
 where
     T: CharGrid,
 {
-    fn contains(&self, pos: &Position) -> bool {
+    fn contains(&self, pos: &Vec2D) -> bool {
         pos.x >= 0 && pos.x < self.width() as isize && pos.y >= 0 && pos.y < self.height() as isize
     }
 }
@@ -51,7 +51,7 @@ impl From<&str> for HashCharGrid {
             }
             height = height.max(y);
             for (x, c) in line.chars().enumerate() {
-                chars.insert(Position::new(x, y), c);
+                chars.insert(Vec2D::new(x, y), c);
             }
             if height > 0 {
                 height += 1;
@@ -74,7 +74,7 @@ impl Display for dyn CharGrid {
                 .map(|y| {
                     (0..self.width())
                         .map(|x| {
-                            let pos = Position::new(x, y);
+                            let pos = Vec2D::new(x, y);
                             self.char_at(&pos).unwrap_or(&' ')
                         })
                         .collect::<String>()

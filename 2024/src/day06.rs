@@ -1,5 +1,5 @@
 use crate::hash_char_grid::{CharGrid, GridContainsPosition, HashCharGrid};
-use crate::pos_2d::Position;
+use crate::vec_2d::Vec2D;
 use std::collections::HashSet;
 
 const INPUT: &str = include_str!("../../2024/input/day06.txt");
@@ -52,7 +52,7 @@ fn solve_part2(input: &str) -> usize {
 fn parse(input: &str) -> Grid {
     let grid = HashCharGrid::from(input);
     let mut obstacles = HashSet::new();
-    let mut start_pos = Position::new(0, 0);
+    let mut start_pos = Vec2D::new(0, 0);
     for (pos, &c) in grid.chars.iter() {
         match c {
             '#' => {
@@ -71,8 +71,8 @@ fn parse(input: &str) -> Grid {
 }
 struct Grid {
     grid: HashCharGrid,
-    start_pos: Position,
-    obstacles: HashSet<Position>,
+    start_pos: Vec2D,
+    obstacles: HashSet<Vec2D>,
 }
 impl Grid {
     fn patrol_until_off_grid(&self) -> Vec<Guard> {
@@ -103,14 +103,14 @@ impl CharGrid for Grid {
     fn height(&self) -> usize {
         self.grid.height()
     }
-    fn char_at(&self, pos: &Position) -> Option<&char> {
+    fn char_at(&self, pos: &Vec2D) -> Option<&char> {
         self.grid.char_at(pos)
     }
 }
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone)]
 struct Guard {
-    pos: Position,
+    pos: Vec2D,
     dir: Direction,
 }
 impl Guard {
@@ -135,12 +135,12 @@ enum Direction {
     Right,
 }
 impl Direction {
-    fn offset(&self) -> Position {
+    fn offset(&self) -> Vec2D {
         match self {
-            Direction::Up => Position { x: 0, y: -1 },
-            Direction::Down => Position { x: 0, y: 1 },
-            Direction::Left => Position { x: -1, y: 0 },
-            Direction::Right => Position { x: 1, y: 0 },
+            Direction::Up => Vec2D { x: 0, y: -1 },
+            Direction::Down => Vec2D { x: 0, y: 1 },
+            Direction::Left => Vec2D { x: -1, y: 0 },
+            Direction::Right => Vec2D { x: 1, y: 0 },
         }
     }
     fn turned_clockwise(&self) -> Direction {

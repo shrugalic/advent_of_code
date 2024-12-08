@@ -9,7 +9,7 @@ mod day06;
 mod day07;
 mod day08;
 mod hash_char_grid;
-mod pos_2d;
+mod vec_2d;
 
 fn main() {
     print_result(1, day01::part1(), day01::part2());

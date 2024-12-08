@@ -1,5 +1,5 @@
 use crate::hash_char_grid::{CharGrid, GridContainsPosition, HashCharGrid};
-use crate::pos_2d::Position;
+use crate::vec_2d::Vec2D;
 use std::collections::{HashMap, HashSet};
 
 const INPUT: &str = include_str!("../../2024/input/day08.txt");
@@ -82,7 +82,7 @@ struct Frequency(char);
 #[derive(Debug)]
 struct Grid {
     grid: HashCharGrid,
-    antennas_by_frequency: HashMap<Frequency, HashSet<Position>>,
+    antennas_by_frequency: HashMap<Frequency, HashSet<Vec2D>>,
 }
 impl CharGrid for Grid {
     fn width(&self) -> usize {
@@ -91,7 +91,7 @@ impl CharGrid for Grid {
     fn height(&self) -> usize {
         self.grid.height()
     }
-    fn char_at(&self, pos: &Position) -> Option<&char> {
+    fn char_at(&self, pos: &Vec2D) -> Option<&char> {
         self.grid.char_at(pos)
     }
 }
