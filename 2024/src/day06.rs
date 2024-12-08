@@ -89,12 +89,17 @@ impl Grid {
         path
     }
     fn patrol_until_off_grid_or_stuck_in_a_loop(&self, mut guard: Guard) -> bool {
-        let mut visited = HashSet::with_capacity(4725);
-        while self.contains(&guard.pos) && !visited.contains(&guard) {
-            visited.insert(guard);
+        let mut visited: Vec<Vec<Vec<bool>>> =
+            vec![vec![vec![false; self.height()]; self.width()]; 4];
+
+        while self.contains(&guard.pos)
+            && !visited[guard.dir as u8 as usize][guard.pos.x as usize][guard.pos.y as usize]
+        {
+            visited[guard.dir as u8 as usize][guard.pos.x as usize][guard.pos.y as usize] = true;
             guard.take_a_step(self);
         }
-        visited.contains(&guard)
+        self.contains(&guard.pos)
+            && visited[guard.dir as u8 as usize][guard.pos.x as usize][guard.pos.y as usize]
     }
 }
 impl CharGrid for Grid {
@@ -109,7 +114,7 @@ impl CharGrid for Grid {
     }
 }
 
-#[derive(Eq, PartialEq, Hash, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
 struct Guard {
     pos: Vec2D,
     dir: Direction,
@@ -128,7 +133,7 @@ impl Guard {
     }
 }
 
-#[derive(Eq, PartialEq, Hash, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
 enum Direction {
     Up,
     Down,
