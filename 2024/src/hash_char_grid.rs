@@ -1,5 +1,6 @@
 use crate::pos_2d::Position;
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug)]
 pub(crate) struct HashCharGrid {
@@ -61,5 +62,25 @@ impl From<&str> for HashCharGrid {
             height,
             chars,
         }
+    }
+}
+
+impl Display for dyn CharGrid {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            (0..self.height())
+                .map(|y| {
+                    (0..self.width())
+                        .map(|x| {
+                            let pos = Position::new(x, y);
+                            self.char_at(&pos).unwrap_or(&' ')
+                        })
+                        .collect::<String>()
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        )
     }
 }

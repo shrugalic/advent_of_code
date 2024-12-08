@@ -1,6 +1,6 @@
+use crate::hash_char_grid::{CharGrid, GridContainsPosition, HashCharGrid};
+use crate::pos_2d::Position;
 use std::collections::HashSet;
-use std::fmt::{Display, Formatter};
-use std::ops::{Add, AddAssign};
 
 const INPUT: &str = include_str!("../../2024/input/day06.txt");
 
@@ -35,39 +35,27 @@ fn solve_part2(input: &str) -> usize {
 }
 
 fn parse(input: &str) -> Grid {
-    let mut width = 0;
-    let mut height = 0;
+    let grid = HashCharGrid::from(input);
     let mut obstacles = HashSet::new();
     let mut start_pos = Position::new(0, 0);
-    for (y, line) in input.trim().lines().enumerate() {
-        if width == 0 {
-            width = line.len();
-        }
-        height = height.max(y);
-        for (x, c) in line.chars().enumerate() {
-            match c {
-                '#' => {
-                    obstacles.insert(Position::new(x, y));
-                }
-                '^' => start_pos = Position::new(x, y),
-                '.' => {}
-                _ => unreachable!("Illegal character: {}", c),
+    for (pos, &c) in grid.chars.iter() {
+        match c {
+            '#' => {
+                obstacles.insert(*pos);
             }
-        }
-        if height > 0 {
-            height += 1;
+            '^' => start_pos = *pos,
+            '.' => {}
+            _ => unreachable!("Illegal character: {}", c),
         }
     }
     Grid {
-        width,
-        height,
+        grid,
         start_pos,
         obstacles,
     }
 }
 struct Grid {
-    width: usize,
-    height: usize,
+    grid: HashCharGrid,
     start_pos: Position,
     obstacles: HashSet<Position>,
 }
@@ -78,7 +66,7 @@ impl Grid {
             pos: self.start_pos,
             dir: Direction::Up,
         };
-        while self.contains(guard.pos) && !visited.contains(&guard) {
+        while self.contains(&guard.pos) && !visited.contains(&guard) {
             visited.insert(guard);
             guard.take_a_step(self);
         }
@@ -86,33 +74,16 @@ impl Grid {
         let path = visited.into_iter().map(|guard| guard.pos).collect();
         (path, looped)
     }
-    fn contains(&self, pos: Position) -> bool {
-        pos.x >= 0 && pos.x < self.width as isize && pos.y >= 0 && pos.y < self.height as isize
-    }
 }
-impl Display for Grid {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            (0..self.height)
-                .map(|y| {
-                    (0..self.width)
-                        .map(|x| {
-                            let pos = Position::new(x, y);
-                            if self.obstacles.contains(&pos) {
-                                '#'
-                            } else if self.start_pos == pos {
-                                '^'
-                            } else {
-                                '.'
-                            }
-                        })
-                        .collect::<String>()
-                })
-                .collect::<Vec<_>>()
-                .join("\n")
-        )
+impl CharGrid for Grid {
+    fn width(&self) -> usize {
+        self.grid.width()
+    }
+    fn height(&self) -> usize {
+        self.grid.height()
+    }
+    fn char_at(&self, pos: &Position) -> Option<&char> {
+        self.grid.char_at(pos)
     }
 }
 
@@ -124,7 +95,7 @@ struct Guard {
 impl Guard {
     fn take_a_step(&mut self, grid: &Grid) {
         let mut next = self.pos + self.dir.offset();
-        while grid.contains(next) && grid.obstacles.contains(&next) {
+        while grid.contains(&next) && grid.obstacles.contains(&next) {
             self.turn_clockwise();
             next = self.pos + self.dir.offset();
         }
@@ -132,35 +103,6 @@ impl Guard {
     }
     fn turn_clockwise(&mut self) {
         self.dir = self.dir.turned_clockwise();
-    }
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-struct Position {
-    x: isize,
-    y: isize,
-}
-impl Position {
-    fn new(x: usize, y: usize) -> Self {
-        Position {
-            x: x as isize,
-            y: y as isize,
-        }
-    }
-}
-impl AddAssign for Position {
-    fn add_assign(&mut self, rhs: Self) {
-        self.x += rhs.x;
-        self.y += rhs.y;
-    }
-}
-impl Add for Position {
-    type Output = Position;
-    fn add(self, rhs: Self) -> Self::Output {
-        Position {
-            x: self.x + rhs.x,
-            y: self.y + rhs.y,
-        }
     }
 }
 
