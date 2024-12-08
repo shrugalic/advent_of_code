@@ -37,7 +37,10 @@ fn solve_part2(input: &str) -> usize {
         dir: Direction::Up,
     };
     for extra_obstacle in unique_pos_path {
-        grid.obstacles.insert(extra_obstacle.pos);
+        grid.obstacle_row_by_column[extra_obstacle.pos.y as usize][extra_obstacle.pos.x as usize] =
+            true;
+        grid.obstacle_column_by_row[extra_obstacle.pos.x as usize][extra_obstacle.pos.y as usize] =
+            true;
 
         let stuck_in_a_loop = grid.patrol_until_off_grid_or_stuck_in_a_loop(start);
         if stuck_in_a_loop {
@@ -45,19 +48,26 @@ fn solve_part2(input: &str) -> usize {
         }
         start = extra_obstacle; // start here next time
 
-        grid.obstacles.remove(&extra_obstacle.pos);
+        grid.obstacle_row_by_column[extra_obstacle.pos.y as usize][extra_obstacle.pos.x as usize] =
+            false;
+        grid.obstacle_column_by_row[extra_obstacle.pos.x as usize][extra_obstacle.pos.y as usize] =
+            false;
     }
     loop_counter
 }
 
 fn parse(input: &str) -> Grid {
     let grid = HashCharGrid::from(input);
-    let mut obstacles = HashSet::new();
+    let mut obstacle_column_by_row: Vec<Vec<bool>> = vec![vec![false; grid.height()]; grid.width()];
+    let mut obstacle_row_by_column: Vec<Vec<bool>> = vec![vec![false; grid.width()]; grid.height()];
     let mut start_pos = Vec2D::new(0, 0);
     for (pos, &c) in grid.chars.iter() {
         match c {
             '#' => {
-                obstacles.insert(*pos);
+                let x = pos.x as usize;
+                let y = pos.y as usize;
+                obstacle_column_by_row[x][y] = true;
+                obstacle_row_by_column[y][x] = true;
             }
             '^' => start_pos = *pos,
             '.' => {}
@@ -67,13 +77,17 @@ fn parse(input: &str) -> Grid {
     Grid {
         grid,
         start_pos,
-        obstacles,
+        obstacle_column_by_row,
+        obstacle_row_by_column,
     }
 }
+
+#[derive(Debug)]
 struct Grid {
     grid: HashCharGrid,
     start_pos: Vec2D,
-    obstacles: HashSet<Vec2D>,
+    obstacle_column_by_row: Vec<Vec<bool>>,
+    obstacle_row_by_column: Vec<Vec<bool>>,
 }
 impl Grid {
     fn patrol_until_off_grid(&self) -> Vec<Guard> {
@@ -84,7 +98,15 @@ impl Grid {
         };
         while self.contains(&guard.pos) && !path.contains(&guard) {
             path.push(guard);
-            guard.take_a_step(self);
+
+            let dir = guard.dir;
+            let (sub_path, out_of_bounds) = guard.step_forward_as_far_as_possible_or_turn(self);
+            for pos in sub_path {
+                path.push(Guard { pos, dir });
+            }
+            if out_of_bounds {
+                break;
+            }
         }
         path
     }
@@ -96,7 +118,15 @@ impl Grid {
             && !visited[guard.dir as u8 as usize][guard.pos.x as usize][guard.pos.y as usize]
         {
             visited[guard.dir as u8 as usize][guard.pos.x as usize][guard.pos.y as usize] = true;
-            guard.take_a_step(self);
+
+            let prev_dir = guard.dir;
+            let (sub_path, out_of_bounds) = guard.step_forward_as_far_as_possible_or_turn(self);
+            for pos in sub_path {
+                visited[prev_dir as u8 as usize][pos.x as usize][pos.y as usize] = true;
+            }
+            if out_of_bounds {
+                return false;
+            }
         }
         self.contains(&guard.pos)
             && visited[guard.dir as u8 as usize][guard.pos.x as usize][guard.pos.y as usize]
@@ -114,26 +144,83 @@ impl CharGrid for Grid {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
+#[derive(Eq, PartialEq, Hash, Copy, Clone)]
 struct Guard {
     pos: Vec2D,
     dir: Direction,
 }
 impl Guard {
-    fn take_a_step(&mut self, grid: &Grid) {
+    fn step_forward_as_far_as_possible_or_turn(&mut self, grid: &Grid) -> (Vec<Vec2D>, bool) {
+        let mut path: Vec<Vec2D> = Vec::new();
+        const MIN_X: isize = 0;
+        const MIN_Y: isize = 0;
+        let max_y = grid.height() as isize - 1;
+        let max_x = grid.width() as isize - 1;
+        let x = self.pos.x as usize;
+        let y = self.pos.y as usize;
+        match self.dir {
+            Direction::Up => {
+                self.pos.y = grid.obstacle_column_by_row[x][..y]
+                    .iter()
+                    .rposition(|b| *b)
+                    .map(|next_obstacle_y| next_obstacle_y + 1)
+                    .unwrap_or(MIN_Y as usize) as isize;
+                for ny in (self.pos.y as usize..y).rev() {
+                    path.push(Vec2D::new(x, ny));
+                }
+            }
+            Direction::Down => {
+                self.pos.y = grid.obstacle_column_by_row[x][y + 1..]
+                    .iter()
+                    .position(|b| *b)
+                    .map(|o_y| o_y + y + 1) // account for prior elements
+                    .map(|next_obstacle_y| next_obstacle_y - 1)
+                    .unwrap_or(max_y as usize) as isize;
+                for ny in (y + 1)..=self.pos.y as usize {
+                    path.push(Vec2D::new(x, ny));
+                }
+            }
+            Direction::Left => {
+                self.pos.x = grid.obstacle_row_by_column[y][..x]
+                    .iter()
+                    .rposition(|b| *b)
+                    .map(|next_obstacle_x| next_obstacle_x + 1)
+                    .unwrap_or(MIN_X as usize) as isize;
+                for nx in (self.pos.x as usize..x).rev() {
+                    path.push(Vec2D::new(nx, y));
+                }
+            }
+            Direction::Right => {
+                self.pos.x = grid.obstacle_row_by_column[y][x + 1..]
+                    .iter()
+                    .position(|b| *b)
+                    .map(|o_x| o_x + x + 1) // account for prior elements
+                    .map(|next_obstacle_x| next_obstacle_x - 1)
+                    .unwrap_or(max_x as usize) as isize;
+                for nx in x + 1..=self.pos.x as usize {
+                    path.push(Vec2D::new(nx, y));
+                }
+            }
+        }
         let mut next = self.pos + self.dir.offset();
-        while grid.contains(&next) && grid.obstacles.contains(&next) {
+        while grid.contains(&next) && grid.obstacle_column_by_row[next.x as usize][next.y as usize]
+        {
             self.turn_clockwise();
             next = self.pos + self.dir.offset();
         }
-        self.pos += self.dir.offset()
+        // Positions are not technically out-of-bounds, but right on the border and headed outside
+        let out_of_bounds = self.pos.x == MIN_X
+            || self.pos.x == max_x
+            || self.pos.y == MIN_Y
+            || self.pos.y == max_y;
+        (path, out_of_bounds)
     }
     fn turn_clockwise(&mut self) {
         self.dir = self.dir.turned_clockwise();
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
+#[derive(Eq, PartialEq, Hash, Copy, Clone)]
 enum Direction {
     Up,
     Down,
