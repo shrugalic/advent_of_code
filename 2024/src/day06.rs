@@ -89,7 +89,7 @@ impl Grid {
         path
     }
     fn patrol_until_off_grid_or_stuck_in_a_loop(&self, mut guard: Guard) -> bool {
-        let mut visited = HashSet::new();
+        let mut visited = HashSet::with_capacity(4725);
         while self.contains(&guard.pos) && !visited.contains(&guard) {
             visited.insert(guard);
             guard.take_a_step(self);
