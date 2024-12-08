@@ -1,4 +1,5 @@
-use crate::hash_char_grid::{CharGrid, GridContainsPosition, HashCharGrid};
+use crate::char_grid::{CharGrid, GridContainsPosition};
+use crate::hash_char_grid::HashCharGrid;
 use crate::vec_2d::Vec2D;
 use std::collections::HashSet;
 
