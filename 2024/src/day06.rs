@@ -14,22 +14,37 @@ pub(crate) fn part2() -> usize {
 
 fn solve_part1(input: &str) -> usize {
     let grid = parse(input);
-    let (path, _) = grid.patrol_until_off_grid_or_stuck_in_a_loop();
-    path.len()
+    let path = grid.patrol_until_off_grid();
+    path.into_iter()
+        .map(|guard| guard.pos)
+        .collect::<HashSet<_>>()
+        .len()
 }
 
 fn solve_part2(input: &str) -> usize {
     let mut grid = parse(input);
-    let (path, _) = grid.patrol_until_off_grid_or_stuck_in_a_loop();
+    let path = grid.patrol_until_off_grid();
+    let mut unique_pos_path: Vec<Guard> = Vec::with_capacity(path.len());
+    for guard in path {
+        if !unique_pos_path.iter().any(|g| g.pos == guard.pos) {
+            unique_pos_path.push(guard);
+        }
+    }
     let mut loop_counter = 0;
-    for extra_obstacle in path {
-        grid.obstacles.insert(extra_obstacle);
+    let mut start = Guard {
+        pos: grid.start_pos,
+        dir: Direction::Up,
+    };
+    for extra_obstacle in unique_pos_path {
+        grid.obstacles.insert(extra_obstacle.pos);
 
-        if let (_, _stuck_in_a_loop @ true) = grid.patrol_until_off_grid_or_stuck_in_a_loop() {
+        let stuck_in_a_loop = grid.patrol_until_off_grid_or_stuck_in_a_loop(start);
+        if stuck_in_a_loop {
             loop_counter += 1;
         }
+        start = extra_obstacle; // start here next time
 
-        grid.obstacles.remove(&extra_obstacle);
+        grid.obstacles.remove(&extra_obstacle.pos);
     }
     loop_counter
 }
@@ -60,19 +75,25 @@ struct Grid {
     obstacles: HashSet<Position>,
 }
 impl Grid {
-    fn patrol_until_off_grid_or_stuck_in_a_loop(&self) -> (HashSet<Position>, bool) {
-        let mut visited = HashSet::new();
+    fn patrol_until_off_grid(&self) -> Vec<Guard> {
+        let mut path = Vec::new();
         let mut guard = Guard {
             pos: self.start_pos,
             dir: Direction::Up,
         };
+        while self.contains(&guard.pos) && !path.contains(&guard) {
+            path.push(guard);
+            guard.take_a_step(self);
+        }
+        path
+    }
+    fn patrol_until_off_grid_or_stuck_in_a_loop(&self, mut guard: Guard) -> bool {
+        let mut visited = HashSet::new();
         while self.contains(&guard.pos) && !visited.contains(&guard) {
             visited.insert(guard);
             guard.take_a_step(self);
         }
-        let looped = visited.contains(&guard);
-        let path = visited.into_iter().map(|guard| guard.pos).collect();
-        (path, looped)
+        visited.contains(&guard)
     }
 }
 impl CharGrid for Grid {
