@@ -1,6 +1,7 @@
 use crate::char_grid::{CharGrid, GridContainsPosition};
 use crate::hash_char_grid::HashCharGrid;
 use crate::vec_2d::Vec2D;
+use rayon::prelude::*;
 use std::collections::HashSet;
 
 const INPUT: &str = include_str!("../../2024/input/day06.txt");
@@ -23,7 +24,7 @@ fn solve_part1(input: &str) -> usize {
 }
 
 fn solve_part2(input: &str) -> usize {
-    let mut grid = parse(input);
+    let grid = parse(input);
     let path = grid.patrol_until_off_grid();
     let mut unique_pos_path: Vec<Guard> = Vec::with_capacity(path.len());
     for guard in path {
@@ -31,23 +32,14 @@ fn solve_part2(input: &str) -> usize {
             unique_pos_path.push(guard);
         }
     }
-    let mut loop_counter = 0;
-    let mut start = Guard {
-        pos: grid.start_pos,
-        dir: Direction::Up,
-    };
-    for extra_obstacle in unique_pos_path {
-        grid.obstacles.insert(extra_obstacle.pos);
-
-        let stuck_in_a_loop = grid.patrol_until_off_grid_or_stuck_in_a_loop(start);
-        if stuck_in_a_loop {
-            loop_counter += 1;
-        }
-        start = extra_obstacle; // start here next time
-
-        grid.obstacles.remove(&extra_obstacle.pos);
-    }
-    loop_counter
+    unique_pos_path
+        .par_windows(2)
+        .filter(|pair| {
+            let start = pair[0];
+            let extra_obstacle = pair[1].pos;
+            grid.patrol_until_off_grid_or_stuck_in_a_loop(start, Some(extra_obstacle))
+        })
+        .count()
 }
 
 fn parse(input: &str) -> Grid {
@@ -84,11 +76,15 @@ impl Grid {
         };
         while self.contains(&guard.pos) && !path.contains(&guard) {
             path.push(guard);
-            guard.take_a_step(self);
+            guard.take_a_step(self, None);
         }
         path
     }
-    fn patrol_until_off_grid_or_stuck_in_a_loop(&self, mut guard: Guard) -> bool {
+    fn patrol_until_off_grid_or_stuck_in_a_loop(
+        &self,
+        mut guard: Guard,
+        extra_obstacle: Option<Vec2D>,
+    ) -> bool {
         let mut visited: Vec<Vec<Vec<bool>>> =
             vec![vec![vec![false; self.height()]; self.width()]; 4];
 
@@ -96,8 +92,9 @@ impl Grid {
             && !visited[guard.dir as u8 as usize][guard.pos.x as usize][guard.pos.y as usize]
         {
             visited[guard.dir as u8 as usize][guard.pos.x as usize][guard.pos.y as usize] = true;
-            guard.take_a_step(self);
+            guard.take_a_step(self, extra_obstacle);
         }
+        // returns if stuck-in-a-loop
         self.contains(&guard.pos)
             && visited[guard.dir as u8 as usize][guard.pos.x as usize][guard.pos.y as usize]
     }
@@ -120,9 +117,11 @@ struct Guard {
     dir: Direction,
 }
 impl Guard {
-    fn take_a_step(&mut self, grid: &Grid) {
+    fn take_a_step(&mut self, grid: &Grid, extra_obstacle: Option<Vec2D>) {
         let mut next = self.pos + self.dir.offset();
-        while grid.contains(&next) && grid.obstacles.contains(&next) {
+        while grid.contains(&next)
+            && (grid.obstacles.contains(&next) || extra_obstacle.is_some_and(|pos| pos == next))
+        {
             self.turn_clockwise();
             next = self.pos + self.dir.offset();
         }
