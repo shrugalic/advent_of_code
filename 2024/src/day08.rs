@@ -43,7 +43,7 @@ fn solve_part2(input: &str) -> usize {
                 let mut antinode = *pos2 - delta;
                 while grid.contains(&antinode) {
                     antinode_locations.insert(antinode);
-                    antinode = antinode - delta;
+                    antinode -= delta;
                 }
                 antinode = *pos1 + delta;
                 while grid.contains(&antinode) {

@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Sub};
+use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub(crate) struct Position {
@@ -26,6 +26,12 @@ impl Add for Position {
             x: self.x + rhs.x,
             y: self.y + rhs.y,
         }
+    }
+}
+impl SubAssign for Position {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
     }
 }
 impl Sub for Position {
