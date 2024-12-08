@@ -44,12 +44,12 @@ fn solve_part2(input: &str) -> usize {
 
 fn parse(input: &str) -> Grid {
     let grid = HashCharGrid::from(input);
-    let mut obstacles = HashSet::new();
+    let mut obstacles = vec![vec![false; grid.height()]; grid.width()];
     let mut start_pos = Vec2D::new(0, 0);
     for (pos, &c) in grid.chars.iter() {
         match c {
             '#' => {
-                obstacles.insert(*pos);
+                obstacles[pos.x as usize][pos.y as usize] = true;
             }
             '^' => start_pos = *pos,
             '.' => {}
@@ -65,7 +65,7 @@ fn parse(input: &str) -> Grid {
 struct Grid {
     grid: HashCharGrid,
     start_pos: Vec2D,
-    obstacles: HashSet<Vec2D>,
+    obstacles: Vec<Vec<bool>>,
 }
 impl Grid {
     fn patrol_until_off_grid(&self) -> Vec<Guard> {
@@ -120,7 +120,8 @@ impl Guard {
     fn take_a_step(&mut self, grid: &Grid, extra_obstacle: Option<Vec2D>) {
         let mut next = self.pos + self.dir.offset();
         while grid.contains(&next)
-            && (grid.obstacles.contains(&next) || extra_obstacle.is_some_and(|pos| pos == next))
+            && (grid.obstacles[next.x as usize][next.y as usize]
+                || extra_obstacle.is_some_and(|pos| pos == next))
         {
             self.turn_clockwise();
             next = self.pos + self.dir.offset();
