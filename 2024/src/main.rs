@@ -9,6 +9,7 @@ mod day05;
 mod day06;
 mod day07;
 mod day08;
+mod day09;
 mod hash_char_grid;
 mod vec_2d;
 mod vec_char_grid;
@@ -22,6 +23,7 @@ fn main() {
     print_result(6, day06::part1(), day06::part2());
     print_result(7, day07::part1(), day07::part2());
     print_result(8, day08::part1(), day08::part2());
+    print_result(9, day09::part1(), day09::part2());
 }
 
 fn print_result(day: i32, part1: impl Display, part2: impl Display) {
