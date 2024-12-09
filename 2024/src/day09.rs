@@ -14,6 +14,13 @@ pub(crate) fn part2() -> usize {
 
 type FileId = u16;
 
+type BlockCount = u8;
+
+struct SizePair {
+    file_size: BlockCount,
+    free: BlockCount,
+}
+
 #[derive(Debug, Clone)]
 enum Block {
     PartOfFile(FileId),
@@ -21,22 +28,17 @@ enum Block {
 }
 
 fn solve_part1(input: &str) -> usize {
-    let mut line = parse(input);
-    if line.len() % 2 == 1 {
-        line.push(0);
-    }
-    let mut blocks: Vec<Block> = Vec::with_capacity(line.len() * 5);
-    for (i, w) in line.windows(2).enumerate().step_by(2) {
-        let id = (i / 2) as FileId;
-        let file_size = w[0];
-        let free_space = w[1];
-        for _ in 0..file_size {
-            blocks.push(Block::PartOfFile(id));
-        }
-        for _ in 0..free_space {
-            blocks.push(Block::Free);
-        }
-    }
+    let dense_representation = parse(input);
+    let mut blocks: Vec<Block> = dense_representation
+        .into_iter()
+        .enumerate()
+        .flat_map(|(id, SizePair { file_size, free })| {
+            iter::repeat(Block::PartOfFile(id as FileId))
+                .take(file_size as usize)
+                .chain(iter::repeat(Block::Free).take(free as usize))
+        })
+        .collect();
+
     let mut first_free = blocks.iter().position(Block::is_free).unwrap();
     let mut last_full = blocks.iter().rposition(Block::is_part_of_file).unwrap();
     while first_free < last_full {
@@ -52,14 +54,18 @@ fn solve_part1(input: &str) -> usize {
     calculate_checksum(&blocks)
 }
 
-fn parse(input: &str) -> Vec<u8> {
+fn parse(input: &str) -> Vec<SizePair> {
     input
-        .trim()
-        .lines()
-        .next()
-        .unwrap()
         .chars()
-        .map(|c| c.to_digit(10).unwrap() as u8)
+        .filter_map(|c| c.to_digit(10).map(|n| n as u8))
+        .chain(iter::once(0)) // make windows(2) work for odd-lengths
+        .collect::<Vec<_>>()
+        .windows(2)
+        .step_by(2)
+        .map(|w| SizePair {
+            file_size: w[0],
+            free: w[1],
+        })
         .collect()
 }
 
@@ -95,28 +101,22 @@ fn calculate_checksum(blocks: &[Block]) -> usize {
         .sum()
 }
 
-type BlockCount = usize;
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Region {
     Occupied(FileId, BlockCount),
     Free(BlockCount),
 }
 fn solve_part2(input: &str) -> usize {
-    let mut line = parse(input);
-    if line.len() % 2 == 1 {
-        line.push(0);
-    }
-    let mut regions: Vec<_> = Vec::with_capacity(line.len());
-    for (i, w) in line.windows(2).enumerate().step_by(2) {
-        let id = (i / 2) as FileId;
-        let file_size = w[0] as usize;
-        let space_size = w[1] as usize;
-        regions.push(Occupied(id, file_size));
-        if space_size > 0 {
-            regions.push(Free(space_size));
-        }
-    }
+    let dense_representation = parse(input);
+    let mut regions: Vec<_> = dense_representation
+        .into_iter()
+        .enumerate()
+        .flat_map(|(id, SizePair { file_size, free })| {
+            let free_region_cnt = if free > 0 { 1 } else { 0 };
+            iter::once(Occupied(id as FileId, file_size))
+                .chain(iter::repeat(Free(free)).take(free_region_cnt))
+        })
+        .collect();
 
     let mut back = regions.len() - 1;
     let mut touched = HashSet::new();
@@ -171,8 +171,8 @@ fn solve_part2(input: &str) -> usize {
     let blocks: Vec<_> = regions
         .into_iter()
         .flat_map(|region| match region {
-            Occupied(id, file_size) => iter::repeat(Block::PartOfFile(id)).take(file_size),
-            Free(space_size) => iter::repeat(Block::Free).take(space_size),
+            Occupied(id, file_size) => iter::repeat(Block::PartOfFile(id)).take(file_size as usize),
+            Free(space_size) => iter::repeat(Block::Free).take(space_size as usize),
         })
         .collect();
     // println!("Final blocks: {}", blocks_to_string(&blocks));
@@ -184,8 +184,8 @@ fn region_to_string(regions: &[Region]) -> String {
     regions
         .iter()
         .map(|region| match region {
-            Occupied(id, file_size) => id.to_string().repeat(*file_size),
-            Free(space_size) => ".".repeat(*space_size),
+            Occupied(id, file_size) => id.to_string().repeat(*file_size as usize),
+            Free(space_size) => ".".repeat(*space_size as usize),
         })
         .collect::<Vec<String>>()
         .join("")
