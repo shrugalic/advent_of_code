@@ -1,6 +1,4 @@
-use std::collections::HashSet;
 use std::iter;
-use Region::{Free, Occupied};
 
 const INPUT: &str = include_str!("../../2024/input/day09.txt");
 
@@ -101,94 +99,48 @@ fn calculate_checksum(blocks: &[Block]) -> usize {
         .sum()
 }
 
-#[derive(Debug, Clone)]
-enum Region {
-    Occupied(FileId, BlockCount),
-    Free(BlockCount),
+#[derive(Debug)]
+struct File {
+    id: FileId,
+    start: usize,
+    size: BlockCount,
 }
+impl File {
+    fn next_block(&self) -> usize {
+        self.start + self.size as usize
+    }
+    fn check_sum(&self) -> usize {
+        self.id as usize * (self.start..self.start + self.size as usize).sum::<usize>()
+    }
+}
+
 fn solve_part2(input: &str) -> usize {
     let dense_representation = parse(input);
-    let mut regions: Vec<_> = dense_representation
-        .into_iter()
-        .enumerate()
-        .flat_map(|(id, SizePair { file_size, free })| {
-            let free_region_cnt = if free > 0 { 1 } else { 0 };
-            iter::once(Occupied(id as FileId, file_size))
-                .chain(iter::repeat(Free(free)).take(free_region_cnt))
-        })
-        .collect();
-
-    let mut back = regions.len() - 1;
-    let mut touched = HashSet::new();
-    while back > 0 {
-        match regions[back] {
-            Occupied(id, file_size) => {
-                if !touched.insert(id) {
-                    // Skip already touched files
-                } else if let Some(front) = regions.iter().position(
-                    |region| matches!(region, Free(space_size) if *space_size >= file_size),
-                ) {
-                    if front >= back {
-                        // No space found
-                    } else if let Free(space_size) = regions[front] {
-                        regions.swap(front, back);
-                        if space_size > file_size {
-                            // Insert free space after the moved file to account for the difference
-                            let extra_space = space_size - file_size;
-                            regions.insert(front + 1, Free(extra_space));
-                            back += 1;
-
-                            // The space moved to the back should only be as large as the file was
-                            let mut back_space_size = file_size;
-
-                            // Defrag: Check if there's free space right before the inserted space
-                            if let Free(before_size) = regions[back - 1] {
-                                back_space_size += before_size;
-                                regions.remove(back - 1);
-                                back -= 1;
-                            }
-
-                            // Defrag: Check if there's free space right after the inserted space
-                            if let Some(Free(after_size)) = regions.get(back + 1) {
-                                back_space_size += after_size;
-                                regions.remove(back + 1);
-                            }
-                            match regions[back] {
-                                Free(ref mut space_size) => {
-                                    *space_size = back_space_size;
-                                }
-                                _ => unreachable!(),
-                            }
-                        }
-                    }
-                }
-            }
-            Free(_) => {}
-        }
-        back -= 1;
+    let mut files = Vec::with_capacity(dense_representation.len());
+    let mut start = 0;
+    for (i, SizePair { file_size, free }) in dense_representation.into_iter().enumerate() {
+        files.push(File {
+            id: i as FileId,
+            start,
+            size: file_size,
+        });
+        start += (file_size + free) as usize;
     }
-    // println!("Final regions: {}", region_to_string(&regions));
-    let blocks: Vec<_> = regions
-        .into_iter()
-        .flat_map(|region| match region {
-            Occupied(id, file_size) => iter::repeat(Block::PartOfFile(id)).take(file_size as usize),
-            Free(space_size) => iter::repeat(Block::Free).take(space_size as usize),
-        })
-        .collect();
-    // println!("Final blocks: {}", blocks_to_string(&blocks));
-    calculate_checksum(&blocks)
-}
 
-#[expect(dead_code)]
-fn region_to_string(regions: &[Region]) -> String {
-    regions
-        .iter()
-        .map(|region| match region {
-            Occupied(id, file_size) => id.to_string().repeat(*file_size as usize),
-            Free(space_size) => ".".repeat(*space_size as usize),
-        })
-        .collect::<Vec<String>>()
-        .join("")
+    let mut file_ids: Vec<_> = files.iter().map(|f| f.id).collect();
+    while let Some(id) = file_ids.pop() {
+        let idx = files.iter().position(|f| f.id == id).unwrap();
+        let file = &files[idx];
+        if let Some(start_of_free_space) = files.windows(2).find_map(|f| {
+            let space_between = f[1].start - f[0].next_block();
+            (space_between >= file.size as usize && f[1].start <= file.start)
+                .then(|| f[0].next_block())
+        }) {
+            files[idx].start = start_of_free_space;
+            files.sort_by_key(|f| f.start);
+        }
+    }
+    files.iter().map(File::check_sum).sum()
 }
 
 #[cfg(test)]
