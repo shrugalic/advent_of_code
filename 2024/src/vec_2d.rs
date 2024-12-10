@@ -12,6 +12,16 @@ impl Vec2D {
             y: y as isize,
         }
     }
+    pub(crate) fn crosswise_neighbors(&self) -> impl Iterator<Item = Vec2D> + use<'_> {
+        [
+            Vec2D { x: 1, y: 0 },
+            Vec2D { x: -1, y: 0 },
+            Vec2D { x: 0, y: 1 },
+            Vec2D { x: 0, y: -1 },
+        ]
+        .into_iter()
+        .map(|dir| dir + *self)
+    }
 }
 impl AddAssign for Vec2D {
     fn add_assign(&mut self, rhs: Self) {
