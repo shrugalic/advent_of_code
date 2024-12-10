@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-mod char_grid;
 mod day01;
 mod day02;
 mod day03;
@@ -11,9 +10,10 @@ mod day07;
 mod day08;
 mod day09;
 mod day10;
-mod hash_char_grid;
+mod hash_tile_grid;
+mod tile_grid;
 mod vec_2d;
-mod vec_char_grid;
+mod vec_tile_grid;
 
 fn main() {
     print_result(1, day01::part1(), day01::part2());

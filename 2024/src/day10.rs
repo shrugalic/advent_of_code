@@ -1,6 +1,6 @@
-use crate::char_grid::CharGrid;
+use crate::tile_grid::TileGrid;
 use crate::vec_2d::Vec2D;
-use crate::vec_char_grid::VecCharGrid;
+use crate::vec_tile_grid::VecTileGrid;
 use std::collections::HashSet;
 
 const INPUT: &str = include_str!("../../2024/input/day10.txt");
@@ -35,7 +35,7 @@ fn solve_part2(input: &str) -> usize {
 
 fn parse(input: &str) -> Map {
     Map {
-        grid: VecCharGrid::from(input),
+        grid: VecTileGrid::from(input),
     }
 }
 
@@ -44,7 +44,7 @@ type Elevation = u8;
 
 #[derive(Debug)]
 struct Map {
-    grid: VecCharGrid,
+    grid: VecTileGrid<char>,
 }
 
 impl Map {

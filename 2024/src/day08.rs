@@ -1,5 +1,5 @@
-use crate::char_grid::{CharGrid, GridContainsPosition};
-use crate::hash_char_grid::HashCharGrid;
+use crate::hash_tile_grid::HashTileGrid;
+use crate::tile_grid::{GridContainsPosition, TileGrid};
 use crate::vec_2d::Vec2D;
 use std::collections::{HashMap, HashSet};
 
@@ -58,7 +58,7 @@ fn solve_part2(input: &str) -> usize {
 }
 
 fn parse(input: &str) -> Grid {
-    let grid = HashCharGrid::from(input);
+    let grid = HashTileGrid::from(input);
     let mut antennas_by_frequency = HashMap::new();
     for (&pos, &c) in grid.chars.iter() {
         match c {
@@ -82,10 +82,10 @@ struct Frequency(char);
 
 #[derive(Debug)]
 struct Grid {
-    grid: HashCharGrid,
+    grid: HashTileGrid<char>,
     antennas_by_frequency: HashMap<Frequency, HashSet<Vec2D>>,
 }
-impl CharGrid for Grid {
+impl TileGrid<char> for Grid {
     fn width(&self) -> usize {
         self.grid.width()
     }

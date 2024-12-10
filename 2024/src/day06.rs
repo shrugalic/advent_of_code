@@ -1,5 +1,5 @@
-use crate::char_grid::{CharGrid, GridContainsPosition};
-use crate::hash_char_grid::HashCharGrid;
+use crate::hash_tile_grid::HashTileGrid;
+use crate::tile_grid::{GridContainsPosition, TileGrid};
 use crate::vec_2d::Vec2D;
 use rayon::prelude::*;
 use std::collections::HashSet;
@@ -43,7 +43,7 @@ fn solve_part2(input: &str) -> usize {
 }
 
 fn parse(input: &str) -> Grid {
-    let grid = HashCharGrid::from(input);
+    let grid = HashTileGrid::from(input);
     let mut obstacles = vec![vec![false; grid.height()]; grid.width()];
     let mut start_pos = Vec2D::new(0, 0);
     for (pos, &c) in grid.chars.iter() {
@@ -63,7 +63,7 @@ fn parse(input: &str) -> Grid {
     }
 }
 struct Grid {
-    grid: HashCharGrid,
+    grid: HashTileGrid<char>,
     start_pos: Vec2D,
     obstacles: Vec<Vec<bool>>,
 }
@@ -99,7 +99,7 @@ impl Grid {
             && visited[guard.dir as u8 as usize][guard.pos.x as usize][guard.pos.y as usize]
     }
 }
-impl CharGrid for Grid {
+impl TileGrid<char> for Grid {
     fn width(&self) -> usize {
         self.grid.width()
     }
