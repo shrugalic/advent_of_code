@@ -28,7 +28,6 @@ struct Stones {
 impl From<&str> for Stones {
     fn from(input: &str) -> Self {
         let stones = input
-            .trim()
             .split_whitespace()
             .map(|n| (n.parse().unwrap(), 1))
             .collect();
@@ -38,7 +37,7 @@ impl From<&str> for Stones {
 
 impl Stones {
     fn count(&self) -> Count {
-        self.stones.values().map(|count| count).sum()
+        self.stones.values().sum()
     }
 
     fn blink(mut self, count: u8) -> Self {
