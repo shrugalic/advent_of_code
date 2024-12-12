@@ -23,6 +23,22 @@ impl Vec2D {
         .into_iter()
         .map(|dir| dir + *self)
     }
+    #[expect(unused)]
+    pub(crate) fn left(&self) -> Self {
+        Vec2D { x: -1, y: 0 }
+    }
+    #[expect(unused)]
+    pub(crate) fn right() -> Self {
+        Vec2D { x: 1, y: 0 }
+    }
+    #[expect(unused)]
+    pub(crate) fn up() -> Self {
+        Vec2D { x: 0, y: -1 }
+    }
+    #[expect(unused)]
+    pub(crate) fn down() -> Self {
+        Vec2D { x: 0, y: 1 }
+    }
 }
 impl AddAssign for Vec2D {
     fn add_assign(&mut self, rhs: Self) {
