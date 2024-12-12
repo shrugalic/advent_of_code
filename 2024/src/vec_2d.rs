@@ -23,6 +23,54 @@ impl Vec2D {
         .into_iter()
         .map(|dir| dir + *self)
     }
+    pub(crate) fn left_neighbor(&self) -> Self {
+        Vec2D {
+            x: self.x - 1,
+            y: self.y,
+        }
+    }
+    pub(crate) fn right_neighbor(&self) -> Self {
+        Vec2D {
+            x: self.x + 1,
+            y: self.y,
+        }
+    }
+    pub(crate) fn above_neighbor(&self) -> Self {
+        Vec2D {
+            x: self.x,
+            y: self.y - 1,
+        }
+    }
+    pub(crate) fn below_neighbor(&self) -> Self {
+        Vec2D {
+            x: self.x,
+            y: self.y + 1,
+        }
+    }
+    pub(crate) fn left_above_neighbor(&self) -> Self {
+        Vec2D {
+            x: self.x - 1,
+            y: self.y - 1,
+        }
+    }
+    pub(crate) fn right_above_neighbor(&self) -> Self {
+        Vec2D {
+            x: self.x + 1,
+            y: self.y - 1,
+        }
+    }
+    pub(crate) fn left_below_neighbor(&self) -> Self {
+        Vec2D {
+            x: self.x - 1,
+            y: self.y + 1,
+        }
+    }
+    pub(crate) fn right_below_neighbor(&self) -> Self {
+        Vec2D {
+            x: self.x + 1,
+            y: self.y + 1,
+        }
+    }
     #[expect(unused)]
     pub(crate) fn left(&self) -> Self {
         Vec2D { x: -1, y: 0 }
