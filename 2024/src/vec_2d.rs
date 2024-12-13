@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Formatter};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Default)]
 pub(crate) struct Vec2D {
     pub(crate) x: isize,
     pub(crate) y: isize,

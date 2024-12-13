@@ -12,6 +12,7 @@ mod day09;
 mod day10;
 mod day11;
 mod day12;
+mod day13;
 mod hash_tile_grid;
 mod tile_grid;
 mod vec_2d;
@@ -30,6 +31,7 @@ fn main() {
     print_result(10, day10::part1(), day10::part2());
     print_result(11, day11::part1(), day11::part2());
     print_result(12, day12::part1(), day12::part2());
+    print_result(13, day13::part1(), day13::part2());
 }
 
 fn print_result(day: i32, part1: impl Display, part2: impl Display) {
