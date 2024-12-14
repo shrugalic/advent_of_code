@@ -162,17 +162,8 @@ trait ConstrainedGridOps {
 
 impl ConstrainedGridOps for Vec2D {
     fn constrain_to(&mut self, grid_size: &Vec2D) {
-        let limit = |coord: &mut isize, max: isize| {
-            if (0..max).contains(coord) {
-                return;
-            }
-            *coord %= max;
-            if *coord < 0 {
-                *coord += max;
-            }
-        };
-        limit(&mut self.x, grid_size.x);
-        limit(&mut self.y, grid_size.y);
+        self.x = self.x.rem_euclid(grid_size.x);
+        self.y = self.y.rem_euclid(grid_size.y);
     }
 
     fn constrained_add(&mut self, v: &Vec2D, grid_size: &Vec2D) {
