@@ -1,5 +1,5 @@
 use std::fmt::{Debug, Formatter};
-use std::ops::{Add, AddAssign, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Mul, Sub, SubAssign};
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Default)]
 pub(crate) struct Vec2D {
@@ -115,6 +115,16 @@ impl Sub for Vec2D {
         Vec2D {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
+        }
+    }
+}
+impl Mul for Vec2D {
+    type Output = Vec2D;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Vec2D {
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
         }
     }
 }
