@@ -74,7 +74,7 @@ impl Grid {
             pos: self.start_pos,
             dir: Direction::Up,
         };
-        while self.contains(&guard.pos) && !path.contains(&guard) {
+        while self.grid.contains(&guard.pos) && !path.contains(&guard) {
             path.push(guard);
             guard.take_a_step(self, None);
         }
@@ -86,28 +86,17 @@ impl Grid {
         extra_obstacle: Option<Vec2D>,
     ) -> bool {
         let mut visited: Vec<Vec<Vec<bool>>> =
-            vec![vec![vec![false; self.height()]; self.width()]; 4];
+            vec![vec![vec![false; self.grid.height()]; self.grid.width()]; 4];
 
-        while self.contains(&guard.pos)
+        while self.grid.contains(&guard.pos)
             && !visited[guard.dir as u8 as usize][guard.pos.x as usize][guard.pos.y as usize]
         {
             visited[guard.dir as u8 as usize][guard.pos.x as usize][guard.pos.y as usize] = true;
             guard.take_a_step(self, extra_obstacle);
         }
         // returns if stuck-in-a-loop
-        self.contains(&guard.pos)
+        self.grid.contains(&guard.pos)
             && visited[guard.dir as u8 as usize][guard.pos.x as usize][guard.pos.y as usize]
-    }
-}
-impl TileGrid<char> for Grid {
-    fn width(&self) -> usize {
-        self.grid.width()
-    }
-    fn height(&self) -> usize {
-        self.grid.height()
-    }
-    fn char_at(&self, pos: &Vec2D) -> Option<&char> {
-        self.grid.char_at(pos)
     }
 }
 
@@ -119,7 +108,7 @@ struct Guard {
 impl Guard {
     fn take_a_step(&mut self, grid: &Grid, extra_obstacle: Option<Vec2D>) {
         let mut next = self.pos + self.dir.offset();
-        while grid.contains(&next)
+        while grid.grid.contains(&next)
             && (grid.obstacles[next.x as usize][next.y as usize]
                 || extra_obstacle.is_some_and(|pos| pos == next))
         {

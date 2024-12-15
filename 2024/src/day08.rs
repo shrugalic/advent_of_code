@@ -1,5 +1,5 @@
 use crate::hash_tile_grid::HashTileGrid;
-use crate::tile_grid::{GridContainsPosition, TileGrid};
+use crate::tile_grid::GridContainsPosition;
 use crate::vec_2d::Vec2D;
 use std::collections::{HashMap, HashSet};
 
@@ -21,11 +21,11 @@ fn solve_part1(input: &str) -> usize {
             for pos2 in antennas.iter().skip(i + 1) {
                 let delta = *pos2 - *pos1;
                 let antinode1 = *pos1 - delta;
-                if grid.contains(&antinode1) {
+                if grid.grid.contains(&antinode1) {
                     antinode_locations.insert(antinode1);
                 }
                 let antinode2 = *pos2 + delta;
-                if grid.contains(&antinode2) {
+                if grid.grid.contains(&antinode2) {
                     antinode_locations.insert(antinode2);
                 }
             }
@@ -42,12 +42,12 @@ fn solve_part2(input: &str) -> usize {
             for pos2 in antennas.iter().skip(i + 1) {
                 let delta = *pos2 - *pos1;
                 let mut antinode = *pos2 - delta;
-                while grid.contains(&antinode) {
+                while grid.grid.contains(&antinode) {
                     antinode_locations.insert(antinode);
                     antinode -= delta;
                 }
                 antinode = *pos1 + delta;
-                while grid.contains(&antinode) {
+                while grid.grid.contains(&antinode) {
                     antinode_locations.insert(antinode);
                     antinode += delta;
                 }
@@ -84,17 +84,6 @@ struct Frequency(char);
 struct Grid {
     grid: HashTileGrid<char>,
     antennas_by_frequency: HashMap<Frequency, HashSet<Vec2D>>,
-}
-impl TileGrid<char> for Grid {
-    fn width(&self) -> usize {
-        self.grid.width()
-    }
-    fn height(&self) -> usize {
-        self.grid.height()
-    }
-    fn char_at(&self, pos: &Vec2D) -> Option<&char> {
-        self.grid.char_at(pos)
-    }
 }
 
 #[cfg(test)]

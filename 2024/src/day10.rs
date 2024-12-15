@@ -49,17 +49,7 @@ struct Map {
 
 impl Map {
     fn low_points(&self) -> Vec<Vec2D> {
-        self.grid
-            .chars
-            .iter()
-            .enumerate()
-            .flat_map(|(y, line)| {
-                line.iter()
-                    .enumerate()
-                    .filter(|(_x, c)| c == &&'0')
-                    .map(move |(x, _)| Vec2D::new(x, y))
-            })
-            .collect()
+        self.grid.positions(|c| c == &'0')
     }
 
     fn count_endpoints_reachable_from(&self, start: Vec2D) -> usize {

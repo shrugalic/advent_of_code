@@ -19,6 +19,19 @@ impl<T> TileGrid<T> for HashTileGrid<T> {
     fn char_at(&self, pos: &Vec2D) -> Option<&T> {
         self.chars.get(pos)
     }
+    fn mut_char_at(&mut self, pos: &Vec2D) -> Option<&mut T> {
+        self.chars.get_mut(pos)
+    }
+
+    fn positions(&self, filter: fn(&T) -> bool) -> Vec<Vec2D> {
+        (0..self.height)
+            .flat_map(|y| {
+                (0..self.width)
+                    .map(move |x| Vec2D::new(x, y))
+                    .filter(|pos| self.char_at(pos).is_some_and(filter))
+            })
+            .collect()
+    }
 }
 
 impl<T> From<&str> for HashTileGrid<T>
