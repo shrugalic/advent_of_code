@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Formatter};
 use std::ops::{Add, AddAssign, Mul, Sub, SubAssign};
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Default)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Default, Ord, PartialOrd)]
 pub(crate) struct Vec2D {
     pub(crate) x: isize,
     pub(crate) y: isize,
@@ -71,19 +71,15 @@ impl Vec2D {
             y: self.y + 1,
         }
     }
-    #[expect(unused)]
-    pub(crate) fn left(&self) -> Self {
+    pub(crate) fn left() -> Self {
         Vec2D { x: -1, y: 0 }
     }
-    #[expect(unused)]
     pub(crate) fn right() -> Self {
         Vec2D { x: 1, y: 0 }
     }
-    #[expect(unused)]
     pub(crate) fn up() -> Self {
         Vec2D { x: 0, y: -1 }
     }
-    #[expect(unused)]
     pub(crate) fn down() -> Self {
         Vec2D { x: 0, y: 1 }
     }
