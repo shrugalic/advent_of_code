@@ -122,10 +122,10 @@ enum Direction {
 impl Direction {
     fn to_offset(&self) -> Vec2D {
         match self {
-            Up => Vec2D::up(),
-            Down => Vec2D::down(),
-            Left => Vec2D::left(),
-            Right => Vec2D::right(),
+            Up => Vec2D::NORTH,
+            Down => Vec2D::SOUTH,
+            Left => Vec2D::WEST,
+            Right => Vec2D::EAST,
         }
     }
 }

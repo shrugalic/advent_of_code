@@ -6,7 +6,13 @@ pub(crate) struct Vec2D {
     pub(crate) x: isize,
     pub(crate) y: isize,
 }
+
 impl Vec2D {
+    pub(crate) const WEST: Vec2D = Vec2D { x: -1, y: 0 };
+    pub(crate) const EAST: Vec2D = Vec2D { x: 1, y: 0 };
+    pub(crate) const NORTH: Vec2D = Vec2D { x: 0, y: -1 };
+    pub(crate) const SOUTH: Vec2D = Vec2D { x: 0, y: 1 };
+
     pub(crate) fn new(x: usize, y: usize) -> Self {
         Vec2D {
             x: x as isize,
@@ -71,17 +77,11 @@ impl Vec2D {
             y: self.y + 1,
         }
     }
-    pub(crate) fn left() -> Self {
-        Vec2D { x: -1, y: 0 }
+    pub(crate) fn turn_cw(&mut self) {
+        (self.x, self.y) = (self.y, -self.x);
     }
-    pub(crate) fn right() -> Self {
-        Vec2D { x: 1, y: 0 }
-    }
-    pub(crate) fn up() -> Self {
-        Vec2D { x: 0, y: -1 }
-    }
-    pub(crate) fn down() -> Self {
-        Vec2D { x: 0, y: 1 }
+    pub(crate) fn turn_ccw(&mut self) {
+        (self.x, self.y) = (-self.y, self.x);
     }
 }
 impl AddAssign for Vec2D {
