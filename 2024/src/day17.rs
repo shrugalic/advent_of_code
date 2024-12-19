@@ -13,12 +13,72 @@ pub(crate) fn part2() -> Integer {
 
 fn solve_part1(input: &str) -> String {
     let (mut computer, program) = parse(input);
-    computer.output_of_running(&program).unwrap()
+    computer.execute(&program);
+    computer.output_as_string()
 }
 
-fn solve_part2(_input: &str) -> Integer {
-    // TODO
-    0
+const WINDOW_SIZE: Integer = 1024;
+fn solve_part2(input: &str) -> Integer {
+    let (mut computer, program) = parse(input);
+
+    /* Example program 0,3,5,4,3,0:
+    0: adv 3 -> a = a / 2.pow(3) = a / 8 = a >> 3 -> cut the last octal digit off a
+    2: out 4 -> out (a % 8) -> output the last octal digit of a
+    4: jnz 0 -> if a != 0 repeat
+
+    => The solution for the example is 117440, or 0o345300 in octal,
+    -> which is basically the program in reverse.
+    */
+
+    /* Input program:
+     0: bst 4 -> bst a -> b = a % 8; -> b is the last (3-bit) digit of a
+     2: bxl 5 -> b1 = b ^ 5
+     4: cdv 5 -> cdv b -> c = a / 2.pow(b); -> c = a >> b1 -> a 0 to 7-bit shift
+     6: adv 3 -> a1 = a / 2.pow(3) -> a >> 3 -> cut the last 3-bit digit off a
+     8: bxl 6 -> b2 = b1 ^ 6
+    10: bxc 3 -> bxc -> b3 = b2 ^ c
+    12: out 5 -> out (b3 % 8)
+    14: jnz 0 -> if a != 0 repeat
+
+    Only the last part of a is relevant to the output. With 0 shift at 4:
+    it's only the last 3 bits, and each further shift moves this window of 3 bits
+    one bit further to the left. So the relevant window is 10 bits wide.
+    */
+
+    // Precalculate the outputs for all possible 10-bit wide windows of a
+    // a is the index, the first output is the value at this index
+    let mut first_output_by_a: Vec<Integer> = Vec::with_capacity(1024);
+    for a in 0..WINDOW_SIZE {
+        computer.reset(a);
+        computer.execute(&program);
+        first_output_by_a.push(*computer.outputs.first().unwrap());
+    }
+    // Use these precalculated outputs to find the program digits recursively
+    find_a(0, &program.0, &first_output_by_a).unwrap()
+}
+
+fn find_a(
+    curr_a: Integer,
+    wanted_outputs: &[Number],
+    first_output_by_a: &[Integer],
+) -> Option<Integer> {
+    if wanted_outputs.is_empty() {
+        return Some(curr_a);
+    }
+    let wanted_output = *wanted_outputs.last().unwrap() as Integer;
+    (0..8)
+        .map(|next_a| (curr_a << 3) + next_a)
+        .filter(|next_a| {
+            let actual_output = first_output_by_a[(*next_a & (WINDOW_SIZE - 1)) as usize];
+            actual_output == wanted_output
+        })
+        .find_map(|next_a| {
+            find_a(
+                next_a,
+                &wanted_outputs[..wanted_outputs.len() - 1],
+                first_output_by_a,
+            )
+        })
 }
 
 type Number = u8;
@@ -75,7 +135,7 @@ struct Computer {
 }
 
 impl Computer {
-    fn output_of_running(&mut self, program: &Program) -> Option<String> {
+    fn execute(&mut self, program: &Program) {
         while let Some((opcode, operand)) = program.instruction_at(self.ip) {
             let combo_operand = || match operand {
                 0..=3 => operand as Integer,
@@ -128,14 +188,20 @@ impl Computer {
                 }
             }
         }
-        Some(self.output_to_string())
     }
-    fn output_to_string(&self) -> String {
+    fn output_as_string(&self) -> String {
         self.outputs
             .iter()
             .map(Integer::to_string)
             .collect::<Vec<_>>()
             .join(",")
+    }
+    fn reset(&mut self, a: Integer) {
+        self.a = a;
+        self.b = 0;
+        self.c = 0;
+        self.ip = 0;
+        self.outputs = vec![];
     }
 }
 
@@ -209,7 +275,7 @@ Program: 0,3,5,4,3,0
             c: 9,
             ..Default::default()
         };
-        computer.output_of_running(&Program(vec![2, 6]));
+        computer.execute(&Program(vec![2, 6]));
         assert_eq!(1, computer.b);
     }
 
@@ -219,7 +285,7 @@ Program: 0,3,5,4,3,0
             a: 10,
             ..Default::default()
         };
-        computer.output_of_running(&Program(vec![5, 0, 5, 1, 5, 4]));
+        computer.execute(&Program(vec![5, 0, 5, 1, 5, 4]));
         assert_eq!(vec![0, 1, 2], computer.outputs);
     }
 
@@ -229,7 +295,7 @@ Program: 0,3,5,4,3,0
             a: 2024,
             ..Default::default()
         };
-        computer.output_of_running(&Program(vec![0, 1, 5, 4, 3, 0]));
+        computer.execute(&Program(vec![0, 1, 5, 4, 3, 0]));
         assert_eq!(vec![4, 2, 5, 6, 7, 7, 7, 7, 3, 1, 0], computer.outputs);
         assert_eq!(0, computer.a);
     }
@@ -240,7 +306,7 @@ Program: 0,3,5,4,3,0
             b: 29,
             ..Default::default()
         };
-        computer.output_of_running(&Program(vec![1, 7]));
+        computer.execute(&Program(vec![1, 7]));
         assert_eq!(26, computer.b);
     }
 
@@ -251,7 +317,7 @@ Program: 0,3,5,4,3,0
             c: 43690,
             ..Default::default()
         };
-        computer.output_of_running(&Program(vec![4, 0]));
+        computer.execute(&Program(vec![4, 0]));
         assert_eq!(44354, computer.b);
     }
 
@@ -263,30 +329,10 @@ Program: 0,3,5,4,3,0
     #[test]
     fn test_part2_example() {
         assert_eq!(117440, solve_part2(EXAMPLE_2));
-        // program 0,3,5,4,3,0
-        println!("{} = 0b{:b} = 0o{:o}", 117440, 117440, 117440);
-        // 117440 = 0b11100101011000000 = 0o345300 ->
-        // note this octal number is basically the program in reverse
-        // 011'100'101'011'000'000
-        //                 000'000  -> input  0 for output 0
-        //             011'000      -> input 24 for output 3
-        //         101'000          -> input 40 for output 5
-        //     100'000              -> input 32 for output 4
-        // 011'000                  -> input 24 for output 3
-        //                          -> input  0 for output 0
-        let mut a = 24 as Integer;
-        a <<= 3;
-        a += 32;
-        a <<= 3;
-        a += 40;
-        a <<= 3;
-        a += 24;
-        a <<= 3;
-        assert_eq!(a, solve_part2(EXAMPLE_2));
     }
 
     #[test]
     fn test_part2() {
-        assert_eq!(1, solve_part2(INPUT));
+        assert_eq!(105_875_099_912_602, solve_part2(INPUT));
     }
 }
