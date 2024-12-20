@@ -29,7 +29,7 @@ fn solve_part2(input: &str) -> usize {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-enum Tile {
+pub(crate) enum Tile {
     Wall,
     Start,
     End,
@@ -37,14 +37,14 @@ enum Tile {
 }
 
 #[derive(Debug)]
-struct Map {
+pub(crate) struct Map {
     grid: VecTileGrid<Tile>,
-    start_pos: Vec2D,
-    end_pos: Vec2D,
+    pub(crate) start_pos: Vec2D,
+    pub(crate) end_pos: Vec2D,
 }
 
 impl Map {
-    fn tile_is_empty_at(&self, pos: &Vec2D) -> bool {
+    pub(crate) fn tile_is_empty_at(&self, pos: &Vec2D) -> bool {
         self.grid.char_at(pos).is_some_and(|tile| tile != &Wall)
     }
     fn find_shortest_paths(&self) -> (Cost, usize) {
