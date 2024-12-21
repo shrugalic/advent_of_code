@@ -1,7 +1,8 @@
-use std::fmt::{Debug, Formatter};
+use std::cmp::Ordering;
+use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Add, AddAssign, Mul, Sub, SubAssign};
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Default, Ord, PartialOrd)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Default, Ord, PartialOrd)]
 pub(crate) struct Vec2D {
     pub(crate) x: isize,
     pub(crate) y: isize,
@@ -83,6 +84,19 @@ impl Vec2D {
     pub(crate) fn turn_ccw(&mut self) {
         (self.x, self.y) = (-self.y, self.x);
     }
+    pub(crate) fn x_and_y_increments(&self) -> (Vec<Vec2D>, Vec<Vec2D>) {
+        let x_parts = match self.x.cmp(&0) {
+            Ordering::Greater => vec![Vec2D::EAST; self.x.unsigned_abs()],
+            Ordering::Less => vec![Vec2D::WEST; self.x.unsigned_abs()],
+            Ordering::Equal => vec![],
+        };
+        let y_parts = match self.y.cmp(&0) {
+            Ordering::Greater => vec![Vec2D::SOUTH; self.y.unsigned_abs()],
+            Ordering::Less => vec![Vec2D::NORTH; self.y.unsigned_abs()],
+            Ordering::Equal => vec![],
+        };
+        (x_parts, y_parts)
+    }
 }
 impl AddAssign for Vec2D {
     fn add_assign(&mut self, rhs: Self) {
@@ -125,7 +139,7 @@ impl Mul for Vec2D {
     }
 }
 
-impl Debug for Vec2D {
+impl Display for Vec2D {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}, {})", self.x, self.y)
     }
