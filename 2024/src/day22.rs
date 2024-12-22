@@ -18,7 +18,7 @@ fn solve_part1(input: &str) -> usize {
 }
 
 fn solve_part2(input: &str) -> usize {
-    let mut first_price_by_seller_id_by_sequence_id: Vec<HashMap<usize, usize>> =
+    let mut first_price_by_seller_id_by_sequence_id: Vec<HashMap<usize, u8>> =
         vec![HashMap::new(); POW4];
     for (seller_id, number) in parse(input).enumerate() {
         let secret_numbers: Vec<_> = next_numbers_with_price_diff(number).take(2000).collect();
@@ -26,7 +26,7 @@ fn solve_part2(input: &str) -> usize {
         for window in secret_numbers.windows(4) {
             let sequence = [window[0].1, window[1].1, window[2].1, window[3].1];
             let sequence_id = id_from(sequence[0], sequence[1], sequence[2], sequence[3]);
-            let price = window[3].0 % 10;
+            let price = (window[3].0 % 10) as u8;
 
             if let Vacant(e) = first_price_by_seller_id_by_sequence_id[sequence_id].entry(seller_id)
             {
@@ -36,7 +36,7 @@ fn solve_part2(input: &str) -> usize {
     }
     first_price_by_seller_id_by_sequence_id
         .into_iter()
-        .map(|prices| prices.values().sum::<usize>())
+        .map(|prices| prices.values().map(|&price| price as usize).sum::<usize>())
         .max()
         .unwrap()
 }
