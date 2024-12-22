@@ -18,28 +18,43 @@ fn solve_part1(input: &str) -> usize {
 }
 
 fn solve_part2(input: &str) -> usize {
-    let mut first_price_by_seller_id_by_sequence: HashMap<[isize; 4], HashMap<usize, usize>> =
-        HashMap::new();
+    let mut first_price_by_seller_id_by_sequence: Vec<Option<HashMap<usize, usize>>> =
+        vec![None; POW4];
     for (seller_id, number) in parse(input).enumerate() {
         let secret_numbers: Vec<_> = next_numbers_with_price_diff(number).take(2000).collect();
 
         for window in secret_numbers.windows(4) {
             let sequence = [window[0].1, window[1].1, window[2].1, window[3].1];
+            let sequence_id = id_from(sequence[0], sequence[1], sequence[2], sequence[3]);
             let price = window[3].0 % 10;
 
-            let first_price_by_seller_id = first_price_by_seller_id_by_sequence
-                .entry(sequence)
-                .or_default();
-            if let Vacant(e) = first_price_by_seller_id.entry(seller_id) {
-                e.insert(price);
+            if first_price_by_seller_id_by_sequence[sequence_id].is_none() {
+                first_price_by_seller_id_by_sequence[sequence_id] = Some(HashMap::new());
+            }
+            if let Some(first_price_by_seller_id) =
+                &mut first_price_by_seller_id_by_sequence[sequence_id]
+            {
+                if let Vacant(e) = first_price_by_seller_id.entry(seller_id) {
+                    e.insert(price);
+                }
             }
         }
     }
     first_price_by_seller_id_by_sequence
-        .values()
+        .into_iter()
+        .filter_map(|prices| prices)
         .map(|prices| prices.values().sum::<usize>())
         .max()
         .unwrap()
+}
+
+const POW4: usize = 19 * 19 * 19 * 19;
+const POW3: usize = 19 * 19 * 19;
+const POW2: usize = 19 * 19;
+const POW1: usize = 19;
+/// Convert a sequence of 4 digits ranging from -9 to +9 into an unsigned integer from 0 to 19.pow(4)
+fn id_from(a: isize, b: isize, c: isize, d: isize) -> usize {
+    POW3 * (a + 9) as usize + POW2 * (b + 9) as usize + POW1 * (c + 9) as usize + (d + 9) as usize
 }
 
 fn parse(input: &str) -> impl Iterator<Item = usize> + use<'_> {
@@ -116,6 +131,13 @@ mod tests {
         assert_eq!((11_100_544, -2), numbers[6]);
         assert_eq!((12_249_484, 0), numbers[7]);
         assert_eq!((7_753_432, -2), numbers[8]);
+    }
+
+    #[test]
+    fn test_id_from() {
+        assert_eq!(0, id_from(-9, -9, -9, -9));
+        assert_eq!(POW3 * 9 + POW2 * 9 + POW1 * 9 + 9, id_from(0, 0, 0, 0));
+        assert_eq!(POW4 - 1, id_from(9, 9, 9, 9));
     }
 
     #[test]
