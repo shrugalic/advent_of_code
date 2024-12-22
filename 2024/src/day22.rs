@@ -20,16 +20,15 @@ fn solve_part2(input: &str) -> usize {
     let seller_count = secret_numbers.len();
     let mut first_price_by_seller_id_by_sequence_id: Vec<Vec<u8>> =
         vec![vec![PRICE_UNKNOWN; seller_count]; POW4];
-    for (seller_id, number) in secret_numbers.into_iter().enumerate() {
-        let secret_numbers: Vec<_> = next_numbers_with_price_diff(number).take(2000).collect();
+    for (seller_id, seed) in secret_numbers.into_iter().enumerate() {
+        let secret_numbers: Vec<_> = next_numbers_with_price_diff(seed).take(2000).collect();
 
-        for window in secret_numbers.windows(4) {
-            let sequence = [window[0].1, window[1].1, window[2].1, window[3].1];
-            let sequence_id = id_from(sequence[0], sequence[1], sequence[2], sequence[3]);
-            let price = (window[3].0 % 10) as u8;
+        for w in secret_numbers.windows(4) {
+            let seq_id = id_from(w[0].1, w[1].1, w[2].1, w[3].1);
+            let price = (w[3].0 % 10) as u8;
 
-            if first_price_by_seller_id_by_sequence_id[sequence_id][seller_id] == PRICE_UNKNOWN {
-                first_price_by_seller_id_by_sequence_id[sequence_id][seller_id] = price;
+            if first_price_by_seller_id_by_sequence_id[seq_id][seller_id] == PRICE_UNKNOWN {
+                first_price_by_seller_id_by_sequence_id[seq_id][seller_id] = price;
             }
         }
     }
@@ -49,7 +48,7 @@ const POW4: usize = 19 * 19 * 19 * 19;
 const POW3: usize = 19 * 19 * 19;
 const POW2: usize = 19 * 19;
 const POW1: usize = 19;
-/// Convert a sequence of 4 digits ranging from -9 to +9 into an unsigned integer from 0 to 19.pow(4)-1
+/// Convert a sequence of 4 digits ranging from -9 to +9 into an unsigned base-19 integer
 fn id_from(a: isize, b: isize, c: isize, d: isize) -> usize {
     POW3 * (a + 9) as usize + POW2 * (b + 9) as usize + POW1 * (c + 9) as usize + (d + 9) as usize
 }
