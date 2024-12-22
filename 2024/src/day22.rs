@@ -1,6 +1,3 @@
-use std::collections::hash_map::Entry::Vacant;
-use std::collections::HashMap;
-
 const INPUT: &str = include_str!("../../2024/input/day22.txt");
 
 pub(crate) fn part1() -> usize {
@@ -17,10 +14,13 @@ fn solve_part1(input: &str) -> usize {
         .sum()
 }
 
+const PRICE_UNKNOWN: u8 = 10;
 fn solve_part2(input: &str) -> usize {
-    let mut first_price_by_seller_id_by_sequence_id: Vec<HashMap<usize, u8>> =
-        vec![HashMap::new(); POW4];
-    for (seller_id, number) in parse(input).enumerate() {
+    let secret_numbers: Vec<_> = parse(input).collect();
+    let seller_count = secret_numbers.len();
+    let mut first_price_by_seller_id_by_sequence_id: Vec<Vec<u8>> =
+        vec![vec![PRICE_UNKNOWN; seller_count]; POW4];
+    for (seller_id, number) in secret_numbers.into_iter().enumerate() {
         let secret_numbers: Vec<_> = next_numbers_with_price_diff(number).take(2000).collect();
 
         for window in secret_numbers.windows(4) {
@@ -28,15 +28,19 @@ fn solve_part2(input: &str) -> usize {
             let sequence_id = id_from(sequence[0], sequence[1], sequence[2], sequence[3]);
             let price = (window[3].0 % 10) as u8;
 
-            if let Vacant(e) = first_price_by_seller_id_by_sequence_id[sequence_id].entry(seller_id)
-            {
-                e.insert(price);
+            if first_price_by_seller_id_by_sequence_id[sequence_id][seller_id] == PRICE_UNKNOWN {
+                first_price_by_seller_id_by_sequence_id[sequence_id][seller_id] = price;
             }
         }
     }
     first_price_by_seller_id_by_sequence_id
         .into_iter()
-        .map(|prices| prices.values().map(|&price| price as usize).sum::<usize>())
+        .map(|prices| {
+            prices
+                .into_iter()
+                .filter_map(|price| (price != PRICE_UNKNOWN).then_some(price as usize))
+                .sum()
+        })
         .max()
         .unwrap()
 }
@@ -45,7 +49,7 @@ const POW4: usize = 19 * 19 * 19 * 19;
 const POW3: usize = 19 * 19 * 19;
 const POW2: usize = 19 * 19;
 const POW1: usize = 19;
-/// Convert a sequence of 4 digits ranging from -9 to +9 into an unsigned integer from 0 to 19.pow(4)
+/// Convert a sequence of 4 digits ranging from -9 to +9 into an unsigned integer from 0 to 19.pow(4)-1
 fn id_from(a: isize, b: isize, c: isize, d: isize) -> usize {
     POW3 * (a + 9) as usize + POW2 * (b + 9) as usize + POW1 * (c + 9) as usize + (d + 9) as usize
 }
