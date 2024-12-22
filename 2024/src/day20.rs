@@ -5,11 +5,11 @@ use std::collections::{BinaryHeap, HashMap, HashSet};
 
 const INPUT: &str = include_str!("../../2024/input/day20.txt");
 
-pub(crate) fn part1() -> usize {
+pub fn part1() -> usize {
     solve_part1(INPUT, 100)
 }
 
-pub(crate) fn part2() -> usize {
+pub fn part2() -> usize {
     solve_part2(INPUT, 100)
 }
 

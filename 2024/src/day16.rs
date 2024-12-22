@@ -10,11 +10,11 @@ const INPUT: &str = include_str!("../../2024/input/day16.txt");
 const STEP_COST: Cost = 1;
 const TURN_COST: Cost = 1000;
 
-pub(crate) fn part1() -> usize {
+pub fn part1() -> usize {
     solve_part1(INPUT)
 }
 
-pub(crate) fn part2() -> usize {
+pub fn part2() -> usize {
     solve_part2(INPUT)
 }
 
@@ -44,7 +44,7 @@ pub(crate) struct Map {
 }
 
 impl Map {
-    pub(crate) fn tile_is_empty_at(&self, pos: &Vec2D) -> bool {
+    pub fn tile_is_empty_at(&self, pos: &Vec2D) -> bool {
         self.grid.char_at(pos).is_some_and(|tile| tile != &Wall)
     }
     fn find_shortest_paths(&self) -> (Cost, usize) {

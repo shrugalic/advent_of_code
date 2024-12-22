@@ -6,11 +6,11 @@ const INPUT: &str = include_str!("../../2024/input/day14.txt");
 
 const GRID_SIZE: Vec2D = Vec2D { x: 101, y: 103 };
 
-pub(crate) fn part1() -> usize {
+pub fn part1() -> usize {
     solve_part1(INPUT, &GRID_SIZE)
 }
 
-pub(crate) fn part2() -> usize {
+pub fn part2() -> usize {
     solve_part2(INPUT, &GRID_SIZE)
 }
 

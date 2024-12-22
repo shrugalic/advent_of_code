@@ -8,11 +8,11 @@ use NumPadButton::*;
 
 const INPUT: &str = include_str!("../../2024/input/day21.txt");
 
-pub(crate) fn part1() -> usize {
+pub fn part1() -> usize {
     solve_part1(INPUT)
 }
 
-pub(crate) fn part2() -> usize {
+pub fn part2() -> usize {
     solve_part2(INPUT)
 }
 

@@ -6,11 +6,11 @@ const INPUT: &str = include_str!("../../2024/input/day18.txt");
 const GRID_SIZE: usize = 71;
 const BLOCK_COUNT: Time = 1024;
 
-pub(crate) fn part1() -> Time {
+pub fn part1() -> Time {
     solve_part1(INPUT, GRID_SIZE, BLOCK_COUNT)
 }
 
-pub(crate) fn part2() -> String {
+pub fn part2() -> String {
     solve_part2(INPUT, GRID_SIZE, BLOCK_COUNT)
 }
 

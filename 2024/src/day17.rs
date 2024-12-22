@@ -3,11 +3,11 @@ use OpCode::*;
 
 const INPUT: &str = include_str!("../../2024/input/day17.txt");
 
-pub(crate) fn part1() -> String {
+pub fn part1() -> String {
     solve_part1(INPUT)
 }
 type Integer = u64;
-pub(crate) fn part2() -> Integer {
+pub fn part2() -> Integer {
     solve_part2(INPUT)
 }
 

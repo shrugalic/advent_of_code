@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 const INPUT: &str = include_str!("../input/day01.txt");
 
-pub(crate) fn part1() -> u32 {
+pub fn part1() -> u32 {
     solve_part1(INPUT)
 }
 
-pub(crate) fn part2() -> u32 {
+pub fn part2() -> u32 {
     solve_part2(INPUT)
 }
 
@@ -46,9 +46,7 @@ fn solve_part2(input: &str) -> u32 {
     for i in &right {
         counts.entry(i).and_modify(|cnt| *cnt += 1).or_insert(1);
     }
-    left.iter()
-        .map(|i| i * *counts.get(&i).unwrap_or(&0))
-        .sum()
+    left.iter().map(|i| i * *counts.get(&i).unwrap_or(&0)).sum()
 }
 
 #[cfg(test)]

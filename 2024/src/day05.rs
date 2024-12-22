@@ -3,11 +3,11 @@ use std::collections::HashSet;
 
 const INPUT: &str = include_str!("../../2024/input/day05.txt");
 
-pub(crate) fn part1() -> u32 {
+pub fn part1() -> u32 {
     solve_part1(INPUT)
 }
 
-pub(crate) fn part2() -> u32 {
+pub fn part2() -> u32 {
     solve_part2(INPUT)
 }
 

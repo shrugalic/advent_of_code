@@ -14,13 +14,13 @@ impl Vec2D {
     pub(crate) const NORTH: Vec2D = Vec2D { x: 0, y: -1 };
     pub(crate) const SOUTH: Vec2D = Vec2D { x: 0, y: 1 };
 
-    pub(crate) fn new(x: usize, y: usize) -> Self {
+    pub fn new(x: usize, y: usize) -> Self {
         Vec2D {
             x: x as isize,
             y: y as isize,
         }
     }
-    pub(crate) fn crosswise_neighbors(&self) -> impl Iterator<Item = Vec2D> + use<'_> {
+    pub fn crosswise_neighbors(&self) -> impl Iterator<Item = Vec2D> + use<'_> {
         [
             Vec2D { x: 1, y: 0 },
             Vec2D { x: -1, y: 0 },
@@ -30,61 +30,61 @@ impl Vec2D {
         .into_iter()
         .map(|dir| dir + *self)
     }
-    pub(crate) fn left_neighbor(&self) -> Self {
+    pub fn left_neighbor(&self) -> Self {
         Vec2D {
             x: self.x - 1,
             y: self.y,
         }
     }
-    pub(crate) fn right_neighbor(&self) -> Self {
+    pub fn right_neighbor(&self) -> Self {
         Vec2D {
             x: self.x + 1,
             y: self.y,
         }
     }
-    pub(crate) fn above_neighbor(&self) -> Self {
+    pub fn above_neighbor(&self) -> Self {
         Vec2D {
             x: self.x,
             y: self.y - 1,
         }
     }
-    pub(crate) fn below_neighbor(&self) -> Self {
+    pub fn below_neighbor(&self) -> Self {
         Vec2D {
             x: self.x,
             y: self.y + 1,
         }
     }
-    pub(crate) fn left_above_neighbor(&self) -> Self {
+    pub fn left_above_neighbor(&self) -> Self {
         Vec2D {
             x: self.x - 1,
             y: self.y - 1,
         }
     }
-    pub(crate) fn right_above_neighbor(&self) -> Self {
+    pub fn right_above_neighbor(&self) -> Self {
         Vec2D {
             x: self.x + 1,
             y: self.y - 1,
         }
     }
-    pub(crate) fn left_below_neighbor(&self) -> Self {
+    pub fn left_below_neighbor(&self) -> Self {
         Vec2D {
             x: self.x - 1,
             y: self.y + 1,
         }
     }
-    pub(crate) fn right_below_neighbor(&self) -> Self {
+    pub fn right_below_neighbor(&self) -> Self {
         Vec2D {
             x: self.x + 1,
             y: self.y + 1,
         }
     }
-    pub(crate) fn turn_cw(&mut self) {
+    pub fn turn_cw(&mut self) {
         (self.x, self.y) = (self.y, -self.x);
     }
-    pub(crate) fn turn_ccw(&mut self) {
+    pub fn turn_ccw(&mut self) {
         (self.x, self.y) = (-self.y, self.x);
     }
-    pub(crate) fn x_and_y_increments(&self) -> (Vec<Vec2D>, Vec<Vec2D>) {
+    pub fn x_and_y_increments(&self) -> (Vec<Vec2D>, Vec<Vec2D>) {
         let x_parts = match self.x.cmp(&0) {
             Ordering::Greater => vec![Vec2D::EAST; self.x.unsigned_abs()],
             Ordering::Less => vec![Vec2D::WEST; self.x.unsigned_abs()],
