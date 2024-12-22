@@ -14,12 +14,10 @@ pub fn solve_part1(input: &str) -> usize {
         .sum()
 }
 
-const PRICE_UNKNOWN: u8 = 10;
 fn solve_part2(input: &str) -> usize {
     let secret_numbers: Vec<_> = parse(input).collect();
-    let seller_count = secret_numbers.len();
-    let mut first_price_by_seller_id_by_sequence_id: Vec<Vec<u8>> =
-        vec![vec![PRICE_UNKNOWN; seller_count]; POW4];
+    let mut last_seller_id_for_sequence_id: Vec<usize> = vec![secret_numbers.len(); POW4];
+    let mut total_price_for_sequence_id: Vec<usize> = vec![0; POW4];
     for (seller_id, seed) in secret_numbers.into_iter().enumerate() {
         let secret_numbers: Vec<_> = next_numbers_with_price_diff(seed).take(2000).collect();
 
@@ -27,21 +25,13 @@ fn solve_part2(input: &str) -> usize {
             let seq_id = id_from(w[0].1, w[1].1, w[2].1, w[3].1);
             let price = (w[3].0 % 10) as u8;
 
-            if first_price_by_seller_id_by_sequence_id[seq_id][seller_id] == PRICE_UNKNOWN {
-                first_price_by_seller_id_by_sequence_id[seq_id][seller_id] = price;
+            if last_seller_id_for_sequence_id[seq_id] != seller_id {
+                last_seller_id_for_sequence_id[seq_id] = seller_id;
+                total_price_for_sequence_id[seq_id] += price as usize;
             }
         }
     }
-    first_price_by_seller_id_by_sequence_id
-        .into_iter()
-        .map(|prices| {
-            prices
-                .into_iter()
-                .filter_map(|price| (price != PRICE_UNKNOWN).then_some(price as usize))
-                .sum()
-        })
-        .max()
-        .unwrap()
+    *total_price_for_sequence_id.iter().max().unwrap()
 }
 
 const POW4: usize = 19 * 19 * 19 * 19;
