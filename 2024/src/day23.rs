@@ -68,8 +68,41 @@ fn solve_part2(input: &str) -> String {
     names.join(",")
 }
 
+// ~1.1 ms
+pub fn solve_part2_andre_optimized(input: &str) -> String {
+    // To avoid using HashMaps as much, this translates the strings to indices
+    let (idx_to_str, connections) = parse_pairs_into_connections2(input);
+
+    let mut largest_set = BTreeSet::new();
+    for (seed_node, targets) in connections.iter().enumerate() {
+        if targets.len() < largest_set.len() {
+            // Unnecessary optimization: Don't even bother with sparse nodes
+            continue;
+        }
+        let mut set = BTreeSet::from([seed_node]);
+
+        for candidate in targets {
+            if set
+                .iter()
+                .all(|node| connections[*candidate].contains(node))
+            {
+                set.insert(*candidate);
+            }
+        }
+        if set.len() > largest_set.len() {
+            largest_set = set;
+        }
+    }
+
+    let names = largest_set
+        .into_iter()
+        .map(|i| idx_to_str[i])
+        .collect::<Vec<&str>>();
+    names.join(",")
+}
+
 // ~2 ms
-pub fn solve_part2_andre(input: &str) -> String {
+pub fn solve_part2_andre_orig(input: &str) -> String {
     let connections: HashMap<Name, Tuple> = parse_pairs_into_connections(input);
 
     let mut largest_set = Tuple::new();
@@ -90,8 +123,7 @@ pub fn solve_part2_andre(input: &str) -> String {
         }
     }
 
-    let mut names: Vec<_> = largest_set.into_iter().collect();
-    names.sort_unstable();
+    let names: Vec<_> = largest_set.into_iter().collect();
     names.join(",")
 }
 
@@ -129,6 +161,37 @@ fn parse_pairs_into_connections(input: &str) -> HashMap<Name, Tuple> {
         connections.entry(b).or_default().insert(a);
     }
     connections
+}
+
+fn parse_pairs_into_connections2(input: &str) -> (Vec<&str>, Vec<Vec<usize>>) {
+    let pairs: Vec<_> = input
+        .trim()
+        .lines()
+        .filter_map(|line| line.split_once('-'))
+        .collect();
+
+    // To avoid using HashMaps as much, translate the strings to indices
+    let mut idx_to_str: Vec<_> = pairs.iter().flat_map(|(a, b)| [a, b]).cloned().collect();
+    idx_to_str.sort_unstable(); // dedup needs the entries to be sorted
+    idx_to_str.dedup();
+
+    // This HashMap to initially translate the strings to indices I was unable to avoid.
+    // Using the `idx_to_str` vec directly, with .iter().position(…) lookups is way slower,
+    // and using a BTreeMap is also slightly slower
+    let str_to_idx: HashMap<&str, usize> = idx_to_str
+        .iter()
+        .enumerate()
+        .map(|(i, &s)| (s, i))
+        .collect();
+
+    let mut connections: Vec<Vec<usize>> = vec![vec![]; idx_to_str.len()];
+    for (a_str, b_str) in pairs {
+        let a = str_to_idx[a_str];
+        let b = str_to_idx[b_str];
+        connections[a].push(b);
+        connections[b].push(a);
+    }
+    (idx_to_str, connections)
 }
 
 fn parse_pairs_into_tuple_set(input: &str) -> TupleSet {
@@ -204,10 +267,18 @@ td-yn
     }
 
     #[test]
-    fn test_part2_andre() {
+    fn test_part2_andre_optimized() {
         assert_eq!(
             "aa,cf,cj,cv,dr,gj,iu,jh,oy,qr,xr,xy,zb",
-            solve_part2_andre(INPUT)
+            solve_part2_andre_optimized(INPUT)
+        );
+    }
+
+    #[test]
+    fn test_part2_andre_orig() {
+        assert_eq!(
+            "aa,cf,cj,cv,dr,gj,iu,jh,oy,qr,xr,xy,zb",
+            solve_part2_andre_orig(INPUT)
         );
     }
 }

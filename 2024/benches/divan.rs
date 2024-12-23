@@ -17,5 +17,10 @@ fn day23_part2() {
 
 #[divan::bench]
 fn day23_part2_andre() {
-    day23::solve_part2_andre(include_str!("../../2024/input/day23.txt"));
+    day23::solve_part2_andre_optimized(include_str!("../../2024/input/day23.txt"));
+}
+
+#[divan::bench]
+fn day23_part2_andre_orig() {
+    day23::solve_part2_andre_orig(include_str!("../../2024/input/day23.txt"));
 }
