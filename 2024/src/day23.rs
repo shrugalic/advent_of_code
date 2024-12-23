@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 const INPUT: &str = include_str!("../../2024/input/day23.txt");
 
@@ -12,7 +12,10 @@ pub fn part2() -> String {
 
 fn solve_part1(input: &str) -> usize {
     let pairs = parse(input);
-    let triples = find_larger_tuples(&pairs, pairs.clone());
+
+    let computers: BTreeSet<&str> = pairs.iter().flat_map(|pair| pair.iter()).cloned().collect();
+
+    let triples = find_larger_tuples(&computers, &pairs, pairs.clone());
     triples
         .iter()
         .filter(|triple| triple.iter().any(|c| c.starts_with('t')))
@@ -21,18 +24,20 @@ fn solve_part1(input: &str) -> usize {
 
 fn solve_part2(input: &str) -> String {
     let pairs = parse(input);
-    let triples = find_larger_tuples(&pairs, pairs.clone());
-    let mut current = triples;
-    let mut next = find_larger_tuples(&pairs, current.clone());
-    while !next.is_empty() {
+    let computers: BTreeSet<&str> = pairs.iter().flat_map(|pair| pair.iter()).cloned().collect();
+    let mut current = find_larger_tuples(&computers, &pairs, pairs.clone());
+    loop {
+        let next = find_larger_tuples(&computers, &pairs, current.clone());
+        if next.is_empty() {
+            break;
+        }
         current = next;
-        next = find_larger_tuples(&pairs, current.clone());
     }
 
     let mut nodes = current
         .into_iter()
         .flat_map(|s| s.into_iter())
-        .collect::<HashSet<&str>>()
+        .collect::<BTreeSet<&str>>()
         .into_iter()
         .collect::<Vec<&str>>();
     nodes.sort_unstable();
@@ -40,36 +45,24 @@ fn solve_part2(input: &str) -> String {
 }
 
 fn find_larger_tuples<'a>(
-    pairs: &'a Vec<Vec<&'a str>>,
-    current_tuples: Vec<Vec<&'a str>>,
-) -> Vec<Vec<&'a str>> {
-    let current_len = current_tuples.first().unwrap().len();
+    computers: &'a BTreeSet<&'a str>,
+    pairs: &'a BTreeSet<BTreeSet<&'a str>>,
+    current_tuples: BTreeSet<BTreeSet<&'a str>>,
+) -> BTreeSet<BTreeSet<&'a str>> {
     let larger_tuples = current_tuples
         .into_iter()
         .flat_map(|current_tuple| {
-            pairs.iter().filter_map(move |pair| {
-                // The other part of this pair is a candidate that could enlarge this tuple by 1,
-                // if there are pairs for it and the other parts of the current tuple
-                let candidate = pair[1];
-                (current_tuple[0] == pair[0]
-                    && !current_tuple[1..].iter().any(|&other| other == candidate)
+            computers.iter().filter_map(move |candidate| {
+                (!current_tuple.contains(candidate)
                     && can_extend_tuple_with(candidate, &current_tuple, pairs))
                 .then_some({
                     let mut next = current_tuple.clone();
-                    next.push(candidate);
-                    next.sort_unstable();
+                    next.insert(candidate);
                     next
                 })
             })
         })
-        .collect::<HashSet<Vec<&str>>>()
-        .into_iter()
-        .collect::<Vec<Vec<&str>>>();
-    // println!(
-    //     "{} tuples of length {}",
-    //     larger_tuples.len(),
-    //     current_len + 1
-    // );
+        .collect::<BTreeSet<BTreeSet<&str>>>();
     // part 2:
     // 11011 tuples of length 3
     // 26455 tuples of length 4
@@ -86,26 +79,22 @@ fn find_larger_tuples<'a>(
     larger_tuples
 }
 
-fn can_extend_tuple_with(candidate: &str, tuple: &[&str], pairs: &[Vec<&str>]) -> bool {
+fn can_extend_tuple_with(
+    candidate: &str,
+    tuple: &BTreeSet<&str>,
+    pairs: &BTreeSet<BTreeSet<&str>>,
+) -> bool {
     tuple
         .iter()
-        .map(|&existing| {
-            let mut pair = vec![candidate, existing];
-            pair.sort_unstable();
-            pair
-        })
+        .map(|&existing| [candidate, existing].iter().cloned().collect())
         .all(|pair| pairs.contains(&pair))
 }
 
-fn parse(input: &str) -> Vec<Vec<&str>> {
+fn parse(input: &str) -> BTreeSet<BTreeSet<&str>> {
     input
         .trim()
         .lines()
-        .map(|line| {
-            let mut pair = line.split("-").collect::<Vec<&str>>();
-            pair.sort_unstable();
-            pair
-        })
+        .map(|line| line.split("-").collect::<BTreeSet<&str>>())
         .collect()
 }
 
