@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 const INPUT: &str = include_str!("../../2024/input/day23.txt");
 
@@ -10,91 +10,105 @@ pub fn part2() -> String {
     solve_part2(INPUT)
 }
 
+type Name<'a> = &'a str;
+// Using BTreeSet because HashSet<HashSet<&str>> is not allowed,
+// because HashSet<&str> does not impl Hash
+type Tuple<'a> = BTreeSet<Name<'a>>;
+type TupleSet<'a> = HashSet<Tuple<'a>>;
+
+// ~9 ms
 fn solve_part1(input: &str) -> usize {
-    let pairs = parse(input);
-
-    let computers: BTreeSet<&str> = pairs.iter().flat_map(|pair| pair.iter()).cloned().collect();
-
-    let triples = find_larger_tuples(&computers, &pairs, pairs.clone());
+    let pairs = parse_pairs_into_tuple_set(input);
+    let connections = parse_pairs_into_connections(input);
+    let triples = increase_connected_sets_by_one(pairs, &connections);
     triples
         .iter()
         .filter(|triple| triple.iter().any(|c| c.starts_with('t')))
         .count()
 }
 
-fn solve_part2(input: &str) -> String {
-    let pairs = parse(input);
-    let computers: BTreeSet<&str> = pairs.iter().flat_map(|pair| pair.iter()).cloned().collect();
-    let mut current = find_larger_tuples(&computers, &pairs, pairs.clone());
-    loop {
-        let next = find_larger_tuples(&computers, &pairs, current.clone());
-        if next.is_empty() {
-            break;
-        }
-        current = next;
-    }
-
-    let mut nodes = current
-        .into_iter()
-        .flat_map(|s| s.into_iter())
-        .collect::<BTreeSet<&str>>()
-        .into_iter()
-        .collect::<Vec<&str>>();
-    nodes.sort_unstable();
-    nodes.join(",")
-}
-
-fn find_larger_tuples<'a>(
-    computers: &'a BTreeSet<&'a str>,
-    pairs: &'a BTreeSet<BTreeSet<&'a str>>,
-    current_tuples: BTreeSet<BTreeSet<&'a str>>,
-) -> BTreeSet<BTreeSet<&'a str>> {
-    let larger_tuples = current_tuples
-        .into_iter()
-        .flat_map(|current_tuple| {
-            computers.iter().filter_map(move |candidate| {
-                (!current_tuple.contains(candidate)
-                    && can_extend_tuple_with(candidate, &current_tuple, pairs))
-                .then_some({
-                    let mut next = current_tuple.clone();
-                    next.insert(candidate);
-                    next
-                })
-            })
-        })
-        .collect::<BTreeSet<BTreeSet<&str>>>();
-    // part 2:
-    // 11011 tuples of length 3
-    // 26455 tuples of length 4
-    // 45045 tuples of length 5
-    // 55770 tuples of length 6
-    // 50622 tuples of length 7
-    // 33462 tuples of length 8
-    // 15730 tuples of length 9
-    // 5005 tuples of length 10
-    // 975 tuples of length 11
-    // 91 tuples of length 12
-    // 1 tuples of length 13
-    // 0 tuples of length 14
-    larger_tuples
-}
-
-fn can_extend_tuple_with(
-    candidate: &str,
-    tuple: &BTreeSet<&str>,
-    pairs: &BTreeSet<BTreeSet<&str>>,
-) -> bool {
-    tuple
+// ~16 ms
+pub fn solve_part1_following_connections(input: &str) -> usize {
+    let connections: HashMap<Name, Tuple> = parse_pairs_into_connections(input);
+    let mut triples: TupleSet = TupleSet::new();
+    for (source, targets) in connections
         .iter()
-        .map(|&existing| [candidate, existing].iter().cloned().collect())
-        .all(|pair| pairs.contains(&pair))
+        .filter(|(_src, targets)| targets.len() >= 2)
+    {
+        // source connects to targets. If two targets are themselves connected, they form a triple
+        for a in targets {
+            for b in targets.iter().filter(|b| b != &a) {
+                if connections[a].contains(b) {
+                    triples.insert([source, a, b].into_iter().cloned().collect());
+                }
+            }
+        }
+    }
+    triples
+        .iter()
+        .filter(|triple| triple.iter().any(|c| c.starts_with('t')))
+        .count()
 }
 
-fn parse(input: &str) -> BTreeSet<BTreeSet<&str>> {
+// ~1.06s
+fn solve_part2(input: &str) -> String {
+    let mut current_sets = parse_pairs_into_tuple_set(input);
+    let connections: HashMap<Name, Tuple> = parse_pairs_into_connections(input);
+    while current_sets.len() > 1 {
+        let next_sets = increase_connected_sets_by_one(current_sets, &connections);
+        current_sets = next_sets;
+    }
+    let mut names: Vec<_> = current_sets
+        .into_iter()
+        .next()
+        .unwrap()
+        .into_iter()
+        .collect();
+    names.sort_unstable();
+    names.join(",")
+}
+
+fn increase_connected_sets_by_one<'a>(
+    current_sets: TupleSet<'a>,
+    connections: &'a HashMap<Name, Tuple>,
+) -> TupleSet<'a> {
+    let mut next_sets = TupleSet::new();
+    for current_set in current_sets {
+        let mut it = current_set.iter();
+        let first_name = it.next().cloned().unwrap();
+        let mut common_connections = connections[first_name].clone();
+        for name in it {
+            common_connections = common_connections
+                .intersection(&connections[name])
+                .cloned()
+                .collect();
+            if common_connections.is_empty() {
+                break;
+            }
+        }
+        for common_connection in common_connections {
+            let mut next_set = current_set.clone();
+            next_set.insert(common_connection);
+            next_sets.insert(next_set);
+        }
+    }
+    next_sets
+}
+
+fn parse_pairs_into_connections(input: &str) -> HashMap<Name, Tuple> {
+    let mut connections: HashMap<Name, Tuple> = HashMap::new();
+    for (a, b) in input.trim().lines().filter_map(|line| line.split_once('-')) {
+        connections.entry(a).or_default().insert(b);
+        connections.entry(b).or_default().insert(a);
+    }
+    connections
+}
+
+fn parse_pairs_into_tuple_set(input: &str) -> TupleSet {
     input
         .trim()
         .lines()
-        .map(|line| line.split("-").collect::<BTreeSet<&str>>())
+        .map(|line| line.split('-').collect())
         .collect()
 }
 
@@ -145,6 +159,11 @@ td-yn
     #[test]
     fn test_part1() {
         assert_eq!(1_248, solve_part1(INPUT));
+    }
+
+    #[test]
+    fn test_part1_following_connections() {
+        assert_eq!(1_248, solve_part1_following_connections(INPUT));
     }
 
     #[test]
