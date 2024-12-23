@@ -14,3 +14,8 @@ fn day22_part2() {
 fn day23_part2() {
     day23::part2();
 }
+
+#[divan::bench]
+fn day23_part2_andre() {
+    day23::solve_part2_andre(include_str!("../../2024/input/day23.txt"));
+}

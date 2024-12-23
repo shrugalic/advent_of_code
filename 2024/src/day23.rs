@@ -68,6 +68,33 @@ fn solve_part2(input: &str) -> String {
     names.join(",")
 }
 
+// ~2 ms
+pub fn solve_part2_andre(input: &str) -> String {
+    let connections: HashMap<Name, Tuple> = parse_pairs_into_connections(input);
+
+    let mut largest_set = Tuple::new();
+    for (seed_node, targets) in &connections {
+        if targets.len() < largest_set.len() {
+            // Unnecessary optimization: Don't even bother with sparse nodes
+            continue;
+        }
+        let mut set = Tuple::from([*seed_node]);
+
+        for candidate in targets {
+            if set.iter().all(|node| connections[candidate].contains(node)) {
+                set.insert(*candidate);
+            }
+        }
+        if set.len() > largest_set.len() {
+            largest_set = set;
+        }
+    }
+
+    let mut names: Vec<_> = largest_set.into_iter().collect();
+    names.sort_unstable();
+    names.join(",")
+}
+
 fn increase_connected_sets_by_one<'a>(
     current_sets: TupleSet<'a>,
     connections: &'a HashMap<Name, Tuple>,
@@ -174,5 +201,13 @@ td-yn
     #[test]
     fn test_part2() {
         assert_eq!("aa,cf,cj,cv,dr,gj,iu,jh,oy,qr,xr,xy,zb", solve_part2(INPUT));
+    }
+
+    #[test]
+    fn test_part2_andre() {
+        assert_eq!(
+            "aa,cf,cj,cv,dr,gj,iu,jh,oy,qr,xr,xy,zb",
+            solve_part2_andre(INPUT)
+        );
     }
 }
