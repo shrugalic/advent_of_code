@@ -251,7 +251,7 @@ impl Coord3D {
 }
 
 impl Hailstone {
-    fn trajectory_intersects_with<'h>(&'h self, other: &'h Hailstone) -> Pair {
+    fn trajectory_intersects_with<'h>(&'h self, other: &'h Hailstone) -> Pair<'h> {
         Pair {
             hs1: self,
             hs2: other,

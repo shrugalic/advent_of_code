@@ -33,7 +33,7 @@ fn calculate_hash(input: &str) -> u8 {
     input.chars().fold(0u8, hash_of)
 }
 
-fn apply_operations_to_empty_boxes(input: &'static str) -> Vec<Vec<Lens>> {
+fn apply_operations_to_empty_boxes(input: &'static str) -> Vec<Vec<Lens<'static>>> {
     let mut boxes: Vec<Vec<Lens>> = vec![vec![]; 256];
     for op in parse(input).map(Operation::from) {
         match op {
@@ -94,7 +94,7 @@ struct Lens<'a> {
     focal_length: FocalLength,
 }
 
-impl<'a> From<&'static str> for Operation<'a> {
+impl From<&'static str> for Operation<'_> {
     fn from(value: &'static str) -> Self {
         if let Some(label) = value.strip_suffix('-') {
             Remove(label)

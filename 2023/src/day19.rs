@@ -90,7 +90,7 @@ fn count_combinations(
     combination_count
 }
 
-fn parse(input: &'static str) -> (HashMap<WorkflowName, Workflow>, Vec<Part>) {
+fn parse(input: &'static str) -> (HashMap<WorkflowName<'static>, Workflow<'static>>, Vec<Part>) {
     let (workflows, parts) = input.trim().split_once("\n\n").unwrap();
     let workflows: Vec<_> = workflows.lines().map(Workflow::from).collect();
     let parts = parts.lines().map(Part::from).collect();

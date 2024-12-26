@@ -56,11 +56,6 @@ struct Traveler {
     prev_pos: Option<Position>,
     prev_node: Position,
 }
-#[derive(Default, Debug, Eq, PartialEq, Clone)]
-struct NodeConstructor {
-    visited: HashSet<Position>,
-    distance: usize,
-}
 
 #[derive(Debug, Default, Eq, PartialEq, Hash, Ord, PartialOrd, Copy, Clone)]
 struct Position {

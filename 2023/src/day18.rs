@@ -31,7 +31,7 @@ fn count_of_border_tiles_plus_inside_tiles(instructions: Vec<Instruction>) -> us
     ground.border_tile_count() + ground.inside_tile_count()
 }
 
-fn parse(input: &'static str) -> impl Iterator<Item = Instruction> {
+fn parse(input: &'static str) -> impl Iterator<Item = Instruction<'static>> {
     input.trim().lines().map(Instruction::from)
 }
 
