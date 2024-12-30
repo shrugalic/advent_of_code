@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Formatter};
 
 const INPUT: &str = include_str!("../../2024/input/day24.txt");
-const EXPECTATION_FUNC: BinaryFunction = |x, y| x + y;
-type BinaryFunction = fn(usize, usize) -> usize;
+const EXPECTATION_FUNC: BinaryPredicate = |x, y| x + y;
+type BinaryPredicate = fn(usize, usize) -> usize;
 
 pub fn part1() -> usize {
     solve_part1(INPUT)
@@ -14,42 +14,27 @@ pub fn part2() -> String {
 }
 
 fn solve_part1(input: &str) -> usize {
-    Machine::from(input).calculate_output()
+    let (gate_by_name, inputs_by_name) = parse(input);
+    gate_by_name
+        .calculate_outputs(&inputs_by_name)
+        .sum_up_z_bits()
 }
 
-fn solve_part2(input: &str, expectation_func: BinaryFunction) -> String {
-    let mut machine = Machine::from(input);
-    machine.list_outputs_to_swap(expectation_func)
+fn solve_part2(input: &str, expectation_func: BinaryPredicate) -> String {
+    let (gate_by_name, inputs_by_name) = parse(input);
+    gate_by_name.list_outputs_to_swap(inputs_by_name, expectation_func)
 }
+
+type WireName<'n> = &'n str;
+struct GateByName<'n>(HashMap<WireName<'n>, Gate<'n>>);
+type ValueByName<'n> = HashMap<WireName<'n>, bool>;
+struct OutputByName<'n>(ValueByName<'n>);
 
 #[derive(Debug)]
-struct Machine<'a> {
-    x_input: usize,
-    y_input: usize,
-    input_len: usize,               // Number of bits in x and y
-    z_output_gate_ids: Vec<GateId>, // Its index is the output number, its value an index into gates
-    gates: Vec<Gate>,               // all gates, where their index is their id
-    gate_names: Vec<WireName<'a>>,  // Mapping from gate id to output wire name
-    gate_values: GateValueCache,
-}
-
-type GateId = usize;
-type WireName<'a> = &'a str;
-type WireId = usize;
-type GateValueCache = Vec<Option<bool>>;
-
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Clone)]
-struct Gate {
-    input1: SourceId,
+struct Gate<'n> {
+    input1: WireName<'n>,
     op: Operation,
-    input2: SourceId,
-}
-
-#[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Copy)]
-enum SourceId {
-    XWire(WireId),
-    YWire(WireId),
-    Gate(GateId),
+    input2: WireName<'n>,
 }
 
 #[derive(Ord, PartialOrd, Eq, PartialEq, Clone)]
@@ -59,30 +44,49 @@ enum Operation {
     Xor,
 }
 
-impl SourceId {
-    fn calculate_output(&self, machine: &Machine, cache: &mut GateValueCache) -> bool {
-        match self {
-            SourceId::XWire(id) => machine.x(id),
-            SourceId::YWire(id) => machine.y(id),
-            SourceId::Gate(id) => machine.gate_value(id, cache),
+fn parse(input: &str) -> (GateByName, ValueByName) {
+    let (wires, gates) = input.split_once("\n\n").unwrap();
+
+    let inputs_by_name: HashMap<WireName, bool> = wires
+        .lines()
+        .filter_map(|line| line.split_once(": "))
+        .map(|(name, value)| (name, value == "1"))
+        .collect();
+
+    let gate_by_name = gates
+        .lines()
+        .map(|line| {
+            // Example: x00 AND y00 -> z00
+            let parts: Vec<_> = line.split_whitespace().collect();
+            let input1 = parts[0];
+            let op = Operation::from(parts[1]);
+            let input2 = parts[2];
+            let output = parts[4];
+            (output, Gate { input1, op, input2 })
+        })
+        .collect();
+    (GateByName(gate_by_name), inputs_by_name)
+}
+
+impl From<&str> for Operation {
+    fn from(op: &str) -> Self {
+        match op {
+            "AND" => Operation::And,
+            "OR" => Operation::Or,
+            "XOR" => Operation::Xor,
+            _ => unreachable!("Illegal op {op}"),
         }
     }
 }
-
-impl Debug for SourceId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                SourceId::XWire(x) => format!("x{x:02}"),
-                SourceId::YWire(y) => format!("y{y:02}"),
-                SourceId::Gate(gate_id) => format!("gate {gate_id}"),
-            }
-        )
+impl Operation {
+    fn apply(&self, lhs: bool, rhs: bool) -> bool {
+        match self {
+            Operation::And => lhs & rhs,
+            Operation::Or => lhs | rhs,
+            Operation::Xor => lhs ^ rhs,
+        }
     }
 }
-
 impl Debug for Operation {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -97,207 +101,195 @@ impl Debug for Operation {
     }
 }
 
-impl<'a> From<&'a str> for Machine<'a> {
-    fn from(input: &'a str) -> Self {
-        let (wires, gates) = input.split_once("\n\n").unwrap();
-        let input_bits = wires.lines().count() / 2;
-
-        let mut gate_tuples = Vec::new();
-        let mut gate_names = Vec::new();
-        let mut z_gate_ids = Vec::new();
-        let mut gate_id_by_output_name: HashMap<WireName, GateId> = HashMap::new();
-        for (gate_id, line) in gates.lines().enumerate() {
-            // Example: x00 AND y00 -> z00
-            let parts: Vec<_> = line.split_whitespace().collect();
-            let mut input1 = parts[0];
-            let op = Operation::from(parts[1]);
-            let mut input2 = parts[2];
-            let output = parts[4];
-            if input1 > input2 {
-                (input1, input2) = (input2, input1);
-            }
-            gate_names.push(output);
-            if output.starts_with("z") {
-                z_gate_ids.push(gate_id);
-            }
-            gate_id_by_output_name.insert(output, gate_id);
-            gate_tuples.push((input1, op, input2));
+impl<'n> GateByName<'n> {
+    fn calculate_outputs(&'n self, inputs: &'n ValueByName<'n>) -> OutputByName<'n> {
+        let mut outputs = ValueByName::new();
+        for &name in self.0.keys().filter(|name| name.starts_with('z')) {
+            self.value_of_wire(name, inputs, &mut outputs);
         }
-
-        // Sort z-gates so their name corresponds with their index
-        z_gate_ids.sort_unstable_by_key(|z| gate_names[*z]);
-
-        let source_id_from = |name: &str| {
-            if name.starts_with("x") {
-                SourceId::XWire(name.strip_prefix("x").unwrap().parse::<WireId>().unwrap())
-            } else if name.starts_with("y") {
-                SourceId::YWire(name.strip_prefix("y").unwrap().parse::<WireId>().unwrap())
-            } else {
-                SourceId::Gate(gate_id_by_output_name[name])
-            }
-        };
-
-        let gates: Vec<Gate> = gate_tuples
-            .into_iter()
-            .map(|(input1, op, input2)| Gate {
-                input1: source_id_from(input1),
-                op,
-                input2: source_id_from(input2),
-            })
-            .collect();
-
-        // stores the x and y bits as a single usize
-        let accumulate = |prefix| {
-            wires
-                .lines()
-                .rev()
-                .filter(|line| line.starts_with(prefix))
-                .map(|line| line.split_once(": ").unwrap().1.parse::<usize>().unwrap())
-                .fold(0usize, |acc, v| (acc << 1) + v)
-        };
-
-        let gate_values = vec![None; gates.len()];
-        Machine {
-            x_input: accumulate("x"),
-            y_input: accumulate("y"),
-            input_len: input_bits,
-            z_output_gate_ids: z_gate_ids,
-            gates,
-            gate_names,
-            gate_values,
-        }
+        OutputByName(outputs)
     }
-}
 
-impl From<&str> for Operation {
-    fn from(op: &str) -> Self {
-        match op {
-            "AND" => Operation::And,
-            "OR" => Operation::Or,
-            "XOR" => Operation::Xor,
-            _ => unreachable!("Illegal op {op}"),
-        }
-    }
-}
-
-impl Machine<'_> {
-    fn x(&self, id: &WireId) -> bool {
-        (self.x_input & (1 << *id)) != 0
-    }
-    fn y(&self, id: &WireId) -> bool {
-        (self.y_input & (1 << *id)) != 0
-    }
-    fn gate(&self, id: &GateId) -> &Gate {
-        &self.gates[*id]
-    }
-    fn reset(&mut self) {
-        self.x_input = 0;
-        self.y_input = 0;
-        self.gate_values = vec![None; self.gates.len()];
-    }
-    fn calculate_output(&mut self) -> usize {
-        let mut cache: GateValueCache = vec![None; self.gates.len()];
-        let sum = self
-            .z_output_gate_ids
-            .iter()
-            .enumerate()
-            .map(|(exponent, gate_id)| {
-                if self.gate_value(gate_id, &mut cache) {
-                    2usize.pow(exponent as u32)
-                } else {
-                    0
-                }
-            })
-            .sum();
-
-        self.gate_values = cache;
-        sum
-    }
-    fn gate_value(&self, gate_id: &GateId, cache: &mut GateValueCache) -> bool {
-        if let Some(value) = cache[*gate_id] {
-            value
+    fn value_of_wire(
+        &'n self,
+        name: WireName<'n>,
+        inputs: &ValueByName<'n>,
+        outputs: &mut ValueByName<'n>,
+    ) -> bool {
+        if name.starts_with(['x', 'y']) {
+            inputs[&name]
+        } else if let Some(value) = outputs.get(name) {
+            *value
         } else {
-            let Gate {
-                input1, op, input2, ..
-            } = &self.gate(gate_id);
+            let Gate { input1, op, input2 } = &self.0[name];
+            let value1 = self.value_of_wire(input1, inputs, outputs);
+            let value2 = self.value_of_wire(input2, inputs, outputs);
+            let value = op.apply(value1, value2);
+            outputs.insert(name, value);
+            value
+        }
+    }
 
-            let input1 = input1.calculate_output(self, cache);
-            let input2 = input2.calculate_output(self, cache);
-            let value = match op {
-                Operation::And => input1 & input2,
-                Operation::Or => input1 | input2,
-                Operation::Xor => input1 ^ input2,
+    // Includes all ancestors of the given gate (not including the gate itself)
+    fn ancestors_of(&self, name: WireName<'n>) -> HashSet<WireName<'n>> {
+        let mut ancestors = HashSet::new();
+        if let Some(Gate { input1, input2, .. }) = self.0.get(name) {
+            if !input1.starts_with(['x', 'y']) && !ancestors.contains(input1) {
+                ancestors.insert(*input1);
+                ancestors.extend(self.ancestors_of(input1));
+            }
+            if !input2.starts_with(['x', 'y']) && !ancestors.contains(input2) {
+                ancestors.insert(*input2);
+                ancestors.extend(self.ancestors_of(input2));
+            }
+        }
+        ancestors
+    }
+
+    fn list_outputs_to_swap(
+        mut self,
+        mut inputs: ValueByName<'n>,
+        expectation_func: BinaryPredicate,
+    ) -> String {
+        let mut swaps: Vec<String> = vec![];
+
+        while let Some(idx) = self.index_of_first_error(&mut inputs, expectation_func) {
+            // There's an error at index `idx`, there must be some misconfigured gates nearby
+
+            let z_at = |idx| {
+                self.0
+                    .keys()
+                    .find(|&name| *name == format!("z{idx:02}").as_str())
+                    .unwrap()
             };
 
-            cache[*gate_id] = Some(value);
-            value
+            // The misconfiguration must be after the previous and before the next index
+            let curr_z = z_at(idx);
+            let next_z = z_at(idx + 1);
+            let prev_z = z_at(idx - 1);
+            let mut next_ancestors = self.ancestors_of(next_z);
+            // Add the current output gate, because it could be missing
+            // from the next output gate's ancestors due to a misconfiguration
+            next_ancestors.insert(curr_z);
+            let prev_ancestors = self.ancestors_of(prev_z);
+            let candidates = next_ancestors
+                .difference(&prev_ancestors)
+                .cloned()
+                .collect();
+
+            // Find the correct pair to swap by trial and error
+            swaps.extend(self.try_swapping_to_find_correct_pair(
+                &mut inputs,
+                candidates,
+                expectation_func,
+                idx,
+            ));
         }
+        swaps.sort_unstable();
+        swaps.join(",")
     }
 
-    pub(crate) fn list_outputs_to_swap(
-        &mut self,
-        expectation_func: fn(usize, usize) -> usize,
-    ) -> String {
-        let mut swaps: Vec<(&str, &str)> = vec![];
-        'test: loop {
-            // increase inputs until output is incorrect
-            for bit_idx in 0..self.input_len {
-                self.reset();
-                let mut expected_bits: Vec<bool> = Vec::new();
-                let mut actual_bits: Vec<bool> = Vec::new();
-                let mut actual_gate_bits: Vec<Vec<bool>> = vec![vec![]; self.gates.len()];
+    fn index_of_first_error(
+        &self,
+        inputs: &mut ValueByName,
+        expectation_func: BinaryPredicate,
+    ) -> Option<usize> {
+        let input_len = inputs.len() / 2; // inputs contains both x and y
+        let set_input_bit = |prefix: char, val: usize, inputs: &mut ValueByName| {
+            for (name, bit) in inputs
+                .iter_mut()
+                .filter(|(name, _)| name.starts_with(prefix))
+            {
+                let idx: usize = name.strip_prefix(['x', 'y']).unwrap().parse().unwrap();
+                *bit = (val & (1 << idx)) != 0;
+            }
+        };
 
-                for (x_bit, y_bit) in [(0, 0), (0, 1), (1, 0), (1, 1)] {
-                    self.x_input = x_bit << bit_idx;
-                    self.y_input = y_bit << bit_idx;
-
-                    let expected_val = expectation_func(self.x_input, self.y_input);
-                    let expected_bit = (expected_val & (1 << bit_idx)) != 0;
-                    expected_bits.push(expected_bit);
-
-                    let actual_val = self.calculate_output();
-                    let actual_bit = (actual_val & (1 << bit_idx)) != 0;
-                    actual_bits.push(actual_bit);
-
-                    actual_gate_bits
-                        .iter_mut()
-                        .zip(&self.gate_values)
-                        .for_each(|(bits, value)| bits.push(value.unwrap()));
-                }
-
-                if expected_bits != actual_bits {
-                    println!("Unexpected outputs for input permutations at index {bit_idx}");
-                    let matching_gate_idxs: Vec<_> = actual_gate_bits
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, actual)| actual == &&expected_bits)
-                        .map(|(i, _)| i)
-                        .collect();
-                    if matching_gate_idxs.len() == 1 {
-                        // Another gate's output exactly matches the expectation, swap the two.
-                        // This works for the part 2 example, but not the real input.
-                        let matching_gate_idx = *matching_gate_idxs.first().unwrap();
-                        let z_gate_idx = self.z_output_gate_ids[bit_idx];
-                        self.gates.swap(matching_gate_idx, z_gate_idx);
-                        swaps.push((
-                            self.gate_names[matching_gate_idx],
-                            self.gate_names[z_gate_idx],
-                        ));
-
-                        continue 'test;
-                    } else if matching_gate_idxs.is_empty() {
-                        println!("- no match");
-                    } else {
-                        // The part 2 input lands here, at 4 bits, with 2, 3 or 4 matches each.
-                        // These were inspected manually
-                        println!("- {} matches", matching_gate_idxs.len());
-                    }
+        for idx in 0..input_len - 1 {
+            for (x, y) in [(0, 1), (1, 0), (1, 1)] {
+                let x = x << idx;
+                let y = y << idx;
+                set_input_bit('x', x, inputs);
+                set_input_bit('y', y, inputs);
+                let actual = self.calculate_outputs(inputs).sum_up_z_bits();
+                let expected = expectation_func(x, y);
+                let diff = actual ^ expected;
+                if actual != expected {
+                    return (0usize..).find(|idx| diff & (1 << *idx) != 0);
                 }
             }
-            let mut swaps: Vec<_> = swaps.into_iter().flat_map(|(a, b)| [a, b]).collect();
-            swaps.sort_unstable();
-            return swaps.join(",");
         }
+        None
+    }
+
+    fn try_swapping_to_find_correct_pair<'a>(
+        &mut self,
+        inputs_by_name: &'a mut ValueByName<'n>,
+        candidates: Vec<WireName<'n>>,
+        expectation_func: BinaryPredicate,
+        prev_idx: usize,
+    ) -> Vec<String> {
+        let mut swaps: Vec<_> = vec![];
+        for (i, gate1) in candidates.iter().enumerate().take(candidates.len() - 1) {
+            for gate2 in candidates.iter().skip(i + 1) {
+                self.swap(gate1, gate2);
+
+                if !self.contains_cycle(gate1)
+                    && !self.contains_cycle(gate2)
+                    && self
+                        .index_of_first_error(inputs_by_name, expectation_func)
+                        .is_none_or(|curr_idx| curr_idx > prev_idx)
+                {
+                    // Fails later or not at all
+                    swaps.push(gate1.to_string());
+                    swaps.push(gate2.to_string());
+                    return swaps;
+                }
+                // Revert
+                self.swap(gate1, gate2);
+            }
+        }
+        unreachable!();
+    }
+
+    fn swap(&mut self, name1: WireName<'n>, name2: WireName<'n>) {
+        let gate1 = self.0.remove(name1).unwrap();
+        let gate2 = self.0.remove(name2).unwrap();
+        self.0.insert(name2, gate1);
+        self.0.insert(name1, gate2);
+    }
+
+    fn contains_cycle(&self, name: WireName) -> bool {
+        self.is_node_its_own_child(name, &mut HashSet::new())
+    }
+
+    fn is_node_its_own_child(
+        &self,
+        name: WireName<'n>,
+        children: &mut HashSet<WireName<'n>>,
+    ) -> bool {
+        if name.starts_with(['x', 'y']) {
+            return false;
+        }
+        if !children.insert(name) {
+            return true;
+        }
+        if let Some(Gate { input1, input2, .. }) = &self.0.get(name) {
+            self.is_node_its_own_child(input1, children)
+                || self.is_node_its_own_child(input2, children)
+        } else {
+            false
+        }
+    }
+}
+
+impl OutputByName<'_> {
+    fn sum_up_z_bits(self) -> usize {
+        self.0
+            .into_iter()
+            .filter(|(name, bit)| name.starts_with('z') && *bit)
+            .map(|(name, _)| 2usize.pow(name.strip_prefix("z").unwrap().parse().unwrap()))
+            .sum()
     }
 }
 
@@ -305,7 +297,6 @@ impl Machine<'_> {
 mod tests {
     use super::*;
 
-    const EXPECTATION_FUNC: BinaryFunction = |x, y| x & y;
     const SMALL_EXAMPLE_1: &str = "\
 x00: 1
 x01: 1
@@ -369,28 +360,6 @@ tgd XOR rvg -> z12
 tnw OR pbm -> gnj
 ";
 
-    const EXAMPLE_2: &str = "\
-x00: 0
-x01: 1
-x02: 0
-x03: 1
-x04: 0
-x05: 1
-y00: 0
-y01: 0
-y02: 1
-y03: 1
-y04: 0
-y05: 1
-
-x00 AND y00 -> z05
-x01 AND y01 -> z02
-x02 AND y02 -> z01
-x03 AND y03 -> z03
-x04 AND y04 -> z04
-x05 AND y05 -> z00
-";
-
     #[test]
     fn test_part1_small_example() {
         assert_eq!(4, solve_part1(SMALL_EXAMPLE_1));
@@ -402,9 +371,17 @@ x05 AND y05 -> z00
     }
 
     #[test]
+    fn test_part1() {
+        assert_eq!(58367545758258, solve_part1(INPUT));
+    }
+
+    #[test]
+    fn test_part2() {
+        assert_eq!("bpf,fdw,hcc,hqc,qcw,z05,z11,z35", part2());
+    }
+
+    #[test]
     fn test_part1_example_gate_values() {
-        let mut machine = Machine::from(EXAMPLE_1);
-        machine.calculate_output();
         let expected_gate_values = "\
 bfw: 1
 bqk: 1
@@ -442,30 +419,35 @@ z09: 1
 z10: 1
 z11: 0
 z12: 0";
-        let expected_value_by_name: HashMap<WireName, bool> = expected_gate_values
+
+        let (gate_by_name, inputs_by_name) = parse(EXAMPLE_1);
+
+        let expected_values: HashMap<WireName, bool> = expected_gate_values
             .lines()
             .map(|line| line.split_once(": ").unwrap())
             .map(|(name, value)| (name, value == "1"))
             .collect();
-        for (id, output_name) in machine.gate_names.iter().enumerate() {
-            let expected = &expected_value_by_name[output_name];
-            let actual = machine.gate_values[id].unwrap();
+
+        let actual_values = gate_by_name.calculate_outputs(&inputs_by_name);
+        for name in gate_by_name.0.keys() {
+            let expected = &expected_values[name];
+            let actual = actual_values.0[name];
             assert_eq!(expected, &actual);
         }
     }
 
     #[test]
-    fn test_part1() {
-        assert_eq!(58367545758258, solve_part1(INPUT));
+    fn test_ancestors_of() {
+        let (gate_by_name, _) = parse(INPUT);
+        let z01_deps = gate_by_name.ancestors_of("z01");
+        assert_eq!(z01_deps, HashSet::from(["mkf", "msh"]));
     }
 
     #[test]
-    fn test_part2_example() {
-        assert_eq!("z00,z01,z02,z05", solve_part2(EXAMPLE_2, EXPECTATION_FUNC));
-    }
-
-    #[test]
-    fn test_part2() {
-        assert_eq!("bpf,fdw,hcc,hqc,qcw,z05,z11,z35", part2());
+    fn test_cycle_detection() {
+        let (mut gate_by_name, _) = parse(INPUT);
+        gate_by_name.swap("z11", "cgn"); // this produces a cycle
+        assert!(!gate_by_name.contains_cycle("z11"));
+        assert!(gate_by_name.contains_cycle("z12"));
     }
 }
