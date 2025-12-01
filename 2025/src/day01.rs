@@ -18,7 +18,7 @@ fn solve_part1(input: &str) -> usize {
     for dir in parse(input) {
         match dir {
             Direction::Left(steps) => {
-                curr = (curr + SIZE - (steps % SIZE)) % SIZE;
+                curr = (curr - steps).rem_euclid(SIZE);
             }
             Direction::Right(steps) => {
                 curr = (curr + steps) % SIZE;
@@ -40,7 +40,7 @@ fn solve_part2(input: &str) -> usize {
                 if NAIVE {
                     let mut remaining = steps;
                     while remaining > 0 {
-                        curr = (curr + SIZE - 1) % SIZE;
+                        curr = (curr - 1).rem_euclid(SIZE);
                         if curr == 0 {
                             zero_count += 1;
                         }
@@ -54,7 +54,7 @@ fn solve_part2(input: &str) -> usize {
                     if remaining_steps >= curr && previous != 0 {
                         zero_count += 1;
                     }
-                    curr = (curr + SIZE - remaining_steps) % SIZE;
+                    curr = (curr - remaining_steps).rem_euclid(SIZE);
                 }
             }
             Direction::Right(steps) => {
