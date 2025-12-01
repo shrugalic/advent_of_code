@@ -3,6 +3,9 @@ name = "advent_of_code_2025"
 version = "0.1.0"
 edition = "2024"
 
+[dependencies]
+rstest = "0.26.1"
+
 [profile.test]
 # The default optimization level is 3 for release mode builds.
 # 0 means disable optimization and is the default for debug mode buids.

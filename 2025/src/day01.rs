@@ -113,47 +113,22 @@ L82
     }
 
     #[test]
-    fn test_part2_example_R50() {
-        assert_eq!(1, solve_part2("R50"));
-    }
-
-    #[test]
-    fn test_part2_example_R100() {
-        assert_eq!(1, solve_part2("R100"));
-    }
-
-    #[test]
-    fn test_part2_example_R150() {
-        assert_eq!(2, solve_part2("R150"));
-    }
-
-    #[test]
-    fn test_part2_example_R200() {
-        assert_eq!(2, solve_part2("R200"));
-    }
-
-    #[test]
-    fn test_part2_example_L50() {
-        assert_eq!(1, solve_part2("L50"));
-    }
-
-    #[test]
-    fn test_part2_example_L100() {
-        assert_eq!(1, solve_part2("L100"));
-    }
-    #[test]
-    fn test_part2_example_L150() {
-        assert_eq!(2, solve_part2("L150"));
-    }
-
-    #[test]
-    fn test_part2_example_L200() {
-        assert_eq!(2, solve_part2("L200"));
-    }
-
-    #[test]
     fn test_part2() {
         // 2_310, 2_188, 5_643 are too low
         assert_eq!(5_831, solve_part2(INPUT));
+    }
+
+    use rstest::rstest;
+    #[rstest]
+    #[case("R50", 1)]
+    #[case("R100", 1)]
+    #[case("R150", 2)]
+    #[case("R200", 2)]
+    #[case("L50", 1)]
+    #[case("L100", 1)]
+    #[case("L150", 2)]
+    #[case("L200", 2)]
+    fn run_part2_test(#[case] input: &str, #[case] expected: usize) {
+        assert_eq!(expected, solve_part2(input));
     }
 }
