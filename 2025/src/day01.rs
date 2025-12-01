@@ -48,8 +48,8 @@ fn solve_part2(input: &str) -> usize {
                     }
                 } else {
                     let previous = curr;
-                    let step_count = steps / SIZE;
-                    zero_count += step_count as usize;
+                    let full_turns = steps / SIZE;
+                    zero_count += full_turns as usize;
                     let remaining_steps = steps % SIZE;
                     if remaining_steps >= curr && previous != 0 {
                         zero_count += 1;
@@ -59,9 +59,9 @@ fn solve_part2(input: &str) -> usize {
             }
             Direction::Right(steps) => {
                 curr += steps;
-                let count = curr / SIZE;
+                let full_turns = curr / SIZE;
                 curr = curr % SIZE;
-                zero_count += count as usize;
+                zero_count += full_turns as usize;
             }
         }
     }
