@@ -47,21 +47,16 @@ fn solve_part2(input: &str) -> usize {
                         remaining -= 1;
                     }
                 } else {
-                    let previous = curr;
-                    let full_turns = steps / SIZE;
+                    let full_turns = ((-curr).rem_euclid(SIZE) + steps) / SIZE;
                     zero_count += full_turns as usize;
-                    let remaining_steps = steps % SIZE;
-                    if remaining_steps >= curr && previous != 0 {
-                        zero_count += 1;
-                    }
-                    curr = (curr - remaining_steps).rem_euclid(SIZE);
+                    curr = (curr - steps).rem_euclid(SIZE);
                 }
             }
             Direction::Right(steps) => {
                 curr += steps;
                 let full_turns = curr / SIZE;
-                curr = curr % SIZE;
                 zero_count += full_turns as usize;
+                curr = curr % SIZE;
             }
         }
     }
