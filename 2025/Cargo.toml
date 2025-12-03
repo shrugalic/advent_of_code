@@ -3,7 +3,7 @@ name = "advent_of_code_2025"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
+[dev-dependencies]
 rstest = "0.26.1"
 
 [profile.test]
@@ -11,4 +11,5 @@ rstest = "0.26.1"
 # 0 means disable optimization and is the default for debug mode buids.
 # (Setting opt-level=1 for debug builds is a good way of speeding them up a bit.)
 # "s" means optimize for size, "z" reduces size even more.
+# May need to comment this out when actually debugging
 opt-level = 1
