@@ -56,7 +56,7 @@ fn solve_part2(input: &str) -> usize {
                 curr += steps;
                 let full_turns = curr / SIZE;
                 zero_count += full_turns as usize;
-                curr = curr % SIZE;
+                curr %= SIZE;
             }
         }
     }

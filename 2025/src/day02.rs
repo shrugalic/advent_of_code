@@ -37,7 +37,7 @@ fn solve_part2(input: &str) -> usize {
         .sum()
 }
 
-fn is_sequence_repeated_twice(c: &Vec<char>) -> bool {
+fn is_sequence_repeated_twice(c: &[char]) -> bool {
     (c.len() == 2 && c[0] == c[1])
         || (c.len() == 4 && c[0] == c[2] && c[1] == c[3])
         || (c.len() == 6 && c[0] == c[3] && c[1] == c[4] && c[2] == c[5])
@@ -50,9 +50,9 @@ fn is_sequence_repeated_twice(c: &Vec<char>) -> bool {
             && c[4] == c[9])
 }
 
-fn is_repeated_sequences_of_length(len: usize, chars: &Vec<char>) -> bool {
+fn is_repeated_sequences_of_length(len: usize, chars: &[char]) -> bool {
     let invalid = chars.len() > len
-        && chars.len() % len == 0
+        && chars.len().is_multiple_of(len)
         && chars
             .windows(len)
             .step_by(len)
