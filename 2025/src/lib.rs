@@ -4,6 +4,7 @@ pub mod day03;
 pub mod day04;
 pub mod day05;
 pub mod day06;
+pub mod day07;
 pub mod tile_grid;
 pub mod vec_2d;
 pub mod vec_tile_grid;
