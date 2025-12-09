@@ -31,6 +31,8 @@ fn solve_part1(input: &str) -> usize {
     max_area
 }
 
+const NO_LARGE_CONCAVE_RECTANGLE_SOLUTION: bool = false;
+
 fn solve_part2(input: &str) -> usize {
     let positions = parse_red_tile_positions(input);
     let xs: HashSet<_> = positions.iter().map(|p| p.x).collect();
@@ -212,7 +214,22 @@ fn solve_part2(input: &str) -> usize {
         .find_map(|(i, j)| {
             let pos1 = &positions[i];
             let pos2 = &positions[j];
-            is_rectangle_inside_polygon(pos1, pos2).then_some(area(pos1, pos2))
+            if !NO_LARGE_CONCAVE_RECTANGLE_SOLUTION {
+                is_rectangle_inside_polygon(pos1, pos2).then_some(area(pos1, pos2))
+            } else {
+                // This very simple solution solves the example as well the real problem,
+                // but not the example2 from reddit, where it returns 84 ((3, 0), (16, 5)) instead of 33.
+                let no_line_intersects_rectangle = position_pairs.iter().all(|(start, end)| {
+                    isize::max(pos1.x, pos2.x) <= isize::min(start.x, end.x)
+                        || isize::min(pos1.x, pos2.x) >= isize::max(start.x, end.x)
+                        || isize::max(pos1.y, pos2.y) <= isize::min(start.y, end.y)
+                        || isize::min(pos1.y, pos2.y) >= isize::max(start.y, end.y)
+                });
+                if no_line_intersects_rectangle {
+                    println!("{pos1} + {pos2} = {}", area(pos1, pos2));
+                }
+                no_line_intersects_rectangle.then_some(area(pos1, pos2))
+            }
         })
         .unwrap()
 }
