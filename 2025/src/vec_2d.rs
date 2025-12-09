@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Add, AddAssign, Mul, Sub, SubAssign};
+use std::str::FromStr;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Default, Ord, PartialOrd)]
 pub(crate) struct Vec2D {
@@ -156,5 +157,24 @@ impl Mul for Vec2D {
 impl Display for Vec2D {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}, {})", self.x, self.y)
+    }
+}
+
+impl FromStr for Vec2D {
+    type Err = String;
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        if let Some((left, right)) = input.split_once(',') {
+            Ok(Vec2D {
+                x: left
+                    .parse()
+                    .map_err(|_| "Invalid x coordinate".to_string())?,
+                y: right
+                    .parse()
+                    .map_err(|_| "Invalid y coordinate".to_string())?,
+            })
+        } else {
+            Err("No comma in input".to_string())
+        }
     }
 }
