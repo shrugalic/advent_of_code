@@ -111,40 +111,26 @@ fn fewest_button_presses1(target: IndicatorLights, buttons: Buttons) -> usize {
     unreachable!()
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 struct JoltagesState {
-    pressed_buttons: Vec<ButtonIndex>,
-    available_buttons: Vec<ButtonIndex>,
-    joltages: Vec<JoltageLevel>,
+    button_press_counts: Vec<usize>,
+    available_button_presses: Vec<usize>,
+    remaining_joltages: Vec<JoltageLevel>,
 }
 impl Ord for JoltagesState {
     fn cmp(&self, other: &Self) -> Ordering {
-        let prioritize_button_presses = true;
-        if prioritize_button_presses {
-            // Prefer fewer button presses, then higher joltage totals
-            match self.pressed_buttons.len().cmp(&other.pressed_buttons.len()) {
-                Ordering::Equal => self
-                    .joltages
-                    .iter()
-                    .sum::<usize>()
-                    .cmp(&other.joltages.iter().sum()),
-                fewer_button_presses_is_better => fewer_button_presses_is_better.reverse(),
-            }
-        } else {
-            // Prefer higher joltages, then fewer button presses
-            match self
-                .joltages
+        match self
+            .remaining_joltages
+            .iter()
+            .sum::<usize>()
+            .cmp(&other.remaining_joltages.iter().sum()).reverse() // Lower is better
+        {
+            Ordering::Equal => self
+                .button_press_counts
                 .iter()
                 .sum::<usize>()
-                .cmp(&other.joltages.iter().sum())
-            {
-                Ordering::Equal => self
-                    .pressed_buttons
-                    .len()
-                    .cmp(&other.pressed_buttons.len())
-                    .reverse(),
-                higher_joltage_is_better => higher_joltage_is_better,
-            }
+                .cmp(&other.button_press_counts.iter().sum()), // Fewer is better
+            use_joltage_ordering => use_joltage_ordering,
         }
     }
 }
@@ -154,94 +140,128 @@ impl PartialOrd<Self> for JoltagesState {
     }
 }
 
-fn fewest_button_presses2(buttons: Buttons, goal: JoltageLevels) -> usize {
-    let mut queued: HashSet<JoltageLevels> = HashSet::new();
-    println!("===== goal {goal:?} =====");
-    let initial_state = JoltagesState {
-        pressed_buttons: vec![],
-        available_buttons: (0..buttons.len()).collect(),
-        joltages: vec![0; goal.len()],
-    };
-    let mut queue = BinaryHeap::from([initial_state]);
+fn fewest_button_presses2(buttons: Buttons, target: JoltageLevels) -> usize {
+    // Let's call this the remaining joltages, assume the target is to reach all zeroes,
+    // and that each button press reduces its assigned joltages by 1
+    let remaining_joltages = target;
 
-    let mut counter = 0usize;
+    // The maximum number of times each button may be pressed
+    // (because otherwise the joltage would be too high)
+    let available_button_presses: Vec<_> = buttons
+        .iter()
+        .flat_map(|button| button.iter().map(|&ji| remaining_joltages[ji]).min())
+        .collect();
+
+    let initial = JoltagesState {
+        button_press_counts: vec![0; buttons.len()],
+        available_button_presses,
+        remaining_joltages,
+    };
+
+    let mut queue = BinaryHeap::from([initial]);
     while let Some(JoltagesState {
-        pressed_buttons,
-        available_buttons,
-        joltages,
+        button_press_counts,
+        available_button_presses,
+        remaining_joltages,
     }) = queue.pop()
     {
-        // Check if we've reached the goal
-        if joltages == goal {
-            println!(
-                "Reached goal {goal:?} by pressing {} buttons {pressed_buttons:?}",
-                pressed_buttons.len()
-            );
-            return pressed_buttons.len();
+        if remaining_joltages.iter().all(|&j| j == 0) {
+            return button_press_counts.iter().sum();
         }
 
-        // println!(
-        //     "{counter}: Visiting joltages {joltages:?} with available {available_buttons:?} by having pressed {} buttons {pressed_buttons:?}",
-        //     pressed_buttons.len()
-        // );
-
-        // Press each available button…
-        let next: Vec<_> = available_buttons
+        let j_idx = remaining_joltages.iter().position(|j| j > &0).unwrap();
+        let joltage_target = remaining_joltages[j_idx];
+        let button_idxs: Vec<_> = buttons
             .iter()
-            .map(|&button_idx| {
-                // Calculate the next joltages when pressing this button
-                let mut next_joltages = joltages.clone();
-                for idx in &buttons[button_idx] {
-                    next_joltages[*idx] += 1;
-                }
-
-                let mut next_buttons_pressed = pressed_buttons.clone();
-                next_buttons_pressed.push(button_idx);
-
-                let unavailable_button = next_joltages
-                    .iter()
-                    .zip(goal.iter())
-                    .any(|(current_joltage, goal_joltage)| current_joltage > goal_joltage)
-                    .then_some(button_idx);
-
-                (next_joltages, next_buttons_pressed, unavailable_button)
-            })
+            .enumerate()
+            .filter_map(|(b_idx, buttons)| buttons.contains(&j_idx).then_some(b_idx))
             .collect();
 
-        // Remove buttons that resulted in the next joltage being too high from the available ones
-        let mut next_available_buttons = available_buttons;
-        for unavailable_button in next
-            .iter()
-            .filter_map(|(_, _, unavailable_button)| *unavailable_button)
-        {
-            let removal_idx = next_available_buttons
+        'distribution_loop: for distribution in list_all_valid_button_press_distributions(
+            joltage_target,
+            &button_idxs,
+            &available_button_presses,
+        ) {
+            let mut next_remaining_joltages = remaining_joltages.clone();
+            let mut next_button_press_counts = button_press_counts.clone();
+            for (b_idx, press_count) in distribution.into_iter().enumerate() {
+                next_button_press_counts[b_idx] += press_count;
+                for j_idx in &buttons[b_idx] {
+                    if press_count > next_remaining_joltages[*j_idx] {
+                        continue 'distribution_loop;
+                    }
+                    next_remaining_joltages[*j_idx] -= press_count;
+                }
+            }
+
+            let next_available_button_presses = buttons
                 .iter()
-                .position(|i| i == &unavailable_button)
-                .unwrap();
-            // println!("Removing unavailable button {unavailable_button} at {removal_idx}");
-            next_available_buttons.remove(removal_idx);
-        }
-        for (next_joltages, next_buttons_pressed, unavailable_button) in next {
-            // Skip if the next joltage is too high
-            if unavailable_button.is_some() {
-                // println!("Dropping {next_joltages:?} > {goal:?}");
-                continue;
-            }
-
-            // Queue the next state if it is new
-            if !queued.contains(&next_joltages) {
-                queued.insert(next_joltages.clone());
-
-                // println!("Putting {next_joltages:?} in the queue");
-                queue.push(JoltagesState {
-                    pressed_buttons: next_buttons_pressed,
-                    available_buttons: next_available_buttons.clone(),
-                    joltages: next_joltages,
+                .flat_map(|button| {
+                    button
+                        .iter()
+                        .map(|&j_idx| next_remaining_joltages[j_idx])
+                        .min()
                 })
-            }
+                .collect();
+
+            let next = JoltagesState {
+                button_press_counts: next_button_press_counts,
+                available_button_presses: next_available_button_presses,
+                remaining_joltages: next_remaining_joltages,
+            };
+            queue.push(next);
         }
     }
+
     unreachable!()
+}
+
+// Lists all possible ways to distribute a given total number of button presses
+// to different buttons, given a constraint of `available_button_presses`.
+// This may return an empty list if impossible
+fn list_all_valid_button_press_distributions(
+    total: usize,
+    available_buttons_ids: &[ButtonIndex],
+    available_button_presses: &[usize],
+) -> Vec<Vec<usize>> {
+    debug_assert!(!available_buttons_ids.is_empty());
+
+    let own_id = available_buttons_ids[0];
+    let max_usable = usize::min(available_button_presses[own_id], total);
+
+    if available_buttons_ids.len() == 1 {
+        // Must use the full total for this button
+        if available_button_presses[own_id] < total {
+            return vec![]; // Cannot fulfill the request
+        }
+        let mut own_uses = vec![0; available_button_presses.len()];
+        own_uses[own_id] = max_usable;
+        vec![own_uses]
+    } else {
+        let mut all_uses: Vec<Vec<usize>> = vec![];
+
+        // Can use max or less for this button
+        let next_available_button_ids: Vec<_> = available_buttons_ids
+            .iter()
+            .filter(|&bid| bid != &own_id)
+            .copied()
+            .collect();
+        for use_count in 0..=max_usable {
+            // available_button_presses may no longer be accurate for this button,
+            // but this button will not be used because it's no longer available
+            let mut remaining_uses = list_all_valid_button_press_distributions(
+                total - use_count,
+                &next_available_button_ids,
+                available_button_presses,
+            );
+            // Add own uses to the result
+            for used in &mut remaining_uses {
+                used[own_id] = use_count;
+            }
+            all_uses.append(&mut remaining_uses);
+        }
+        all_uses
+    }
 }
 
 fn parse(input: &str) -> impl Iterator<Item = Line> {
@@ -318,7 +338,7 @@ mod tests {
     #[test]
     fn test_part2_line1() {
         assert_eq!(
-            32,
+            32, // according to both first and second attempt
             solve_part2("[.#.#] (0,2,3) (1,3) (2,3) (0,1,2) (0) {31,4,31,29}")
         );
     }
@@ -326,10 +346,102 @@ mod tests {
     #[test]
     fn test_part2_line2() {
         assert_eq!(
-            1, // unknown
+            119, // according to second attempt (first was too slow)
             solve_part2(
                 "[#..#..##.#] (1,2,3,4,5,6,7,8,9) (2,5,6,7) (0,1,3,5,7,8) (0,2,3,5,6,8,9) (0,1,3,5,6,7,8,9) (4,7) (3,5,7) (4,6) (1,2,4) (0,1,2,4,5,7,8,9) {34,50,61,55,68,80,58,88,50,48}"
             )
+        );
+    }
+
+    #[test]
+    fn test_part2_line50() {
+        assert_eq!(
+            1, // unknown, second attempt still too slow
+            solve_part2(
+                "[##.#.#.##.] (3,4,6) (0,1,4,6,7,8,9) (0,1,2,5,7,9) (1,3,7,8,9) (1,2,3,4,5,7,8,9) (0,1,2,3,4,7) (1,2,3,8) (0,1,2,4,5,8) (1,3,6,9) (1,3,7,9) (3,5) (0,1,2,3,4,6,7,8,9) (0,1,4,5,8,9) {167,207,67,89,174,32,150,167,166,169}"
+            )
+        );
+    }
+
+    #[test]
+    fn test_distribute_1_item_with_equal_total_than_available_presses() {
+        let total = 5;
+        let available_ids = vec![0];
+        let available_presses = vec![5];
+        assert_eq!(
+            vec![vec![5]],
+            list_all_valid_button_press_distributions(total, &available_ids, &available_presses)
+        );
+    }
+
+    #[test]
+    fn test_distribute_1_item_with_less_total_than_available_presses() {
+        let total = 3;
+        let available_ids = vec![0];
+        let available_presses = vec![5];
+        assert_eq!(
+            vec![vec![3]],
+            list_all_valid_button_press_distributions(total, &available_ids, &available_presses)
+        );
+    }
+
+    #[test]
+    fn test_distribute_1_item_with_more_total_than_available_presses() {
+        let total = 5;
+        let available_ids = vec![0];
+        let available_presses = vec![3];
+        let expected: Vec<Vec<usize>> = vec![];
+        assert_eq!(
+            expected,
+            list_all_valid_button_press_distributions(total, &available_ids, &available_presses)
+        );
+    }
+
+    #[test]
+    fn test_distribute_2_items_unlimited() {
+        let total = 3;
+        let available_ids = vec![0, 1];
+        let available_presses = vec![3, 3];
+        assert_eq!(
+            vec![vec![0, 3], vec![1, 2], vec![2, 1], vec![3, 0]],
+            list_all_valid_button_press_distributions(total, &available_ids, &available_presses)
+        );
+    }
+
+    #[test]
+    fn test_distribute_2_items_with_some_limits() {
+        let total = 5;
+        let available_ids = vec![0, 1];
+        let available_presses = vec![5, 3];
+        assert_eq!(
+            vec![vec![2, 3], vec![3, 2], vec![4, 1], vec![5, 0]],
+            list_all_valid_button_press_distributions(total, &available_ids, &available_presses)
+        );
+    }
+
+    #[test]
+    fn test_distribute_3_items() {
+        let total = 4;
+        let available_ids = vec![0, 1, 2];
+        let available_presses = vec![4, 4, 3];
+        assert_eq!(
+            vec![
+                vec![0, 1, 3],
+                vec![0, 2, 2],
+                vec![0, 3, 1],
+                vec![0, 4, 0],
+                vec![1, 0, 3],
+                vec![1, 1, 2],
+                vec![1, 2, 1],
+                vec![1, 3, 0],
+                vec![2, 0, 2],
+                vec![2, 1, 1],
+                vec![2, 2, 0],
+                vec![3, 0, 1],
+                vec![3, 1, 0],
+                vec![4, 0, 0],
+            ],
+            list_all_valid_button_press_distributions(total, &available_ids, &available_presses)
         );
     }
 
