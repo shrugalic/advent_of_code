@@ -13,3 +13,8 @@ rstest = "0.26.1"
 # "s" means optimize for size, "z" reduces size even more.
 # May need to comment this out when actually debugging
 opt-level = 1
+
+[dependencies]
+# The "highs" solver needs `cmake`, installed with `brew install cmake`
+good_lp = { version = "1.14.2", features = ["highs"], default-features = false }
+

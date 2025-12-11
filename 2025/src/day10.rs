@@ -1,3 +1,7 @@
+use good_lp::{
+    constraint, highs, variable, variables, Constraint, Expression, ProblemVariables, Solution,
+    SolverModel,
+};
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashSet};
 
@@ -29,7 +33,7 @@ fn solve_part1(input: &str) -> usize {
 
 fn solve_part2(input: &str) -> usize {
     parse(input)
-        .map(|(_, buttons, requirements)| fewest_button_presses2(buttons, requirements))
+        .map(|(_, buttons, requirements)| fewest_button_presses3(buttons, requirements))
         .sum()
 }
 
@@ -140,79 +144,67 @@ impl PartialOrd<Self> for JoltagesState {
     }
 }
 
-fn fewest_button_presses2(buttons: Buttons, target: JoltageLevels) -> usize {
-    // Let's call this the remaining joltages, assume the target is to reach all zeroes,
-    // and that each button press reduces its assigned joltages by 1
-    let remaining_joltages = target;
-
-    // The maximum number of times each button may be pressed
-    // (because otherwise the joltage would be too high)
-    let available_button_presses: Vec<_> = buttons
-        .iter()
-        .flat_map(|button| button.iter().map(|&ji| remaining_joltages[ji]).min())
+fn fewest_button_presses3(buttons: Buttons, target: JoltageLevels) -> usize {
+    let button_idx_by_joltage_idx: Vec<_> = (0..target.len())
+        .map(|j_idx| {
+            buttons
+                .iter()
+                .enumerate()
+                .filter_map(|(b_idx, buttons)| buttons.contains(&j_idx).then_some(b_idx))
+                .collect::<Vec<_>>()
+        })
         .collect();
 
-    let initial = JoltagesState {
-        button_press_counts: vec![0; buttons.len()],
-        available_button_presses,
-        remaining_joltages,
-    };
-
-    let mut queue = BinaryHeap::from([initial]);
-    while let Some(JoltagesState {
-        button_press_counts,
-        available_button_presses,
-        remaining_joltages,
-    }) = queue.pop()
-    {
-        if remaining_joltages.iter().all(|&j| j == 0) {
-            return button_press_counts.iter().sum();
-        }
-
-        let j_idx = remaining_joltages.iter().position(|j| j > &0).unwrap();
-        let joltage_target = remaining_joltages[j_idx];
-        let button_idxs: Vec<_> = buttons
-            .iter()
-            .enumerate()
-            .filter_map(|(b_idx, buttons)| buttons.contains(&j_idx).then_some(b_idx))
-            .collect();
-
-        'distribution_loop: for distribution in list_all_valid_button_press_distributions(
-            joltage_target,
-            &button_idxs,
-            &available_button_presses,
-        ) {
-            let mut next_remaining_joltages = remaining_joltages.clone();
-            let mut next_button_press_counts = button_press_counts.clone();
-            for (b_idx, press_count) in distribution.into_iter().enumerate() {
-                next_button_press_counts[b_idx] += press_count;
-                for j_idx in &buttons[b_idx] {
-                    if press_count > next_remaining_joltages[*j_idx] {
-                        continue 'distribution_loop;
-                    }
-                    next_remaining_joltages[*j_idx] -= press_count;
-                }
-            }
-
-            let next_available_button_presses = buttons
-                .iter()
-                .flat_map(|button| {
-                    button
-                        .iter()
-                        .map(|&j_idx| next_remaining_joltages[j_idx])
-                        .min()
-                })
-                .collect();
-
-            let next = JoltagesState {
-                button_press_counts: next_button_press_counts,
-                available_button_presses: next_available_button_presses,
-                remaining_joltages: next_remaining_joltages,
-            };
-            queue.push(next);
-        }
+    let mut good_lp_vars = ProblemVariables::new();
+    let mut var_handles = Vec::with_capacity(buttons.len());
+    for i in 0..buttons.len() {
+        var_handles.push(good_lp_vars.add(variable().min(0)));
     }
+    // dbg!(&var_handles);
+    let objective: Expression = var_handles.iter().sum();
+    // dbg!(&objective);
+    let constraints: Vec<Constraint> = button_idx_by_joltage_idx
+        .iter()
+        .enumerate()
+        .map(|(j_idx, b_idxs)| {
+            let lhs: Expression = b_idxs.iter().map(|i| var_handles[*i]).sum();
+            constraint::eq(lhs, target[j_idx] as i32)
+        })
+        .collect();
+    // dbg!(&constraints);
+    if let Ok(solution) = good_lp_vars
+        .minimise(objective.clone())
+        .using(highs)
+        .with_all(constraints)
+        .solve()
+    {
+        // Verify the validity of the solution
+        let mut solutions = Vec::with_capacity(buttons.len());
+        for var in var_handles {
+            let value = solution.value(var).round();
+            solutions.push(value);
+        }
+        let mut joltage_levels = vec![0; target.len()];
+        for (i, f_button_press_count) in solutions.iter().enumerate() {
+            let button_press_count = f_button_press_count.round() as usize;
+            for j_idx in &buttons[i] {
+                joltage_levels[*j_idx] += button_press_count;
+            }
+        }
+        let sum = solution.eval(objective);
+        let rounded_sum = sum.round();
+        let buttom_press_sum = solutions.iter().sum::<f64>();
+        let rounded_buttom_press_sum = solutions.iter().map(|v| v.round() as usize).sum::<usize>();
+        if buttom_press_sum != sum || rounded_buttom_press_sum != sum.round() as usize {
+            println!(
+                "sum {sum}, rounded-sum {rounded_sum}, solution-sum {buttom_press_sum}, rounded solution-sum {rounded_buttom_press_sum}"
+            );
+        }
 
+        debug_assert_eq!(target, joltage_levels); // This fails for 23 out of 200 lines
+
+        return sum as usize;
+    }
     unreachable!()
 }
 
@@ -356,7 +348,7 @@ mod tests {
     #[test]
     fn test_part2_line50() {
         assert_eq!(
-            1, // unknown, second attempt still too slow
+            213, // according to the good_lp solver
             solve_part2(
                 "[##.#.#.##.] (3,4,6) (0,1,4,6,7,8,9) (0,1,2,5,7,9) (1,3,7,8,9) (1,2,3,4,5,7,8,9) (0,1,2,3,4,7) (1,2,3,8) (0,1,2,4,5,8) (1,3,6,9) (1,3,7,9) (3,5) (0,1,2,3,4,6,7,8,9) (0,1,4,5,8,9) {167,207,67,89,174,32,150,167,166,169}"
             )
@@ -447,6 +439,90 @@ mod tests {
 
     #[test]
     fn test_part2() {
-        assert_eq!(1 /* unknown */, solve_part2(INPUT));
+        // different solvers yield different results:
+        // - clarabel: 20808
+        // - highs: 20847
+        // - lp_solve: 20846
+        // - microlp: 20845
+        assert_eq!(20871, solve_part2(INPUT));
+    }
+
+    #[test]
+    fn good_lp_example() {
+        // had to `brew install cbc` to use the default solver. Didn't work.
+        // Changed to `highs` solver and got `cmake` with `brew install cmake`. Works.
+        variables! {
+            vars:
+                   a <= 1;
+              2 <= b <= 4;
+        } // variables can also be added dynamically with ProblemVariables::add
+        if let Ok(solution) = vars
+            .maximise(10 * (a - b / 5) - b)
+            .using(highs)
+            .with(constraint!(a + 2 <= b))
+            .with(constraint!(1 + a >= 4 - b)) // .with_all(iter) is also available
+            .solve()
+        {
+            println!("a={}   b={}", solution.value(a), solution.value(b));
+            println!("a + b = {}", solution.eval(a + b))
+        };
+    }
+
+    #[test]
+    fn good_lp_with_example1() {
+        variables! {
+            vars:
+                0 <= a;
+                0 <= b;
+                0 <= c;
+                0 <= d;
+                0 <= e;
+                0 <= f;
+        } // variables can also be added dynamically with ProblemVariables::add
+        if let Ok(solution) = vars
+            .minimise(a + b + c + d + e + f)
+            .using(highs)
+            .with(constraint!(e + f == 3))
+            .with(constraint!(b + f == 5))
+            .with(constraint!(c + d + e == 4))
+            .with(constraint!(a + b + d == 7))
+            .solve()
+        {
+            assert_eq!(1., solution.value(a));
+            assert_eq!(2., solution.value(b));
+            assert_eq!(0., solution.value(c));
+            assert_eq!(4., solution.value(d));
+            assert_eq!(0., solution.value(e));
+            assert_eq!(3., solution.value(f));
+            assert_eq!(10., solution.eval(a + b + c + d + e + f));
+        };
+    }
+
+    #[test]
+    fn good_lp_with_example1_without_macros() {
+        let mut vars = ProblemVariables::new();
+        let a = vars.add(variable().min(0));
+        let b = vars.add(variable().min(0));
+        let c = vars.add(variable().min(0));
+        let d = vars.add(variable().min(0));
+        let e = vars.add(variable().min(0));
+        let f = vars.add(variable().min(0));
+        if let Ok(solution) = vars
+            .minimise(a + b + c + d + e + f)
+            .using(highs)
+            .with(constraint::eq(e + f, 3))
+            .with(constraint::eq(b + f, 5))
+            .with(constraint::eq(c + d + e, 4))
+            .with(constraint::eq(a + b + d, 7))
+            .solve()
+        {
+            assert_eq!(1., solution.value(a));
+            assert_eq!(2., solution.value(b));
+            assert_eq!(0., solution.value(c));
+            assert_eq!(4., solution.value(d));
+            assert_eq!(0., solution.value(e));
+            assert_eq!(3., solution.value(f));
+            assert_eq!(10., solution.eval(a + b + c + d + e + f));
+        };
     }
 }
