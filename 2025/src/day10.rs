@@ -158,7 +158,7 @@ fn fewest_button_presses3(buttons: Buttons, target: JoltageLevels) -> usize {
     let mut good_lp_vars = ProblemVariables::new();
     let mut var_handles = Vec::with_capacity(buttons.len());
     for i in 0..buttons.len() {
-        var_handles.push(good_lp_vars.add(variable().min(0)));
+        var_handles.push(good_lp_vars.add(variable().integer().min(0)));
     }
     // dbg!(&var_handles);
     let objective: Expression = var_handles.iter().sum();
@@ -348,7 +348,7 @@ mod tests {
     #[test]
     fn test_part2_line50() {
         assert_eq!(
-            213, // according to the good_lp solver
+            214,
             solve_part2(
                 "[##.#.#.##.] (3,4,6) (0,1,4,6,7,8,9) (0,1,2,5,7,9) (1,3,7,8,9) (1,2,3,4,5,7,8,9) (0,1,2,3,4,7) (1,2,3,8) (0,1,2,4,5,8) (1,3,6,9) (1,3,7,9) (3,5) (0,1,2,3,4,6,7,8,9) (0,1,4,5,8,9) {167,207,67,89,174,32,150,167,166,169}"
             )
@@ -472,12 +472,12 @@ mod tests {
     fn good_lp_with_example1() {
         variables! {
             vars:
-                0 <= a;
-                0 <= b;
-                0 <= c;
-                0 <= d;
-                0 <= e;
-                0 <= f;
+                0 <= a (integer);
+                0 <= b (integer);
+                0 <= c (integer);
+                0 <= d (integer);
+                0 <= e (integer);
+                0 <= f (integer);
         } // variables can also be added dynamically with ProblemVariables::add
         if let Ok(solution) = vars
             .minimise(a + b + c + d + e + f)
@@ -501,12 +501,12 @@ mod tests {
     #[test]
     fn good_lp_with_example1_without_macros() {
         let mut vars = ProblemVariables::new();
-        let a = vars.add(variable().min(0));
-        let b = vars.add(variable().min(0));
-        let c = vars.add(variable().min(0));
-        let d = vars.add(variable().min(0));
-        let e = vars.add(variable().min(0));
-        let f = vars.add(variable().min(0));
+        let a = vars.add(variable().integer().min(0));
+        let b = vars.add(variable().integer().min(0));
+        let c = vars.add(variable().integer().min(0));
+        let d = vars.add(variable().integer().min(0));
+        let e = vars.add(variable().integer().min(0));
+        let f = vars.add(variable().integer().min(0));
         if let Ok(solution) = vars
             .minimise(a + b + c + d + e + f)
             .using(highs)
